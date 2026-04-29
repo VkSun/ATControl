@@ -1,0 +1,47 @@
+name: atcontrol
+description: Система управления автопарком ATControl
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # База данных Supabase
+  supabase_flutter: ^2.3.0
+  
+  # Навигация
+  go_router: ^13.0.0
+  
+  # Управление состоянием
+  riverpod: ^2.5.0
+  flutter_riverpod: ^2.5.0
+  
+  # Иконки
+  cupertino_icons: ^1.0.6
+  flutter_svg: ^2.0.9
+  
+  # Уведомления
+  flutter_local_notifications: ^17.0.0
+  
+  # Работа с датами
+  intl: ^0.19.0
+  
+  # Excel импорт/экспорт
+  syncfusion_flutter_xlsio: ^25.1.41
+  open_file: ^3.3.2
+  path_provider: ^2.1.2
+  
+  # Погода
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

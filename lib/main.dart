@@ -1,0 +1,42 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'utils/router.dart';
+import 'utils/theme.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await initializeDateFormatting('ru', null);
+
+  await Supabase.initialize(
+    url: 'https://gmekcuwebewdhupywyal.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtZWtjdXdlYmV3ZGh1cHl3eWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTU5NDMsImV4cCI6MjA5Mjk3MTk0M30.gqxIiHldZViI4f_sTrjuG3Bmr18jAZKfJNyLpO8l10s',
+  );
+
+  runApp(
+    const ProviderScope(
+      child: ATControlApp(),
+    ),
+  );
+}
+
+class ATControlApp extends ConsumerWidget {
+  const ATControlApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
+
+    return MaterialApp.router(
+      title: 'ATControl',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
+      routerConfig: router,
+    );
+  }
+}
