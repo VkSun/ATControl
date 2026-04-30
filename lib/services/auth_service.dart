@@ -12,7 +12,8 @@ final currentUserProvider = StreamProvider<User?>((ref) {
 });
 
 final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
-  final user = Supabase.instance.client.auth.currentUser;
+  final userAsync = ref.watch(currentUserProvider);
+  final user = userAsync.value;
   if (user == null) return null;
   try {
     final data = await supabase

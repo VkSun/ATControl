@@ -9,6 +9,7 @@ import '../../services/vehicle_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
+import '../../utils/permissions.dart';
 
 enum DriverSort { fullName, licenseExpiry, medicalExpiry, birthDate }
 
@@ -82,6 +83,7 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final perms = ref.watch(permissionsProvider);
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -93,21 +95,21 @@ class _TopBar extends StatelessWidget {
         children: [
           Text('Водители', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(width: 12),
-          FilledButton.icon(
-            onPressed: () => showDialog(
-              context: context,
-              builder: (_) => DriverEditDialog(
-                onSaved: () => ref.invalidate(driversProvider),
+          if (perms.canAddDriver)
+            FilledButton.icon(
+              onPressed: () => showDialog(
+                context: context,
+                builder: (_) => DriverEditDialog(
+                  onSaved: () => ref.invalidate(driversProvider),
+                ),
+              ),
+              icon: const Icon(Icons.add, size: 14),
+              label: const Text('Добавить', style: TextStyle(fontSize: 12)),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                minimumSize: Size.zero,
               ),
             ),
-            icon: const Icon(Icons.add, size: 14),
-            label: const Text('Добавить', style: TextStyle(fontSize: 12)),
-            style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            minimumSize: Size.zero,
-            textStyle: const TextStyle(fontSize: 13),
-          ),
-          ),
           const Spacer(),
           const Icon(Icons.notifications_outlined, size: 20),
           const SizedBox(width: 12),
@@ -118,16 +120,11 @@ class _TopBar extends StatelessWidget {
               final color = profileAsync.value?.avatarColor ?? '#4361EE';
               final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
               return GestureDetector(
-                onTap: () => showDialog(
-                context: context,
-                builder: (_) => const ProfileDialog(),
-              ),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: avatarColor,
-                child: Text(initials,
-                  style: const TextStyle(fontSize: 11, color: Colors.white)),
-                ),
+                onTap: () => showDialog(context: context,
+                  builder: (_) => const ProfileDialog()),
+                child: CircleAvatar(radius: 16, backgroundColor: avatarColor,
+                  child: Text(initials,
+                    style: const TextStyle(fontSize: 11, color: Colors.white))),
               );
             },
           ),
@@ -246,34 +243,37 @@ class _DriverTable extends StatelessWidget {
           child: ListView.builder(
             itemCount: drivers.length,
             itemBuilder: (context, i) {
-              final d = drivers[i];
-              return InkWell(
-                onTap: () => _openEdit(context, d),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(width: 200, child: Text(d.fullName, style: const TextStyle(fontSize: 12))),
-                      SizedBox(width: 90, child: Text(d.tabNumber, style: const TextStyle(fontSize: 12))),
-                      SizedBox(width: 90, child: _VehicleCell(vehicleId: d.vehicleId, ref: ref)),
-                      SizedBox(width: 140, child: _DateCell(date: d.licenseExpiry, fmt: fmt, colors: colors)),
-                      SizedBox(width: 120, child: _DateCell(date: d.medicalExpiry, fmt: fmt, colors: colors)),
-                      SizedBox(width: 120, child: Text(d.birthDate != null ? fmt.format(d.birthDate!) : '—', style: const TextStyle(fontSize: 12))),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 16),
-                        onPressed: () => _openEdit(context, d),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+  final d = drivers[i];
+  final perms = ref.watch(permissionsProvider);
+  return InkWell(
+    onTap: perms.canEditDriver ? () => _openEdit(context, d) : null,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(width: 200, child: Text(d.fullName, style: const TextStyle(fontSize: 12))),
+          SizedBox(width: 90, child: Text(d.tabNumber, style: const TextStyle(fontSize: 12))),
+          SizedBox(width: 90, child: _VehicleCell(vehicleId: d.vehicleId, ref: ref)),
+          SizedBox(width: 140, child: _DateCell(date: d.licenseExpiry, fmt: fmt, colors: colors)),
+          SizedBox(width: 120, child: _DateCell(date: d.medicalExpiry, fmt: fmt, colors: colors)),
+          SizedBox(width: 120, child: Text(d.birthDate != null ? fmt.format(d.birthDate!) : '—',
+            style: const TextStyle(fontSize: 12))),
+          const Spacer(),
+          if (perms.canEditDriver)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              onPressed: () => _openEdit(context, d),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            ),
+        ],
+      ),
+    ),
+  );
+},
           ),
         ),
         Padding(

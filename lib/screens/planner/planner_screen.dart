@@ -12,6 +12,7 @@ import '../../utils/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
+import '../../utils/permissions.dart';
 
 final notesProvider = StateProvider<String>((ref) => '');
 
@@ -37,18 +38,52 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
   }
 
   Future<void> _loadNotes() async {
-    final data = await Supabase.instance.client
-        .from('notes').select().limit(1).single();
-    if (mounted) _notesCtrl.text = data['content'] ?? '';
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      final data = await Supabase.instance.client
+          .from('notes')
+          .select()
+          .eq('user_id', userId)
+          .limit(1)
+          .single();
+      if (mounted) _notesCtrl.text = data['content'] ?? '';
+    } catch (_) {
+      // Заметки ещё не созданы для этого пользователя
+      if (mounted) _notesCtrl.text = '';
+    }
   }
 
   Future<void> _saveNotes() async {
     setState(() => _notesSaving = true);
-    final data = await Supabase.instance.client
-        .from('notes').select().limit(1).single();
-    await Supabase.instance.client
-        .from('notes').update({'content': _notesCtrl.text}).eq('id', data['id']);
-    if (mounted) setState(() => _notesSaving = false);
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      final existing = await Supabase.instance.client
+          .from('notes')
+          .select()
+          .eq('user_id', userId)
+          .limit(1);
+
+      if ((existing as List).isEmpty) {
+        await Supabase.instance.client.from('notes').insert({
+          'content': _notesCtrl.text,
+          'user_id': userId,
+        });
+      } else {
+        await Supabase.instance.client
+            .from('notes')
+            .update({'content': _notesCtrl.text}).eq('user_id', userId);
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
+    } finally {
+      if (mounted) setState(() => _notesSaving = false);
+    }
   }
 
   Future<void> _syncExpiryTasks() async {
@@ -65,11 +100,14 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
           if (diff <= 30) {
             items.add({
               'title': '$type — ${v.brandModel} (${v.govNumber})',
-              'date': date, 'diff': diff,
-              'vehicle_id': v.id, 'driver_id': null,
+              'date': date,
+              'diff': diff,
+              'vehicle_id': v.id,
+              'driver_id': null,
             });
           }
         }
+
         check(v.inspectionDate, 'Техосмотр');
         check(v.insuranceDate, 'Страховка');
         check(v.specialPermitDate, 'Спец. разрешение');
@@ -83,11 +121,14 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
           if (diff <= 30) {
             items.add({
               'title': '$type — ${d.fullName}',
-              'date': date, 'diff': diff,
-              'vehicle_id': null, 'driver_id': d.id,
+              'date': date,
+              'diff': diff,
+              'vehicle_id': null,
+              'driver_id': d.id,
             });
           }
         }
+
         check(d.licenseExpiry, 'Вод. удостоверение');
         check(d.medicalExpiry, 'Мед. справка');
       }
@@ -133,9 +174,11 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                       border: Border.all(color: colors.tableBorder, width: 0.5),
                     ),
                     child: tasksAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(child: Text('Ошибка: $e')),
-                      data: (tasks) => _TaskList(tasks: tasks, colors: colors, ref: ref),
+                      data: (tasks) =>
+                          _TaskList(tasks: tasks, colors: colors, ref: ref),
                     ),
                   ),
                 ),
@@ -148,7 +191,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colors.tableBorder, width: 0.5),
+                          border:
+                              Border.all(color: colors.tableBorder, width: 0.5),
                         ),
                         padding: const EdgeInsets.all(14),
                         child: Column(
@@ -157,17 +201,24 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                             Row(
                               children: [
                                 Text('Быстрые заметки',
-                                    style: Theme.of(context).textTheme.titleMedium),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium),
                                 const Spacer(),
                                 if (_notesSaving)
-                                  const SizedBox(width: 14, height: 14,
-                                      child: CircularProgressIndicator(strokeWidth: 2))
+                                  const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
                                 else
                                   IconButton(
-                                    icon: const Icon(Icons.save_outlined, size: 16),
+                                    icon: const Icon(Icons.save_outlined,
+                                        size: 16),
                                     onPressed: _saveNotes,
                                     padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 28, minHeight: 28),
                                     tooltip: 'Сохранить',
                                   ),
                               ],
@@ -180,7 +231,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                                 hintText: 'Введите заметку...',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: colors.tableBorder),
+                                  borderSide:
+                                      BorderSide(color: colors.tableBorder),
                                 ),
                                 contentPadding: const EdgeInsets.all(10),
                               ),
@@ -193,7 +245,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colors.tableBorder, width: 0.5),
+                          border:
+                              Border.all(color: colors.tableBorder, width: 0.5),
                         ),
                         padding: const EdgeInsets.all(14),
                         child: tasksAsync.when(
@@ -203,7 +256,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                             month: _calendarMonth,
                             tasks: tasks,
                             colors: colors,
-                            onMonthChanged: (m) => setState(() => _calendarMonth = m),
+                            onMonthChanged: (m) =>
+                                setState(() => _calendarMonth = m),
                           ),
                         ),
                       ),
@@ -221,7 +275,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
   void _openAddTask(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => _AddTaskDialog(onSaved: () => ref.invalidate(tasksProvider)),
+      builder: (_) =>
+          _AddTaskDialog(onSaved: () => ref.invalidate(tasksProvider)),
     );
   }
 }
@@ -241,66 +296,79 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Text('Планировщик', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(width: 12),
-          FilledButton.icon(
-            onPressed: onAddTask,
-            icon: const Icon(Icons.add, size: 14),
-            label: const Text('Добавить задачу', style: TextStyle(fontSize: 12)),
-            style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            minimumSize: Size.zero,
-            textStyle: const TextStyle(fontSize: 13),
+    return Consumer(
+      builder: (context, ref, _) {
+        final perms = ref.watch(permissionsProvider);
+        return Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            border: Border(
+                bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
           ),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton.icon(
-            onPressed: syncing ? null : onSync,
-            icon: syncing
-                ? const SizedBox(width: 12, height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 1.5))
-                : const Icon(Icons.sync, size: 14),
-            label: const Text('Обновить сроки', style: TextStyle(fontSize: 12)),
-            style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            minimumSize: Size.zero,
-            textStyle: const TextStyle(fontSize: 13),
-          ),
-          ),
-          const Spacer(),
-          const Icon(Icons.notifications_outlined, size: 20),
-          const SizedBox(width: 12),
-          Consumer(
-            builder: (context, ref, _) {
-              final profileAsync = ref.watch(profileProvider);
-              final initials = profileAsync.value?.initials ?? 'АИ';
-              final color = profileAsync.value?.avatarColor ?? '#4361EE';
-              final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
-              return GestureDetector(
-                onTap: () => showDialog(
-                  context: context,
-                  builder: (_) => const ProfileDialog(),
+          child: Row(
+            children: [
+              Text('Планировщик',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(width: 12),
+              if (perms.canAddTask)
+                FilledButton.icon(
+                  onPressed: onAddTask,
+                  icon: const Icon(Icons.add, size: 14),
+                  label: const Text('Добавить задачу',
+                      style: TextStyle(fontSize: 12)),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    minimumSize: Size.zero,
+                  ),
                 ),
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: avatarColor,
-                  child: Text(initials,
-                    style: const TextStyle(fontSize: 11, color: Colors.white)),
+              const SizedBox(width: 8),
+              if (perms.isAdmin)
+                OutlinedButton.icon(
+                  onPressed: syncing ? null : onSync,
+                  icon: syncing
+                      ? const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(strokeWidth: 1.5))
+                      : const Icon(Icons.sync, size: 14),
+                  label: const Text('Обновить сроки',
+                      style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    minimumSize: Size.zero,
+                  ),
                 ),
-              );
-            },
+              const Spacer(),
+              const Icon(Icons.notifications_outlined, size: 20),
+              const SizedBox(width: 12),
+              Consumer(
+                builder: (context, ref, _) {
+                  final profileAsync = ref.watch(profileProvider);
+                  final initials = profileAsync.value?.initials ?? 'АИ';
+                  final color = profileAsync.value?.avatarColor ?? '#4361EE';
+                  final avatarColor =
+                      Color(int.parse(color.replaceFirst('#', '0xFF')));
+                  return GestureDetector(
+                    onTap: () => showDialog(
+                        context: context,
+                        builder: (_) => const ProfileDialog()),
+                    child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: avatarColor,
+                        child: Text(initials,
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.white))),
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -310,7 +378,8 @@ class _TaskList extends StatelessWidget {
   final AppColors colors;
   final WidgetRef ref;
 
-  const _TaskList({required this.tasks, required this.colors, required this.ref});
+  const _TaskList(
+      {required this.tasks, required this.colors, required this.ref});
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +401,8 @@ class _TaskList extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.all(14),
-          child: Text('Список задач', style: Theme.of(context).textTheme.titleMedium),
+          child: Text('Список задач',
+              style: Theme.of(context).textTheme.titleMedium),
         ),
         Expanded(
           child: ListView(
@@ -345,9 +415,12 @@ class _TaskList extends StatelessWidget {
               } else {
                 final d = DateTime.parse(dateKey);
                 final diff = d.difference(today).inDays;
-                if (dateKey == todayStr) label = 'Сегодня, ${fmt.format(d)}';
-                else if (diff == 1) label = 'Завтра, ${fmt.format(d)}';
-                else label = fmt.format(d);
+                if (dateKey == todayStr)
+                  label = 'Сегодня, ${fmt.format(d)}';
+                else if (diff == 1)
+                  label = 'Завтра, ${fmt.format(d)}';
+                else
+                  label = fmt.format(d);
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,10 +428,14 @@ class _TaskList extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(label,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500,
-                          color: colors.badgeAmberText, letterSpacing: 0.3)),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: colors.badgeAmberText,
+                            letterSpacing: 0.3)),
                   ),
-                  ...dateTasks.map((t) => _TaskRow(task: t, colors: colors, ref: ref)),
+                  ...dateTasks
+                      .map((t) => _TaskRow(task: t, colors: colors, ref: ref)),
                 ],
               );
             }).toList(),
@@ -389,7 +466,8 @@ class _TaskRow extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE24B4A)),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFE24B4A)),
             child: const Text('Удалить'),
           ),
         ],
@@ -418,7 +496,8 @@ class _TaskRow extends StatelessWidget {
   void _openExpiryEdit(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => _ExpiryEditDialog(task: task, onSaved: () => ref.invalidate(tasksProvider)),
+      builder: (_) => _ExpiryEditDialog(
+          task: task, onSaved: () => ref.invalidate(tasksProvider)),
     );
   }
 
@@ -427,70 +506,96 @@ class _TaskRow extends StatelessWidget {
     final isExpiry = task.type == 'expiry';
     final isHighPriority = task.priority == 'high';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isHighPriority && isExpiry ? colors.badgeRed : colors.tableBorder,
-          width: isHighPriority && isExpiry ? 1 : 0.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          if (!isExpiry)
-            GestureDetector(
-              onTap: () async {
-                await ref.read(taskServiceProvider).toggleComplete(task.id, !task.isCompleted);
-                ref.invalidate(tasksProvider);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 16, height: 16,
-                decoration: BoxDecoration(
-                  color: task.isCompleted ? const Color(0xFF4361EE) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: task.isCompleted ? const Color(0xFF4361EE) : colors.tableBorder,
-                    width: 1.5,
-                  ),
-                ),
-                child: task.isCompleted
-                    ? const Icon(Icons.check, size: 10, color: Colors.white)
-                    : null,
-              ),
-            )
-          else
-            Icon(Icons.warning_amber_rounded, size: 16,
-              color: isHighPriority ? colors.badgeRedText : colors.badgeAmberText),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _openEdit(context),
-              child: Text(task.title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isExpiry
-                      ? (isHighPriority ? colors.badgeRedText : colors.badgeAmberText)
-                      : Theme.of(context).textTheme.bodyMedium!.color,
-                  decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                ),
-              ),
+    return Consumer(
+      builder: (context, ref, _) {
+        final perms = ref.watch(permissionsProvider);
+        return Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isHighPriority && isExpiry
+                  ? colors.badgeRed
+                  : colors.tableBorder,
+              width: isHighPriority && isExpiry ? 1 : 0.5,
             ),
           ),
-          if (task.dueTime != null)
-            Text(task.dueTime!.substring(0, 5),
-              style: TextStyle(fontSize: 10, color: colors.badgeAmberText)),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => _confirmDelete(context),
-            child: Icon(Icons.close, size: 14,
-              color: Theme.of(context).textTheme.bodySmall!.color),
+          child: Row(
+            children: [
+              if (!isExpiry && perms.canCompleteTask)
+                GestureDetector(
+                  onTap: () async {
+                    await ref
+                        .read(taskServiceProvider)
+                        .toggleComplete(task.id, !task.isCompleted);
+                    ref.invalidate(tasksProvider);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: task.isCompleted
+                          ? const Color(0xFF4361EE)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: task.isCompleted
+                            ? const Color(0xFF4361EE)
+                            : colors.tableBorder,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: task.isCompleted
+                        ? const Icon(Icons.check, size: 10, color: Colors.white)
+                        : null,
+                  ),
+                )
+              else if (!isExpiry)
+                const SizedBox(width: 16, height: 16)
+              else
+                Icon(Icons.warning_amber_rounded,
+                    size: 16,
+                    color: isHighPriority
+                        ? colors.badgeRedText
+                        : colors.badgeAmberText),
+              const SizedBox(width: 10),
+              Expanded(
+                child: GestureDetector(
+                  onTap: perms.canEdit ? () => _openEdit(context) : null,
+                  child: Text(
+                    task.title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isExpiry
+                          ? (isHighPriority
+                              ? colors.badgeRedText
+                              : colors.badgeAmberText)
+                          : Theme.of(context).textTheme.bodyMedium!.color,
+                      decoration:
+                          task.isCompleted ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                ),
+              ),
+              if (task.dueTime != null)
+                Text(task.dueTime!.substring(0, 5),
+                    style:
+                        TextStyle(fontSize: 10, color: colors.badgeAmberText)),
+              const SizedBox(width: 8),
+              if (perms.canDeleteTask)
+                GestureDetector(
+                  onTap: () => _confirmDelete(context),
+                  child: Icon(Icons.close,
+                      size: 14,
+                      color: Theme.of(context).textTheme.bodySmall!.color),
+                ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -523,45 +628,86 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
       // Обновляем дату в соответствующей таблице
       if (widget.task.vehicleId != null) {
         final vehicles = await ref.read(vehicleServiceProvider).getAll();
-        final v = vehicles.where((v) => v.id == widget.task.vehicleId).firstOrNull;
+        final v =
+            vehicles.where((v) => v.id == widget.task.vehicleId).firstOrNull;
         if (v != null) {
           Vehicle updated;
           if (taskTitle.startsWith('Техосмотр')) {
-            updated = Vehicle(id: v.id, invNumber: v.invNumber, brand: v.brand,
-              model: v.model, govNumber: v.govNumber, year: v.year,
-              inspectionDate: _newDate, insuranceDate: v.insuranceDate,
-              specialPermitDate: v.specialPermitDate, notes: v.notes);
+            updated = Vehicle(
+                id: v.id,
+                invNumber: v.invNumber,
+                brand: v.brand,
+                model: v.model,
+                govNumber: v.govNumber,
+                year: v.year,
+                inspectionDate: _newDate,
+                insuranceDate: v.insuranceDate,
+                specialPermitDate: v.specialPermitDate,
+                notes: v.notes);
           } else if (taskTitle.startsWith('Страховка')) {
-            updated = Vehicle(id: v.id, invNumber: v.invNumber, brand: v.brand,
-              model: v.model, govNumber: v.govNumber, year: v.year,
-              inspectionDate: v.inspectionDate, insuranceDate: _newDate,
-              specialPermitDate: v.specialPermitDate, notes: v.notes);
+            updated = Vehicle(
+                id: v.id,
+                invNumber: v.invNumber,
+                brand: v.brand,
+                model: v.model,
+                govNumber: v.govNumber,
+                year: v.year,
+                inspectionDate: v.inspectionDate,
+                insuranceDate: _newDate,
+                specialPermitDate: v.specialPermitDate,
+                notes: v.notes);
           } else {
-            updated = Vehicle(id: v.id, invNumber: v.invNumber, brand: v.brand,
-              model: v.model, govNumber: v.govNumber, year: v.year,
-              inspectionDate: v.inspectionDate, insuranceDate: v.insuranceDate,
-              specialPermitDate: _newDate, notes: v.notes);
+            updated = Vehicle(
+                id: v.id,
+                invNumber: v.invNumber,
+                brand: v.brand,
+                model: v.model,
+                govNumber: v.govNumber,
+                year: v.year,
+                inspectionDate: v.inspectionDate,
+                insuranceDate: v.insuranceDate,
+                specialPermitDate: _newDate,
+                notes: v.notes);
           }
           await ref.read(vehicleServiceProvider).update(v.id, updated);
           ref.invalidate(vehiclesProvider);
         }
       } else if (widget.task.driverId != null) {
         final drivers = await ref.read(driverServiceProvider).getAll();
-        final d = drivers.where((d) => d.id == widget.task.driverId).firstOrNull;
+        final d =
+            drivers.where((d) => d.id == widget.task.driverId).firstOrNull;
         if (d != null) {
           Driver updated;
           if (taskTitle.startsWith('Вод.')) {
-            updated = Driver(id: d.id, tabNumber: d.tabNumber, lastName: d.lastName,
-              firstName: d.firstName, middleName: d.middleName, birthDate: d.birthDate,
-              phone: d.phone, licenseNumber: d.licenseNumber,
-              licenseCategories: d.licenseCategories, licenseExpiry: _newDate,
-              medicalExpiry: d.medicalExpiry, vehicleId: d.vehicleId, notes: d.notes);
+            updated = Driver(
+                id: d.id,
+                tabNumber: d.tabNumber,
+                lastName: d.lastName,
+                firstName: d.firstName,
+                middleName: d.middleName,
+                birthDate: d.birthDate,
+                phone: d.phone,
+                licenseNumber: d.licenseNumber,
+                licenseCategories: d.licenseCategories,
+                licenseExpiry: _newDate,
+                medicalExpiry: d.medicalExpiry,
+                vehicleId: d.vehicleId,
+                notes: d.notes);
           } else {
-            updated = Driver(id: d.id, tabNumber: d.tabNumber, lastName: d.lastName,
-              firstName: d.firstName, middleName: d.middleName, birthDate: d.birthDate,
-              phone: d.phone, licenseNumber: d.licenseNumber,
-              licenseCategories: d.licenseCategories, licenseExpiry: d.licenseExpiry,
-              medicalExpiry: _newDate, vehicleId: d.vehicleId, notes: d.notes);
+            updated = Driver(
+                id: d.id,
+                tabNumber: d.tabNumber,
+                lastName: d.lastName,
+                firstName: d.firstName,
+                middleName: d.middleName,
+                birthDate: d.birthDate,
+                phone: d.phone,
+                licenseNumber: d.licenseNumber,
+                licenseCategories: d.licenseCategories,
+                licenseExpiry: d.licenseExpiry,
+                medicalExpiry: _newDate,
+                vehicleId: d.vehicleId,
+                notes: d.notes);
           }
           await ref.read(driverServiceProvider).update(d.id, updated);
           ref.invalidate(driversProvider);
@@ -571,8 +717,9 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -581,7 +728,7 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
   @override
   Widget build(BuildContext context) {
     final dateStr = _newDate != null
-        ? '${_newDate!.day.toString().padLeft(2,'0')}.${_newDate!.month.toString().padLeft(2,'0')}.${_newDate!.year}'
+        ? '${_newDate!.day.toString().padLeft(2, '0')}.${_newDate!.month.toString().padLeft(2, '0')}.${_newDate!.year}'
         : 'Не указана';
 
     return AlertDialog(
@@ -593,10 +740,11 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.task.title,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             const SizedBox(height: 16),
             const Text('Новая дата окончания срока:',
-              style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
+                style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -626,7 +774,9 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
         FilledButton(
           onPressed: _loading ? null : _save,
           child: _loading
-              ? const SizedBox(width: 16, height: 16,
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('Сохранить'),
         ),
@@ -642,8 +792,10 @@ class _MiniCalendar extends StatelessWidget {
   final ValueChanged<DateTime> onMonthChanged;
 
   const _MiniCalendar({
-    required this.month, required this.tasks,
-    required this.colors, required this.onMonthChanged,
+    required this.month,
+    required this.tasks,
+    required this.colors,
+    required this.onMonthChanged,
   });
 
   @override
@@ -669,18 +821,21 @@ class _MiniCalendar extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.chevron_left, size: 16),
-              onPressed: () => onMonthChanged(DateTime(month.year, month.month - 1)),
+              onPressed: () =>
+                  onMonthChanged(DateTime(month.year, month.month - 1)),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
             ),
             Expanded(
               child: Text(fmt.format(month),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w500)),
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right, size: 16),
-              onPressed: () => onMonthChanged(DateTime(month.year, month.month + 1)),
+              onPressed: () =>
+                  onMonthChanged(DateTime(month.year, month.month + 1)),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
             ),
@@ -688,46 +843,57 @@ class _MiniCalendar extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Row(
-          children: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map((d) =>
-            Expanded(child: Text(d, textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500,
-                  color: Color(0xFF888888))))
-          ).toList(),
+          children: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+              .map((d) => Expanded(
+                  child: Text(d,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF888888)))))
+              .toList(),
         ),
         const SizedBox(height: 4),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7, mainAxisSpacing: 2,
-            crossAxisSpacing: 2, childAspectRatio: 1.2,
+            crossAxisCount: 7,
+            mainAxisSpacing: 2,
+            crossAxisSpacing: 2,
+            childAspectRatio: 1.2,
           ),
           itemCount: startWeekday + daysInMonth,
           itemBuilder: (context, i) {
             if (i < startWeekday) return const SizedBox();
             final day = i - startWeekday + 1;
             final isToday = today.year == month.year &&
-                today.month == month.month && today.day == day;
+                today.month == month.month &&
+                today.day == day;
             final hasTask = taskDays.contains(day);
             return Stack(
               alignment: Alignment.center,
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: isToday ? const Color(0xFF4361EE) : Colors.transparent,
+                    color:
+                        isToday ? const Color(0xFF4361EE) : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text('$day',
-                    style: TextStyle(fontSize: 11,
-                      color: isToday ? Colors.white
-                          : Theme.of(context).textTheme.bodyMedium!.color)),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: isToday
+                              ? Colors.white
+                              : Theme.of(context).textTheme.bodyMedium!.color)),
                 ),
                 if (hasTask && !isToday)
                   Positioned(
                     bottom: 2,
                     child: Container(
-                      width: 4, height: 4,
+                      width: 4,
+                      height: 4,
                       decoration: BoxDecoration(
                           color: colors.badgeRedText, shape: BoxShape.circle),
                     ),
@@ -788,13 +954,16 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
         await ref.read(taskServiceProvider).create(task);
       } else {
         await Supabase.instance.client
-            .from('tasks').update(task.toJson()).eq('id', task.id);
+            .from('tasks')
+            .update(task.toJson())
+            .eq('id', task.id);
       }
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -828,7 +997,8 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
                       final d = await showDatePicker(
                         context: context,
                         initialDate: _dueDate ?? DateTime.now(),
-                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        firstDate:
+                            DateTime.now().subtract(const Duration(days: 365)),
                         lastDate: DateTime(2035),
                       );
                       if (d != null) setState(() => _dueDate = d);
@@ -836,7 +1006,7 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
                     icon: const Icon(Icons.calendar_today, size: 14),
                     label: Text(
                       _dueDate != null
-                          ? '${_dueDate!.day.toString().padLeft(2,'0')}.${_dueDate!.month.toString().padLeft(2,'0')}.${_dueDate!.year}'
+                          ? '${_dueDate!.day.toString().padLeft(2, '0')}.${_dueDate!.month.toString().padLeft(2, '0')}.${_dueDate!.year}'
                           : 'Дата',
                       style: const TextStyle(fontSize: 12),
                     ),
@@ -862,13 +1032,16 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
                 const SizedBox(width: 12),
                 SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: 'normal',
+                    ButtonSegment(
+                        value: 'normal',
                         label: Text('Обычный', style: TextStyle(fontSize: 11))),
-                    ButtonSegment(value: 'high',
+                    ButtonSegment(
+                        value: 'high',
                         label: Text('Высокий', style: TextStyle(fontSize: 11))),
                   ],
                   selected: {_priority},
-                  onSelectionChanged: (s) => setState(() => _priority = s.first),
+                  onSelectionChanged: (s) =>
+                      setState(() => _priority = s.first),
                   style: ButtonStyle(
                     minimumSize: WidgetStateProperty.all(const Size(0, 32)),
                   ),
@@ -886,7 +1059,9 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
         FilledButton(
           onPressed: _loading ? null : _save,
           child: _loading
-              ? const SizedBox(width: 16, height: 16,
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))
               : Text(isEdit ? 'Сохранить' : 'Добавить'),
         ),

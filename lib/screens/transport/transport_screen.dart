@@ -8,6 +8,7 @@ import 'vehicle_edit_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
+import '../../utils/permissions.dart';
 
 enum VehicleSort { invNumber, brand, govNumber }
 
@@ -83,6 +84,8 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final perms = ref.watch(permissionsProvider);
+
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -94,20 +97,21 @@ class _TopBar extends StatelessWidget {
         children: [
           Text('Транспорт', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(width: 12),
-          FilledButton.icon(
-            onPressed: () => showDialog(
-              context: context,
-              builder: (_) => VehicleEditDialog(
-                onSaved: () => ref.invalidate(vehiclesProvider),
+          if (perms.canAddVehicle)
+            FilledButton.icon(
+              onPressed: () => showDialog(
+                context: context,
+                builder: (_) => VehicleEditDialog(
+                  onSaved: () => ref.invalidate(vehiclesProvider),
+                ),
+              ),
+              icon: const Icon(Icons.add, size: 14),
+              label: const Text('Добавить', style: TextStyle(fontSize: 12)),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                minimumSize: Size.zero,
               ),
             ),
-            icon: const Icon(Icons.add, size: 14),
-            label: const Text('Добавить', style: TextStyle(fontSize: 12)),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              minimumSize: Size.zero,
-            ),
-          ),
           const Spacer(),
           const Icon(Icons.notifications_outlined, size: 20),
           const SizedBox(width: 12),
@@ -116,7 +120,8 @@ class _TopBar extends StatelessWidget {
               final profileAsync = ref.watch(profileProvider);
               final initials = profileAsync.value?.initials ?? 'АИ';
               final color = profileAsync.value?.avatarColor ?? '#4361EE';
-              final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
+              final avatarColor = Color(int.parse(
+                  color.replaceFirst('#', '0xFF')));
               return GestureDetector(
                 onTap: () => showDialog(
                   context: context,
@@ -259,10 +264,12 @@ class _VehicleTable extends StatelessWidget {
             itemCount: vehicles.length,
             itemBuilder: (context, i) {
               final v = vehicles[i];
+              final perms = ref.watch(permissionsProvider);
               return _VehicleRow(
                 vehicle: v,
                 colors: colors,
                 fmt: fmt,
+                canEdit: perms.canEditVehicle,
                 onEdit: () => _openEdit(context, v),
               );
             },
@@ -305,18 +312,20 @@ class _VehicleRow extends StatelessWidget {
   final AppColors colors;
   final DateFormat fmt;
   final VoidCallback onEdit;
+  final bool canEdit;
 
   const _VehicleRow({
     required this.vehicle,
     required this.colors,
     required this.fmt,
     required this.onEdit,
+    required this.canEdit,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onEdit,
+      onTap: canEdit ? onEdit : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
@@ -336,7 +345,6 @@ class _VehicleRow extends StatelessWidget {
               child: _DateCell(date: vehicle.insuranceDate, fmt: fmt, colors: colors)),
             SizedBox(width: 100,
               child: _DateCell(date: vehicle.specialPermitDate, fmt: fmt, colors: colors)),
-            // ТО автомобиля
             SizedBox(width: 140,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,7 +357,6 @@ class _VehicleRow extends StatelessWidget {
                 ],
               ),
             ),
-            // ТО оборудования
             SizedBox(width: 140,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,12 +370,13 @@ class _VehicleRow extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 16),
-              onPressed: onEdit,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            ),
+            if (canEdit)
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                onPressed: onEdit,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
           ],
         ),
       ),
