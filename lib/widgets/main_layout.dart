@@ -11,6 +11,7 @@ import '../models/profile.dart';
 import '../screens/profile/profile_dialog.dart';
 import '../services/vehicle_service.dart';
 import '../services/driver_service.dart';
+import '../services/auth_service.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
 
@@ -283,13 +284,17 @@ class _SidebarNav extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pendingCount = ref.watch(pendingCountProvider).value ?? 0;
 
-    final items = [
-      const _NavItem('Главная', '/', Icons.home_outlined),
-      const _NavItem('Транспорт', '/transport', Icons.directions_car_outlined),
-      const _NavItem('Водители', '/drivers', Icons.people_outlined),
-      _NavItem('Планировщик', '/planner', Icons.calendar_month_outlined, badge: pendingCount),
-      const _NavItem('Настройки', '/settings', Icons.settings_outlined),
-    ];
+    final userRole = ref.watch(currentUserRoleProvider).value;
+   
+final items = [
+  const _NavItem('Главная', '/', Icons.home_outlined),
+  const _NavItem('Транспорт', '/transport', Icons.directions_car_outlined),
+  const _NavItem('Водители', '/drivers', Icons.people_outlined),
+  _NavItem('Планировщик', '/planner', Icons.calendar_month_outlined, badge: pendingCount),
+  if (userRole?.isAdmin == true)
+    const _NavItem('Пользователи', '/users', Icons.manage_accounts_outlined),
+  const _NavItem('Настройки', '/settings', Icons.settings_outlined),
+];
 
     return ListView(
       padding: const EdgeInsets.all(8),

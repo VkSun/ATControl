@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/profile.dart';
 import '../../services/profile_service.dart';
+import 'package:go_router/go_router.dart';
+import '../../services/auth_service.dart';
 
 class ProfileDialog extends ConsumerStatefulWidget {
   const ProfileDialog({super.key});
@@ -154,6 +156,16 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
         ),
       ),
       actions: [
+        TextButton(
+  onPressed: () async {
+    Navigator.pop(context);
+    await ref.read(authServiceProvider).signOut();
+  },
+  style: TextButton.styleFrom(
+      foregroundColor: const Color(0xFFE24B4A)),
+  child: const Text('Выйти из системы'),
+),
+const Spacer(),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Отмена'),
