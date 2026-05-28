@@ -21,7 +21,7 @@ class TaskService {
     final data = await supabase
         .from(_table)
         .select()
-        .or('type.eq.expiry,user_id.eq.${_userId}')
+        .or('type.eq.expiry,user_id.eq.$_userId')
         .order('due_date')
         .order('due_time');
     return (data as List).map((e) => Task.fromJson(e)).toList();
@@ -32,7 +32,7 @@ class TaskService {
     final data = await supabase
         .from(_table)
         .select()
-        .or('type.eq.expiry,user_id.eq.${_userId}')
+        .or('type.eq.expiry,user_id.eq.$_userId')
         .eq('due_date', today)
         .order('due_time');
     return (data as List).map((e) => Task.fromJson(e)).toList();
@@ -45,7 +45,7 @@ class TaskService {
     final data = await supabase
         .from(_table)
         .select()
-        .or('type.eq.expiry,user_id.eq.${_userId}')
+        .or('type.eq.expiry,user_id.eq.$_userId')
         .inFilter('due_date', [today, tomorrow])
         .order('due_date')
         .order('due_time');
@@ -72,7 +72,7 @@ class TaskService {
     final data = await supabase
         .from(_table)
         .select()
-        .or('type.eq.expiry,user_id.eq.${_userId}')
+        .or('type.eq.expiry,user_id.eq.$_userId')
         .eq('is_completed', false)
         .lte('due_date', today);
     return (data as List).length;

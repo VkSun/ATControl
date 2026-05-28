@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_role.dart';
@@ -86,19 +87,20 @@ class AuthService {
 
   // Активация кода приглашения
   Future<InvitationCode> validateInvitationCode(String code) async {
+    final List data;
     try {
-      final data = await supabase
+      data = await supabase
           .from('invitation_codes')
           .select()
           .eq('code', code.toUpperCase())
-          .eq('is_used', false)
-          .single();
-      final invitation = InvitationCode.fromJson(data);
-      if (invitation.isExpired) throw Exception('Код приглашения истёк');
-      return invitation;
-    } catch (e) {
+          .eq('is_used', false);
+    } catch (_) {
       throw Exception('Код приглашения недействителен');
     }
+    if (data.isEmpty) throw Exception('Код приглашения недействителен');
+    final invitation = InvitationCode.fromJson(data.first as Map<String, dynamic>);
+    if (invitation.isExpired) throw Exception('Код приглашения истёк');
+    return invitation;
   }
 
   // Регистрация пользователя по коду приглашения
@@ -174,10 +176,8 @@ class AuthService {
 
   String _generateCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final random = List.generate(12, (i) {
-      final idx = DateTime.now().microsecondsSinceEpoch % chars.length;
-      return chars[(idx + i * 7) % chars.length];
-    }).join();
+    final rng = Random.secure();
+    final random = List.generate(12, (_) => chars[rng.nextInt(chars.length)]).join();
     return '${random.substring(0, 4)}-${random.substring(4, 8)}-${random.substring(8, 12)}';
   }
 

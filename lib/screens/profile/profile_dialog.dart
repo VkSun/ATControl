@@ -70,8 +70,10 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
       ref.invalidate(profileProvider);
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Ошибка: $e')));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

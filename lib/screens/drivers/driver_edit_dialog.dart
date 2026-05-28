@@ -44,7 +44,9 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
   @override
   void dispose() {
     for (final c in [_tabNumber, _lastName, _firstName, _middleName,
-      _phone, _licenseNumber, _licenseCategories, _notes]) c.dispose();
+      _phone, _licenseNumber, _licenseCategories, _notes]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -76,8 +78,10 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Ошибка: $e')));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -144,7 +148,7 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
                   error: (_, __) => const SizedBox(),
                   data: (vehicles) {
                     return DropdownButtonFormField<String?>(
-                      value: _selectedVehicleId,
+                      initialValue: _selectedVehicleId,
                       decoration: const InputDecoration(
                         labelText: 'Закреплённый автомобиль',
                         border: OutlineInputBorder(),

@@ -44,7 +44,9 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   @override
   void dispose() {
     for (final c in [_invNumber, _brand, _model, _govNumber, _year,
-      _notes, _toMileage, _equipmentType, _equipmentHours]) c.dispose();
+      _notes, _toMileage, _equipmentType, _equipmentHours]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -78,8 +80,10 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Ошибка: $e')));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

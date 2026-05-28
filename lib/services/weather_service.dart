@@ -29,8 +29,9 @@ class WeatherService {
 
     String icon;
     final code = int.parse(current['weatherCode']);
-    if (code == 113) icon = '☀';
-    else if (code == 116) icon = '⛅';
+    if (code == 113) {
+      icon = '☀';
+    } else if (code == 116) icon = '⛅';
     else if (code <= 122) icon = '☁';
     else if (code <= 185) icon = '🌦';
     else if (code <= 246) icon = '❄';

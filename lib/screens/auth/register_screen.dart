@@ -25,7 +25,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   void dispose() {
     for (final c in [_emailCtrl, _passwordCtrl, _confirmCtrl,
-      _fullNameCtrl, _positionCtrl]) c.dispose();
+      _fullNameCtrl, _positionCtrl]) {
+      c.dispose();
+    }
     super.dispose();
   }
 

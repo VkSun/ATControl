@@ -28,7 +28,7 @@ class SettingsScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(20),
             child: ListView(
               children: [
-                _SectionLabel('Уведомления'),
+                const _SectionLabel('Уведомления'),
                 _ToggleSetting(
                   label: 'Уведомления за 30 дней',
                   desc: 'Предупреждения за 30 дней до истечения срока',
@@ -52,7 +52,7 @@ class SettingsScreen extends ConsumerWidget {
                   onChanged: (v) => ref.read(notifyDay7Provider.notifier).state = v,
                   colors: colors,
                 ),
-                _SectionLabel('Внешний вид'),
+                const _SectionLabel('Внешний вид'),
                 _SelectSetting(
                   label: 'Тема оформления',
                   value: ref.watch(themeModeProvider) == ThemeMode.light ? 'Светлая'
@@ -89,7 +89,7 @@ class SettingsScreen extends ConsumerWidget {
                   },
                   colors: colors,
                 ),
-                _SectionLabel('Данные'),
+                const _SectionLabel('Данные'),
                 _PathSetting(
                   label: 'Путь для импорта XLS',
                   desc: 'Папка для загрузки данных из Excel-файлов',
@@ -221,7 +221,7 @@ class _ToggleSetting extends StatelessWidget {
               ],
             ),
           ),
-          Switch(value: value, onChanged: onChanged, activeColor: const Color(0xFF4361EE)),
+          Switch(value: value, onChanged: onChanged, activeThumbColor: const Color(0xFF4361EE)),
         ],
       ),
     );

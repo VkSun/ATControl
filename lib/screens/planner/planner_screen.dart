@@ -78,9 +78,10 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
             .update({'content': _notesCtrl.text}).eq('user_id', userId);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
+      }
     } finally {
       if (mounted) setState(() => _notesSaving = false);
     }
@@ -415,9 +416,9 @@ class _TaskList extends StatelessWidget {
               } else {
                 final d = DateTime.parse(dateKey);
                 final diff = d.difference(today).inDays;
-                if (dateKey == todayStr)
+                if (dateKey == todayStr) {
                   label = 'Сегодня, ${fmt.format(d)}';
-                else if (diff == 1)
+                } else if (diff == 1)
                   label = 'Завтра, ${fmt.format(d)}';
                 else
                   label = fmt.format(d);
@@ -717,9 +718,10 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -961,9 +963,10 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
