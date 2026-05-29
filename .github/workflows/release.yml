@@ -9,7 +9,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - uses: subosito/flutter-action@v2
         with:
@@ -27,7 +27,7 @@ jobs:
           Copy-Item -Recurse "build\windows\x64\runner\Release" $name
           Compress-Archive -Path $name -DestinationPath "$name.zip"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: windows-build
           path: ATControl-${{ github.ref_name }}-windows.zip
@@ -35,9 +35,9 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4.7.0
         with:
           distribution: temurin
           java-version: '17'
@@ -56,7 +56,7 @@ jobs:
           mv build/app/outputs/flutter-apk/app-release.apk \
              ATControl-${{ github.ref_name }}-android.apk
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: android-build
           path: ATControl-${{ github.ref_name }}-android.apk
@@ -67,11 +67,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: windows-build
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: android-build
 
@@ -83,3 +83,4 @@ jobs:
           files: |
             ATControl-${{ github.ref_name }}-windows.zip
             ATControl-${{ github.ref_name }}-android.apk
+
