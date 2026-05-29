@@ -12,6 +12,7 @@ import '../../utils/theme.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
+import '../../utils/responsive.dart';
 
 final notesProvider = StateProvider<String>((ref) => '');
 
@@ -150,6 +151,11 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final tasksAsync = ref.watch(tasksProvider);
+    final mobile = isMobile(context);
+
+    if (mobile) {
+      return _buildMobile(context, colors, tasksAsync);
+    }
 
     return Column(
       children: [
@@ -174,11 +180,9 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                       border: Border.all(color: colors.tableBorder, width: 0.5),
                     ),
                     child: tasksAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
+                      loading: () => const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(child: Text('Ошибка: $e')),
-                      data: (tasks) =>
-                          _TaskList(tasks: tasks, colors: colors, ref: ref),
+                      data: (tasks) => _TaskList(tasks: tasks, colors: colors, ref: ref),
                     ),
                   ),
                 ),
@@ -191,8 +195,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: colors.tableBorder, width: 0.5),
+                          border: Border.all(color: colors.tableBorder, width: 0.5),
                         ),
                         padding: const EdgeInsets.all(14),
                         child: Column(
@@ -201,24 +204,18 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                             Row(
                               children: [
                                 Text('Быстрые заметки',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium),
+                                    style: Theme.of(context).textTheme.titleMedium),
                                 const Spacer(),
                                 if (_notesSaving)
                                   const SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2))
+                                      width: 14, height: 14,
+                                      child: CircularProgressIndicator(strokeWidth: 2))
                                 else
                                   IconButton(
-                                    icon: const Icon(Icons.save_outlined,
-                                        size: 16),
+                                    icon: const Icon(Icons.save_outlined, size: 16),
                                     onPressed: _saveNotes,
                                     padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(
-                                        minWidth: 28, minHeight: 28),
+                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                                     tooltip: 'Сохранить',
                                   ),
                               ],
@@ -231,8 +228,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                                 hintText: 'Введите заметку...',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide:
-                                      BorderSide(color: colors.tableBorder),
+                                  borderSide: BorderSide(color: colors.tableBorder),
                                 ),
                                 contentPadding: const EdgeInsets.all(10),
                               ),
@@ -245,8 +241,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: colors.tableBorder, width: 0.5),
+                          border: Border.all(color: colors.tableBorder, width: 0.5),
                         ),
                         padding: const EdgeInsets.all(14),
                         child: tasksAsync.when(
@@ -256,8 +251,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                             month: _calendarMonth,
                             tasks: tasks,
                             colors: colors,
-                            onMonthChanged: (m) =>
-                                setState(() => _calendarMonth = m),
+                            onMonthChanged: (m) => setState(() => _calendarMonth = m),
                           ),
                         ),
                       ),
@@ -269,6 +263,148 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMobile(BuildContext context, AppColors colors, AsyncValue<List<Task>> tasksAsync) {
+    final perms = ref.watch(permissionsProvider);
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Column(
+          children: [
+            // Календарь закреплён сверху
+            Container(
+              color: Theme.of(context).cardColor,
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+              child: tasksAsync.when(
+                loading: () => const SizedBox(height: 180),
+                error: (_, __) => const SizedBox(height: 180),
+                data: (tasks) => _MiniCalendar(
+                  month: _calendarMonth,
+                  tasks: tasks,
+                  colors: colors,
+                  onMonthChanged: (m) => setState(() => _calendarMonth = m),
+                ),
+              ),
+            ),
+            // Табы: Задачи / Заметки
+            TabBar(
+              tabs: const [
+                Tab(text: 'Задачи'),
+                Tab(text: 'Заметки'),
+              ],
+              labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+            // Содержимое вкладок
+            Expanded(
+              child: TabBarView(
+                children: [
+                  // Вкладка Задачи
+                  tasksAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('Ошибка: $e')),
+                    data: (tasks) {
+                      final fmt = DateFormat('dd MMMM', 'ru');
+                      final today = DateTime.now();
+                      final todayStr = DateFormat('yyyy-MM-dd').format(today);
+                      final Map<String, List<Task>> grouped = {};
+                      for (final t in tasks) {
+                        final key = t.dueDate != null
+                            ? DateFormat('yyyy-MM-dd').format(t.dueDate!)
+                            : 'Без даты';
+                        grouped.putIfAbsent(key, () => []).add(t);
+                      }
+                      final keys = grouped.keys.toList()..sort();
+                      return ListView(
+                        padding: const EdgeInsets.only(bottom: 80),
+                        children: keys.map((dateKey) {
+                          final dateTasks = grouped[dateKey]!;
+                          String label;
+                          if (dateKey == 'Без даты') {
+                            label = 'Без даты';
+                          } else {
+                            final d = DateTime.parse(dateKey);
+                            final diff = d.difference(today).inDays;
+                            if (dateKey == todayStr)
+                              label = 'Сегодня, ${fmt.format(d)}';
+                            else if (diff == 1)
+                              label = 'Завтра, ${fmt.format(d)}';
+                            else
+                              label = fmt.format(d);
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+                                child: Text(label,
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: colors.badgeAmberText)),
+                              ),
+                              ...dateTasks.map((t) =>
+                                  _TaskRow(task: t, colors: colors, ref: ref)),
+                            ],
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  // Вкладка Заметки
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (_notesSaving)
+                              const SizedBox(
+                                  width: 18, height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2))
+                            else
+                              TextButton.icon(
+                                onPressed: _saveNotes,
+                                icon: const Icon(Icons.save_outlined, size: 16),
+                                label: const Text('Сохранить'),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _notesCtrl,
+                            maxLines: null,
+                            expands: true,
+                            textAlignVertical: TextAlignVertical.top,
+                            decoration: InputDecoration(
+                              hintText: 'Введите заметку...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: colors.tableBorder),
+                              ),
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: perms.canAddTask
+            ? FloatingActionButton(
+                onPressed: () => _openAddTask(context),
+                child: const Icon(Icons.add),
+              )
+            : null,
+      ),
     );
   }
 

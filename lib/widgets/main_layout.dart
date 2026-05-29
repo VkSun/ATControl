@@ -5,10 +5,13 @@ import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:async';
 import '../utils/theme.dart';
+import '../utils/responsive.dart';
 import '../services/weather_service.dart';
 import '../services/vehicle_service.dart';
 import '../services/driver_service.dart';
 import '../services/auth_service.dart';
+import '../services/profile_service.dart';
+import '../screens/profile/profile_dialog.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
 
@@ -39,7 +42,6 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     super.didChangeDependencies();
     final width = MediaQuery.of(context).size.width;
     if (_lastWidth == null) {
-      // Первый запуск — авто-свернуть если окно узкое
       if (width < 900) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) ref.read(sidebarCollapsedProvider.notifier).state = true;
@@ -69,6 +71,11 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     final themeMode = ref.watch(themeModeProvider);
     final location = GoRouterState.of(context).uri.toString();
     final collapsed = ref.watch(sidebarCollapsedProvider);
+    final mobile = isMobile(context);
+
+    if (mobile) {
+      return _MobileLayout(child: widget.child, location: location, colors: colors, now: _now);
+    }
 
     return Scaffold(
       body: Row(
@@ -98,6 +105,158 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     );
   }
 }
+
+// ─── MOBILE LAYOUT ──────────────────────────────────────────────────────────
+
+class _MobileLayout extends ConsumerWidget {
+  final Widget child;
+  final String location;
+  final AppColors colors;
+  final DateTime now;
+
+  const _MobileLayout({
+    required this.child,
+    required this.location,
+    required this.colors,
+    required this.now,
+  });
+
+  int _locationToIndex(String loc) {
+    switch (loc) {
+      case '/transport': return 1;
+      case '/drivers':   return 2;
+      case '/planner':   return 3;
+      case '/settings':  return 4;
+      default:           return 0;
+    }
+  }
+
+  String _indexToLocation(int i) {
+    switch (i) {
+      case 1: return '/transport';
+      case 2: return '/drivers';
+      case 3: return '/planner';
+      case 4: return '/settings';
+      default: return '/';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userRole = ref.watch(currentUserRoleProvider).value;
+    final pendingCount = ref.watch(pendingCountProvider).value ?? 0;
+    final profileAsync = ref.watch(profileProvider);
+    final initials = profileAsync.value?.initials ?? 'АИ';
+    final avatarHex = profileAsync.value?.avatarColor ?? '#4361EE';
+    final avatarColor = Color(int.parse(avatarHex.replaceFirst('#', '0xFF')));
+    final themeMode = ref.watch(themeModeProvider);
+    final currentIdx = _locationToIndex(location);
+
+    return Scaffold(
+      body: SafeArea(child: child),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Divider(height: 0.5, thickness: 0.5, color: colors.tableBorder),
+          NavigationBar(
+            height: 60,
+            selectedIndex: currentIdx,
+            onDestinationSelected: (i) => context.go(_indexToLocation(i)),
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Главная',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.directions_car_outlined),
+                selectedIcon: Icon(Icons.directions_car),
+                label: 'Транспорт',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.people_outlined),
+                selectedIcon: Icon(Icons.people),
+                label: 'Водители',
+              ),
+              NavigationDestination(
+                icon: Badge(
+                  isLabelVisible: pendingCount > 0,
+                  label: Text('$pendingCount'),
+                  child: const Icon(Icons.calendar_month_outlined),
+                ),
+                selectedIcon: Badge(
+                  isLabelVisible: pendingCount > 0,
+                  label: Text('$pendingCount'),
+                  child: const Icon(Icons.calendar_month),
+                ),
+                label: 'Планировщик',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: 'Настройки',
+              ),
+            ],
+          ),
+          // Нижняя панель: профиль + тема + пользователи
+          Container(
+            color: Theme.of(context).cardColor,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (_) => const ProfileDialog(),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: avatarColor,
+                        child: Text(initials,
+                            style: const TextStyle(fontSize: 10, color: Colors.white)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(profileAsync.value?.fullName ?? '',
+                          style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                if (userRole?.isAdmin == true)
+                  IconButton(
+                    icon: const Icon(Icons.manage_accounts_outlined, size: 20),
+                    onPressed: () => context.go('/users'),
+                    tooltip: 'Пользователи',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+                IconButton(
+                  icon: Icon(
+                    themeMode == ThemeMode.dark
+                        ? Icons.wb_sunny_outlined
+                        : Icons.nightlight_round,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    ref.read(themeModeProvider.notifier).state =
+                        themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── DESKTOP SIDEBAR ────────────────────────────────────────────────────────
 
 class _Sidebar extends StatelessWidget {
   final AppColors colors;
@@ -139,6 +298,7 @@ class _Sidebar extends StatelessWidget {
               collapsed: collapsed,
             ),
           ),
+          _SidebarBottomProfile(collapsed: collapsed, colors: colors),
           _SidebarBottom(collapsed: collapsed),
         ],
       ),
@@ -177,34 +337,34 @@ class _SidebarTop extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-  children: [
-    GestureDetector(
-      onTap: onToggleCollapse,
-      child: Container(
-        width: 32, height: 32,
-        decoration: BoxDecoration(
-          color: colors.sidebarActive,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Icon(Icons.directions_car, color: Colors.white, size: 18),
-      ),
-    ),
-    if (!collapsed) ...[
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text('ATControl',
-          style: Theme.of(context).textTheme.titleMedium),
-      ),
-      IconButton(
-        onPressed: onToggleCollapse,
-        icon: const Icon(Icons.chevron_left, size: 18),
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-        color: Theme.of(context).textTheme.bodySmall!.color,
-      ),
-    ],
-  ],
-),
+            children: [
+              GestureDetector(
+                onTap: onToggleCollapse,
+                child: Container(
+                  width: 32, height: 32,
+                  decoration: BoxDecoration(
+                    color: colors.sidebarActive,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.directions_car, color: Colors.white, size: 18),
+                ),
+              ),
+              if (!collapsed) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('ATControl',
+                    style: Theme.of(context).textTheme.titleMedium),
+                ),
+                IconButton(
+                  onPressed: onToggleCollapse,
+                  icon: const Icon(Icons.chevron_left, size: 18),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  color: Theme.of(context).textTheme.bodySmall!.color,
+                ),
+              ],
+            ],
+          ),
           if (!collapsed) ...[
             const SizedBox(height: 14),
             Text(timeStr,
@@ -294,18 +454,17 @@ class _SidebarNav extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pendingCount = ref.watch(pendingCountProvider).value ?? 0;
-
     final userRole = ref.watch(currentUserRoleProvider).value;
-   
-final items = [
-  const _NavItem('Главная', '/', Icons.home_outlined),
-  const _NavItem('Транспорт', '/transport', Icons.directions_car_outlined),
-  const _NavItem('Водители', '/drivers', Icons.people_outlined),
-  _NavItem('Планировщик', '/planner', Icons.calendar_month_outlined, badge: pendingCount),
-  if (userRole?.isAdmin == true)
-    const _NavItem('Пользователи', '/users', Icons.manage_accounts_outlined),
-  const _NavItem('Настройки', '/settings', Icons.settings_outlined),
-];
+
+    final items = [
+      const _NavItem('Главная', '/', Icons.home_outlined),
+      const _NavItem('Транспорт', '/transport', Icons.directions_car_outlined),
+      const _NavItem('Водители', '/drivers', Icons.people_outlined),
+      _NavItem('Планировщик', '/planner', Icons.calendar_month_outlined, badge: pendingCount),
+      if (userRole?.isAdmin == true)
+        const _NavItem('Пользователи', '/users', Icons.manage_accounts_outlined),
+      const _NavItem('Настройки', '/settings', Icons.settings_outlined),
+    ];
 
     return ListView(
       padding: const EdgeInsets.all(8),
@@ -388,6 +547,79 @@ final items = [
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+// Профиль + уведомление внизу сайдбара (десктоп)
+class _SidebarBottomProfile extends ConsumerWidget {
+  final bool collapsed;
+  final AppColors colors;
+
+  const _SidebarBottomProfile({required this.collapsed, required this.colors});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+    final initials = profileAsync.value?.initials ?? 'АИ';
+    final avatarHex = profileAsync.value?.avatarColor ?? '#4361EE';
+    final avatarColor = Color(int.parse(avatarHex.replaceFirst('#', '0xFF')));
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: collapsed ? 12 : 14, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: colors.tableBorder, width: 0.5)),
+      ),
+      child: collapsed
+          ? Column(
+              children: [
+                GestureDetector(
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (_) => const ProfileDialog(),
+                  ),
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: avatarColor,
+                    child: Text(initials,
+                        style: const TextStyle(fontSize: 10, color: Colors.white)),
+                  ),
+                ),
+              ],
+            )
+          : GestureDetector(
+              onTap: () => showDialog(
+                context: context,
+                builder: (_) => const ProfileDialog(),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: avatarColor,
+                    child: Text(initials,
+                        style: const TextStyle(fontSize: 10, color: Colors.white)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(profileAsync.value?.fullName ?? '',
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis),
+                        Text(profileAsync.value?.position ?? '',
+                            style: const TextStyle(
+                                fontSize: 10, color: Color(0xFF888888)),
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.notifications_outlined, size: 16),
+                ],
+              ),
+            ),
     );
   }
 }

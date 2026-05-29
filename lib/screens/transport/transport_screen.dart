@@ -8,6 +8,7 @@ import 'vehicle_edit_dialog.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
+import '../../utils/responsive.dart';
 
 enum VehicleSort { invNumber, brand, govNumber }
 
@@ -23,6 +24,79 @@ class TransportScreen extends ConsumerWidget {
     final sort = ref.watch(vehicleSortProvider);
     final search = ref.watch(vehicleSearchProvider);
     final vehiclesAsync = ref.watch(vehiclesProvider);
+    final mobile = isMobile(context);
+    final perms = ref.watch(permissionsProvider);
+
+    List<Vehicle> buildList(List<Vehicle> vehicles) {
+      var list = vehicles;
+      if (search.isNotEmpty) {
+        final q = search.toLowerCase();
+        list = list.where((v) =>
+          v.invNumber.toLowerCase().contains(q) ||
+          v.brandModel.toLowerCase().contains(q) ||
+          v.govNumber.toLowerCase().contains(q)).toList();
+      }
+      list = [...list];
+      switch (sort) {
+        case VehicleSort.brand:
+          list.sort((a, b) => a.brandModel.compareTo(b.brandModel));
+        case VehicleSort.govNumber:
+          list.sort((a, b) => a.govNumber.compareTo(b.govNumber));
+        case VehicleSort.invNumber:
+          list.sort((a, b) => a.invNumber.compareTo(b.invNumber));
+      }
+      return list;
+    }
+
+    if (mobile) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: TextField(
+                onChanged: (v) =>
+                    ref.read(vehicleSearchProvider.notifier).state = v,
+                decoration: InputDecoration(
+                  hintText: 'Поиск транспорта...',
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  isDense: true,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+            ),
+            Expanded(
+              child: vehiclesAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Ошибка: $e')),
+                data: (vehicles) => _VehicleTable(
+                  vehicles: buildList(vehicles),
+                  colors: colors,
+                  ref: ref,
+                  mobile: true,
+                ),
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: perms.canAddVehicle
+            ? FloatingActionButton(
+                onPressed: () => showDialog(
+                  context: context,
+                  builder: (_) => VehicleEditDialog(
+                    onSaved: () => ref.invalidate(vehiclesProvider),
+                  ),
+                ),
+                child: const Icon(Icons.add),
+              )
+            : null,
+      );
+    }
 
     return Column(
       children: [
@@ -41,29 +115,15 @@ class TransportScreen extends ConsumerWidget {
                   _SearchAndSort(colors: colors, sort: sort, ref: ref),
                   Expanded(
                     child: vehiclesAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(child: Text('Ошибка: $e')),
-                      data: (vehicles) {
-                        var list = vehicles;
-                        if (search.isNotEmpty) {
-                          final q = search.toLowerCase();
-                          list = list.where((v) =>
-                            v.invNumber.toLowerCase().contains(q) ||
-                            v.brandModel.toLowerCase().contains(q) ||
-                            v.govNumber.toLowerCase().contains(q)
-                          ).toList();
-                        }
-                        list = [...list];
-                        switch (sort) {
-                          case VehicleSort.brand:
-                            list.sort((a, b) => a.brandModel.compareTo(b.brandModel));
-                          case VehicleSort.govNumber:
-                            list.sort((a, b) => a.govNumber.compareTo(b.govNumber));
-                          case VehicleSort.invNumber:
-                            list.sort((a, b) => a.invNumber.compareTo(b.invNumber));
-                        }
-                        return _VehicleTable(vehicles: list, colors: colors, ref: ref);
-                      },
+                      data: (vehicles) => _VehicleTable(
+                        vehicles: buildList(vehicles),
+                        colors: colors,
+                        ref: ref,
+                        mobile: false,
+                      ),
                     ),
                   ),
                 ],
@@ -230,12 +290,29 @@ class _VehicleTable extends StatelessWidget {
   final List<Vehicle> vehicles;
   final AppColors colors;
   final WidgetRef ref;
+  final bool mobile;
 
-  const _VehicleTable({required this.vehicles, required this.colors, required this.ref});
+  const _VehicleTable({required this.vehicles, required this.colors, required this.ref, this.mobile = false});
 
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd.MM.yyyy');
+    final perms = ref.watch(permissionsProvider);
+
+    if (mobile) {
+      return ListView.builder(
+        padding: const EdgeInsets.only(top: 8, bottom: 80),
+        itemCount: vehicles.length,
+        itemBuilder: (context, i) => _VehicleRow(
+          vehicle: vehicles[i],
+          colors: colors,
+          fmt: fmt,
+          canEdit: perms.canEditVehicle,
+          onEdit: () => _openEdit(context, vehicles[i]),
+          mobile: true,
+        ),
+      );
+    }
 
     return Column(
       children: [
@@ -261,27 +338,19 @@ class _VehicleTable extends StatelessWidget {
         Expanded(
           child: ListView.builder(
             itemCount: vehicles.length,
-            itemBuilder: (context, i) {
-              final v = vehicles[i];
-              final perms = ref.watch(permissionsProvider);
-              return _VehicleRow(
-                vehicle: v,
-                colors: colors,
-                fmt: fmt,
-                canEdit: perms.canEditVehicle,
-                onEdit: () => _openEdit(context, v),
-              );
-            },
+            itemBuilder: (context, i) => _VehicleRow(
+              vehicle: vehicles[i],
+              colors: colors,
+              fmt: fmt,
+              canEdit: perms.canEditVehicle,
+              onEdit: () => _openEdit(context, vehicles[i]),
+            ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Text('Записей: ${vehicles.length}',
-                style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
+          child: Text('Записей: ${vehicles.length}',
+              style: Theme.of(context).textTheme.bodySmall),
         ),
       ],
     );
@@ -312,6 +381,7 @@ class _VehicleRow extends StatelessWidget {
   final DateFormat fmt;
   final VoidCallback onEdit;
   final bool canEdit;
+  final bool mobile;
 
   const _VehicleRow({
     required this.vehicle,
@@ -319,10 +389,41 @@ class _VehicleRow extends StatelessWidget {
     required this.fmt,
     required this.onEdit,
     required this.canEdit,
+    this.mobile = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (mobile) {
+      return InkWell(
+        onTap: canEdit ? onEdit : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 70,
+                child: Text(vehicle.invNumber,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              ),
+              Expanded(
+                child: Text(vehicle.brandModel,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+              Text(vehicle.govNumber,
+                  style: TextStyle(fontSize: 12,
+                      color: Theme.of(context).textTheme.bodySmall!.color)),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, size: 16, color: Color(0xFF888888)),
+            ],
+          ),
+        ),
+      );
+    }
+
     return InkWell(
       onTap: canEdit ? onEdit : null,
       child: Container(

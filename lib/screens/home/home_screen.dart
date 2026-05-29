@@ -8,6 +8,7 @@ import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/task_service.dart';
 import '../../utils/theme.dart';
+import '../../utils/responsive.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 
@@ -17,6 +18,11 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
+    final mobile = isMobile(context);
+
+    if (mobile) {
+      return _MobileHome(colors: colors);
+    }
 
     return Column(
       children: [
@@ -27,9 +33,9 @@ class HomeScreen extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _ExpiryCard(colors: colors)),
+                Expanded(child: _ExpiryCard(colors: colors, limit: null)),
                 const SizedBox(width: 16),
-                Expanded(child: _TasksCard(colors: colors, ref: ref)),
+                Expanded(child: _TasksCard(colors: colors)),
               ],
             ),
           ),
@@ -38,6 +44,27 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 }
+
+// ─── MOBILE HOME ─────────────────────────────────────────────────────────────
+
+class _MobileHome extends ConsumerWidget {
+  final AppColors colors;
+  const _MobileHome({required this.colors});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        _ExpiryCard(colors: colors, limit: 5),
+        const SizedBox(height: 12),
+        _TasksCard(colors: colors, limit: 5),
+      ],
+    );
+  }
+}
+
+// ─── DESKTOP TOP BAR ─────────────────────────────────────────────────────────
 
 class _TopBar extends StatelessWidget {
   final AppColors colors;
@@ -84,16 +111,20 @@ class _TopBar extends StatelessWidget {
   }
 }
 
+// ─── EXPIRY CARD ─────────────────────────────────────────────────────────────
+
 class _ExpiryCard extends ConsumerWidget {
   final AppColors colors;
-  const _ExpiryCard({required this.colors});
+  final int? limit;
+  const _ExpiryCard({required this.colors, this.limit});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final vehiclesAsync = ref.watch(vehiclesProvider);
     final driversAsync = ref.watch(driversProvider);
-    final fmt = DateFormat('dd.MM.yyyy');
+    final fmt = DateFormat('dd.MM.yy');
     final now = DateTime.now();
+    final mobile = isMobile(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -103,123 +134,138 @@ class _ExpiryCard extends ConsumerWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: mobile ? MainAxisSize.min : MainAxisSize.max,
         children: [
           Padding(
-            padding: const EdgeInsets.all(14),
-            child: Text('Истекающие сроки', style: Theme.of(context).textTheme.titleMedium),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Text('Истекающие сроки',
+                style: Theme.of(context).textTheme.titleSmall),
           ),
-          Expanded(
-            child: Builder(builder: (_) {
-              if (vehiclesAsync.isLoading || driversAsync.isLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final items = <Map<String, dynamic>>[];
-
-              final vehicles = vehiclesAsync.value ?? <Vehicle>[];
-              for (final v in vehicles) {
-                void check(DateTime? date, String type) {
-                  if (date == null) return;
-                  final diff = date.difference(now).inDays;
-                  if (diff <= 30) {
-                    items.add({'label': type, 'subject': v.brandModel,
-                      'extra': v.govNumber, 'date': date, 'diff': diff});
-                  }
-                }
-                check(v.inspectionDate, 'Техосмотр');
-                check(v.insuranceDate, 'Страховка');
-                check(v.specialPermitDate, 'Спец. разрешение');
-              }
-
-              final drivers = driversAsync.value ?? <Driver>[];
-              for (final d in drivers) {
-                void check(DateTime? date, String type) {
-                  if (date == null) return;
-                  final diff = date.difference(now).inDays;
-                  if (diff <= 30) {
-                    items.add({'label': type, 'subject': d.fullName,
-                      'extra': '', 'date': date, 'diff': diff});
-                  }
-                }
-                check(d.licenseExpiry, 'Вод. удостоверение');
-                check(d.medicalExpiry, 'Мед. справка');
-              }
-
-              items.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
-
-              if (items.isEmpty) {
-                return const Center(child: Text('Нет истекающих сроков'));
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                itemCount: items.length,
-                itemBuilder: (context, i) {
-                  final item = items[i];
-                  final diff = item['diff'] as int;
-                  final date = item['date'] as DateTime;
-                  Color badgeBg, badgeText;
-                  if (diff < 0 || diff <= 7) {
-                    badgeBg = colors.badgeRed;
-                    badgeText = colors.badgeRedText;
-                  } else if (diff <= 14) {
-                    badgeBg = colors.badgeAmber;
-                    badgeText = colors.badgeAmberText;
-                  } else {
-                    badgeBg = colors.badgeGreen;
-                    badgeText = colors.badgeGreenText;
-                  }
-                  return Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 130,
-                          child: Text(item['label'] as String,
-                            style: TextStyle(fontSize: 11,
-                                color: Theme.of(context).textTheme.bodySmall!.color)),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item['subject'] as String,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                              if ((item['extra'] as String).isNotEmpty)
-                                Text(item['extra'] as String,
-                                  style: TextStyle(fontSize: 10,
-                                      color: Theme.of(context).textTheme.bodySmall!.color)),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                              color: badgeBg, borderRadius: BorderRadius.circular(6)),
-                          child: Text(fmt.format(date),
-                            style: TextStyle(fontSize: 11, color: badgeText,
-                                fontWeight: FontWeight.w500)),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+          Builder(builder: (_) {
+            if (vehiclesAsync.isLoading || driversAsync.isLoading) {
+              return const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: CircularProgressIndicator()),
               );
-            }),
-          ),
+            }
+
+            final items = <Map<String, dynamic>>[];
+            final vehicles = vehiclesAsync.value ?? <Vehicle>[];
+            for (final v in vehicles) {
+              void check(DateTime? date, String type) {
+                if (date == null) return;
+                final diff = date.difference(now).inDays;
+                if (diff <= 30) {
+                  items.add({'label': type, 'subject': v.brandModel,
+                    'extra': v.govNumber, 'date': date, 'diff': diff});
+                }
+              }
+              check(v.inspectionDate, 'Техосмотр');
+              check(v.insuranceDate, 'Страховка');
+              check(v.specialPermitDate, 'Спец. разрешение');
+            }
+
+            final drivers = driversAsync.value ?? <Driver>[];
+            for (final d in drivers) {
+              void check(DateTime? date, String type) {
+                if (date == null) return;
+                final diff = date.difference(now).inDays;
+                if (diff <= 30) {
+                  items.add({'label': type, 'subject': d.fullName,
+                    'extra': '', 'date': date, 'diff': diff});
+                }
+              }
+              check(d.licenseExpiry, 'Вод. удостоверение');
+              check(d.medicalExpiry, 'Мед. справка');
+            }
+
+            items.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
+
+            if (items.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: Text('Нет истекающих сроков')),
+              );
+            }
+
+            final shown = limit != null ? items.take(limit!).toList() : items;
+
+            final listWidget = ListView.builder(
+              shrinkWrap: mobile,
+              physics: mobile
+                  ? const NeverScrollableScrollPhysics()
+                  : const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              itemCount: shown.length,
+              itemBuilder: (context, i) {
+                final item = shown[i];
+                final diff = item['diff'] as int;
+                final date = item['date'] as DateTime;
+                Color badgeBg, badgeText;
+                if (diff < 0 || diff <= 7) {
+                  badgeBg = colors.badgeRed; badgeText = colors.badgeRedText;
+                } else if (diff <= 14) {
+                  badgeBg = colors.badgeAmber; badgeText = colors.badgeAmberText;
+                } else {
+                  badgeBg = colors.badgeGreen; badgeText = colors.badgeGreenText;
+                }
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  decoration: BoxDecoration(
+                    border: Border(
+                        bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item['subject'] as String,
+                                style: const TextStyle(
+                                    fontSize: 12, fontWeight: FontWeight.w500)),
+                            Text(item['label'] as String,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall!
+                                        .color)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                            color: badgeBg,
+                            borderRadius: BorderRadius.circular(6)),
+                        child: Text(fmt.format(date),
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: badgeText,
+                                fontWeight: FontWeight.w500)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+
+            return mobile ? listWidget : Expanded(child: listWidget);
+          }),
         ],
       ),
     );
   }
 }
 
+// ─── TASKS CARD ──────────────────────────────────────────────────────────────
+
 class _TasksCard extends ConsumerWidget {
   final AppColors colors;
-  final WidgetRef ref;
-  const _TasksCard({required this.colors, required this.ref});
+  final int? limit;
+  const _TasksCard({required this.colors, this.limit});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -227,6 +273,7 @@ class _TasksCard extends ConsumerWidget {
     final fmt = DateFormat('d MMMM', 'ru');
     final today = DateTime.now();
     final tomorrow = today.add(const Duration(days: 1));
+    final mobile = isMobile(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -236,55 +283,81 @@ class _TasksCard extends ConsumerWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: mobile ? MainAxisSize.min : MainAxisSize.max,
         children: [
           Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
             child: Text('Задачи на сегодня и завтра',
-                style: Theme.of(context).textTheme.titleMedium),
+                style: Theme.of(context).textTheme.titleSmall),
           ),
-          Expanded(
-            child: tasksAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Ошибка: $e')),
-              data: (allTasks) {
-                final todayTasks = allTasks.where((t) =>
-                  t.dueDate != null &&
-                  t.dueDate!.year == today.year &&
-                  t.dueDate!.month == today.month &&
-                  t.dueDate!.day == today.day).toList();
-
-                final tomorrowTasks = allTasks.where((t) =>
-                  t.dueDate != null &&
-                  t.dueDate!.year == tomorrow.year &&
-                  t.dueDate!.month == tomorrow.month &&
-                  t.dueDate!.day == tomorrow.day).toList();
-
-                if (todayTasks.isEmpty && tomorrowTasks.isEmpty) {
-                  return const Center(child: Text('Задач на сегодня и завтра нет'));
-                }
-
-                return ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  children: [
-                    if (todayTasks.isNotEmpty) ...[
-                      _dayLabel('Сегодня, ${fmt.format(today)}', colors),
-                      ...todayTasks.map((t) => _TaskRow(task: t, colors: colors)),
-                    ],
-                    if (tomorrowTasks.isNotEmpty) ...[
-                      _dayLabel('Завтра, ${fmt.format(tomorrow)}', colors),
-                      ...tomorrowTasks.map((t) => _TaskRow(task: t, colors: colors)),
-                    ],
-                  ],
-                );
-              },
+          tasksAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator()),
             ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(14),
+              child: Text('Ошибка: $e'),
+            ),
+            data: (allTasks) {
+              var todayTasks = allTasks.where((t) =>
+                t.dueDate != null &&
+                t.dueDate!.year == today.year &&
+                t.dueDate!.month == today.month &&
+                t.dueDate!.day == today.day).toList();
+
+              var tomorrowTasks = allTasks.where((t) =>
+                t.dueDate != null &&
+                t.dueDate!.year == tomorrow.year &&
+                t.dueDate!.month == tomorrow.month &&
+                t.dueDate!.day == tomorrow.day).toList();
+
+              if (limit != null) {
+                final remaining = limit!;
+                if (todayTasks.length > remaining) {
+                  todayTasks = todayTasks.take(remaining).toList();
+                  tomorrowTasks = [];
+                } else {
+                  tomorrowTasks = tomorrowTasks
+                      .take(remaining - todayTasks.length)
+                      .toList();
+                }
+              }
+
+              if (todayTasks.isEmpty && tomorrowTasks.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(child: Text('Задач на сегодня и завтра нет')),
+                );
+              }
+
+              final content = ListView(
+                shrinkWrap: mobile,
+                physics: mobile
+                    ? const NeverScrollableScrollPhysics()
+                    : const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                children: [
+                  if (todayTasks.isNotEmpty) ...[
+                    _dayLabel('Сегодня, ${fmt.format(today)}', colors, context),
+                    ...todayTasks.map((t) => _TaskRow(task: t, colors: colors)),
+                  ],
+                  if (tomorrowTasks.isNotEmpty) ...[
+                    _dayLabel('Завтра, ${fmt.format(tomorrow)}', colors, context),
+                    ...tomorrowTasks.map((t) => _TaskRow(task: t, colors: colors)),
+                  ],
+                ],
+              );
+
+              return mobile ? content : Expanded(child: content);
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _dayLabel(String text, AppColors colors) {
+  Widget _dayLabel(String text, AppColors colors, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(text,

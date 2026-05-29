@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/theme.dart';
+import '../../utils/responsive.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 
@@ -297,46 +298,92 @@ class _PathSettingState extends State<_PathSetting> {
 
   @override
   Widget build(BuildContext context) {
+    final mobile = isMobile(context);
     return _SettingCard(
       colors: widget.colors,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
+      child: mobile
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.label, style: const TextStyle(fontSize: 13)),
                 const SizedBox(height: 2),
-                Text(widget.desc, style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
+                Text(widget.desc,
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _ctrl,
+                        onChanged: widget.onChanged,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 7),
+                        ),
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                      onPressed: () {},
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        minimumSize: Size.zero,
+                        textStyle: const TextStyle(fontSize: 11),
+                      ),
+                      child: const Text('Обзор...'),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.label, style: const TextStyle(fontSize: 13)),
+                      const SizedBox(height: 2),
+                      Text(widget.desc,
+                          style: const TextStyle(
+                              fontSize: 11, color: Color(0xFF888888))),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _ctrl,
+                    onChanged: widget.onChanged,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 7),
+                    ),
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                    textStyle: const TextStyle(fontSize: 11),
+                  ),
+                  child: const Text('Обзор...'),
+                ),
               ],
             ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 200,
-            child: TextField(
-              controller: _ctrl,
-              onChanged: widget.onChanged,
-              decoration: InputDecoration(
-                isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              ),
-              style: const TextStyle(fontSize: 11),
-            ),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              minimumSize: Size.zero,
-              textStyle: const TextStyle(fontSize: 11),
-            ),
-            child: const Text('Обзор...'),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -9,6 +9,7 @@ import '../../services/vehicle_service.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
+import '../../utils/responsive.dart';
 
 enum DriverSort { fullName, licenseExpiry, medicalExpiry, birthDate }
 
@@ -18,12 +19,80 @@ final driverSearchProvider = StateProvider<String>((ref) => '');
 class DriversScreen extends ConsumerWidget {
   const DriversScreen({super.key});
 
+  List<Driver> _buildList(List<Driver> drivers, String search, DriverSort sort) {
+    var list = drivers;
+    if (search.isNotEmpty) {
+      final q = search.toLowerCase();
+      list = list.where((d) => d.fullName.toLowerCase().contains(q)).toList();
+    }
+    list = [...list];
+    switch (sort) {
+      case DriverSort.licenseExpiry:
+        list.sort((a, b) => (a.licenseExpiry ?? DateTime(2099)).compareTo(b.licenseExpiry ?? DateTime(2099)));
+      case DriverSort.medicalExpiry:
+        list.sort((a, b) => (a.medicalExpiry ?? DateTime(2099)).compareTo(b.medicalExpiry ?? DateTime(2099)));
+      case DriverSort.birthDate:
+        list.sort((a, b) => (a.birthDate ?? DateTime(2099)).compareTo(b.birthDate ?? DateTime(2099)));
+      case DriverSort.fullName:
+        list.sort((a, b) => a.fullName.compareTo(b.fullName));
+    }
+    return list;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final sort = ref.watch(driverSortProvider);
     final search = ref.watch(driverSearchProvider);
     final driversAsync = ref.watch(driversProvider);
+    final mobile = isMobile(context);
+    final perms = ref.watch(permissionsProvider);
+
+    if (mobile) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: TextField(
+                onChanged: (v) => ref.read(driverSearchProvider.notifier).state = v,
+                decoration: InputDecoration(
+                  hintText: 'Поиск по ФИО...',
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  isDense: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+            ),
+            Expanded(
+              child: driversAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Ошибка: $e')),
+                data: (drivers) => _DriverTable(
+                  drivers: _buildList(drivers, search, sort),
+                  colors: colors,
+                  ref: ref,
+                  mobile: true,
+                ),
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: perms.canAddDriver
+            ? FloatingActionButton(
+                onPressed: () => showDialog(
+                  context: context,
+                  builder: (_) => DriverEditDialog(
+                    onSaved: () => ref.invalidate(driversProvider),
+                  ),
+                ),
+                child: const Icon(Icons.add),
+              )
+            : null,
+      );
+    }
 
     return Column(
       children: [
@@ -44,25 +113,11 @@ class DriversScreen extends ConsumerWidget {
                     child: driversAsync.when(
                       loading: () => const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(child: Text('Ошибка: $e')),
-                      data: (drivers) {
-                        var list = drivers;
-                        if (search.isNotEmpty) {
-                          final q = search.toLowerCase();
-                          list = list.where((d) => d.fullName.toLowerCase().contains(q)).toList();
-                        }
-                        list = [...list];
-                        switch (sort) {
-                          case DriverSort.licenseExpiry:
-                            list.sort((a, b) => (a.licenseExpiry ?? DateTime(2099)).compareTo(b.licenseExpiry ?? DateTime(2099)));
-                          case DriverSort.medicalExpiry:
-                            list.sort((a, b) => (a.medicalExpiry ?? DateTime(2099)).compareTo(b.medicalExpiry ?? DateTime(2099)));
-                          case DriverSort.birthDate:
-                            list.sort((a, b) => (a.birthDate ?? DateTime(2099)).compareTo(b.birthDate ?? DateTime(2099)));
-                          case DriverSort.fullName:
-                            list.sort((a, b) => a.fullName.compareTo(b.fullName));
-                        }
-                        return _DriverTable(drivers: list, colors: colors, ref: ref);
-                      },
+                      data: (drivers) => _DriverTable(
+                        drivers: _buildList(drivers, search, sort),
+                        colors: colors,
+                        ref: ref,
+                      ),
                     ),
                   ),
                 ],
@@ -213,12 +268,47 @@ class _DriverTable extends StatelessWidget {
   final List<Driver> drivers;
   final AppColors colors;
   final WidgetRef ref;
+  final bool mobile;
 
-  const _DriverTable({required this.drivers, required this.colors, required this.ref});
+  const _DriverTable({required this.drivers, required this.colors, required this.ref, this.mobile = false});
 
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd.MM.yyyy');
+    final perms = ref.watch(permissionsProvider);
+
+    if (mobile) {
+      return ListView.builder(
+        padding: const EdgeInsets.only(top: 8, bottom: 80),
+        itemCount: drivers.length,
+        itemBuilder: (context, i) {
+          final d = drivers[i];
+          return InkWell(
+            onTap: perms.canEditDriver ? () => _openEdit(context, d) : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(d.fullName,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                  ),
+                  Text(d.tabNumber,
+                      style: TextStyle(fontSize: 12,
+                          color: Theme.of(context).textTheme.bodySmall!.color)),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right, size: 16, color: Color(0xFF888888)),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    }
+
     return Column(
       children: [
         Container(
@@ -242,46 +332,42 @@ class _DriverTable extends StatelessWidget {
           child: ListView.builder(
             itemCount: drivers.length,
             itemBuilder: (context, i) {
-  final d = drivers[i];
-  final perms = ref.watch(permissionsProvider);
-  return InkWell(
-    onTap: perms.canEditDriver ? () => _openEdit(context, d) : null,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
-      ),
-      child: Row(
-        children: [
-          SizedBox(width: 200, child: Text(d.fullName, style: const TextStyle(fontSize: 12))),
-          SizedBox(width: 90, child: Text(d.tabNumber, style: const TextStyle(fontSize: 12))),
-          SizedBox(width: 90, child: _VehicleCell(vehicleId: d.vehicleId, ref: ref)),
-          SizedBox(width: 140, child: _DateCell(date: d.licenseExpiry, fmt: fmt, colors: colors)),
-          SizedBox(width: 120, child: _DateCell(date: d.medicalExpiry, fmt: fmt, colors: colors)),
-          SizedBox(width: 120, child: Text(d.birthDate != null ? fmt.format(d.birthDate!) : '—',
-            style: const TextStyle(fontSize: 12))),
-          const Spacer(),
-          if (perms.canEditDriver)
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 16),
-              onPressed: () => _openEdit(context, d),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            ),
-        ],
-      ),
-    ),
-  );
-},
+              final d = drivers[i];
+              return InkWell(
+                onTap: perms.canEditDriver ? () => _openEdit(context, d) : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 200, child: Text(d.fullName, style: const TextStyle(fontSize: 12))),
+                      SizedBox(width: 90, child: Text(d.tabNumber, style: const TextStyle(fontSize: 12))),
+                      SizedBox(width: 90, child: _VehicleCell(vehicleId: d.vehicleId, ref: ref)),
+                      SizedBox(width: 140, child: _DateCell(date: d.licenseExpiry, fmt: fmt, colors: colors)),
+                      SizedBox(width: 120, child: _DateCell(date: d.medicalExpiry, fmt: fmt, colors: colors)),
+                      SizedBox(width: 120, child: Text(d.birthDate != null ? fmt.format(d.birthDate!) : '—',
+                        style: const TextStyle(fontSize: 12))),
+                      const Spacer(),
+                      if (perms.canEditDriver)
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          onPressed: () => _openEdit(context, d),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
         Padding(
           padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Text('Записей: ${drivers.length}', style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
+          child: Text('Записей: ${drivers.length}',
+              style: Theme.of(context).textTheme.bodySmall),
         ),
       ],
     );
