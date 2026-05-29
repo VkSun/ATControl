@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,7 +9,6 @@ import '../../services/task_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../utils/theme.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
@@ -622,6 +621,24 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
 
   Future<void> _save() async {
     if (_newDate == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Обновить срок?'),
+        content: const Text('Дата окончания срока будет обновлена.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     setState(() => _loading = true);
     try {
       final taskTitle = widget.task.title;
@@ -641,9 +658,16 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
                 model: v.model,
                 govNumber: v.govNumber,
                 year: v.year,
+                color: v.color,
+                vin: v.vin,
                 inspectionDate: _newDate,
                 insuranceDate: v.insuranceDate,
                 specialPermitDate: v.specialPermitDate,
+                toDate: v.toDate,
+                toMileage: v.toMileage,
+                equipmentType: v.equipmentType,
+                equipmentToDate: v.equipmentToDate,
+                equipmentHours: v.equipmentHours,
                 notes: v.notes);
           } else if (taskTitle.startsWith('Страховка')) {
             updated = Vehicle(
@@ -653,9 +677,16 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
                 model: v.model,
                 govNumber: v.govNumber,
                 year: v.year,
+                color: v.color,
+                vin: v.vin,
                 inspectionDate: v.inspectionDate,
                 insuranceDate: _newDate,
                 specialPermitDate: v.specialPermitDate,
+                toDate: v.toDate,
+                toMileage: v.toMileage,
+                equipmentType: v.equipmentType,
+                equipmentToDate: v.equipmentToDate,
+                equipmentHours: v.equipmentHours,
                 notes: v.notes);
           } else {
             updated = Vehicle(
@@ -665,9 +696,16 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
                 model: v.model,
                 govNumber: v.govNumber,
                 year: v.year,
+                color: v.color,
+                vin: v.vin,
                 inspectionDate: v.inspectionDate,
                 insuranceDate: v.insuranceDate,
                 specialPermitDate: _newDate,
+                toDate: v.toDate,
+                toMileage: v.toMileage,
+                equipmentType: v.equipmentType,
+                equipmentToDate: v.equipmentToDate,
+                equipmentHours: v.equipmentHours,
                 notes: v.notes);
           }
           await ref.read(vehicleServiceProvider).update(v.id, updated);
@@ -688,6 +726,7 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
                 middleName: d.middleName,
                 birthDate: d.birthDate,
                 phone: d.phone,
+                address: d.address,
                 licenseNumber: d.licenseNumber,
                 licenseCategories: d.licenseCategories,
                 licenseExpiry: _newDate,
@@ -703,6 +742,7 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
                 middleName: d.middleName,
                 birthDate: d.birthDate,
                 phone: d.phone,
+                address: d.address,
                 licenseNumber: d.licenseNumber,
                 licenseCategories: d.licenseCategories,
                 licenseExpiry: d.licenseExpiry,
@@ -942,6 +982,25 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
 
   Future<void> _save() async {
     if (_titleCtrl.text.trim().isEmpty) return;
+    final isEdit = widget.task != null;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isEdit ? 'Сохранить изменения?' : 'Добавить задачу?'),
+        content: Text(isEdit ? 'Задача будет обновлена.' : 'Задача будет добавлена в планировщик.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     setState(() => _loading = true);
     try {
       final task = Task(
@@ -955,10 +1014,7 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
       if (widget.task == null) {
         await ref.read(taskServiceProvider).create(task);
       } else {
-        await Supabase.instance.client
-            .from('tasks')
-            .update(task.toJson())
-            .eq('id', task.id);
+        await ref.read(taskServiceProvider).update(task.id, task);
       }
       widget.onSaved();
       if (mounted) Navigator.pop(context);

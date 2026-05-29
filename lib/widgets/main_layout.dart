@@ -23,6 +23,7 @@ class MainLayout extends ConsumerStatefulWidget {
 class _MainLayoutState extends ConsumerState<MainLayout> {
   late Timer _timer;
   late DateTime _now;
+  double? _lastWidth;
 
   @override
   void initState() {
@@ -31,6 +32,29 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _now = DateTime.now());
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final width = MediaQuery.of(context).size.width;
+    if (_lastWidth == null) {
+      // Первый запуск — авто-свернуть если окно узкое
+      if (width < 900) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ref.read(sidebarCollapsedProvider.notifier).state = true;
+        });
+      }
+    } else if (_lastWidth! >= 900 && width < 900) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(sidebarCollapsedProvider.notifier).state = true;
+      });
+    } else if (_lastWidth! < 900 && width >= 900) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(sidebarCollapsedProvider.notifier).state = false;
+      });
+    }
+    _lastWidth = width;
   }
 
   @override
@@ -45,16 +69,6 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     final themeMode = ref.watch(themeModeProvider);
     final location = GoRouterState.of(context).uri.toString();
     final collapsed = ref.watch(sidebarCollapsedProvider);
-
-    // Автосворачивание при узком окне
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final width = MediaQuery.of(context).size.width;
-      if (width < 900 && !collapsed) {
-        ref.read(sidebarCollapsedProvider.notifier).state = true;
-      } else if (width >= 900 && collapsed) {
-        ref.read(sidebarCollapsedProvider.notifier).state = false;
-      }
-    });
 
     return Scaffold(
       body: Row(

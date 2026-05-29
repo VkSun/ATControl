@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/profile.dart';
 import '../../services/profile_service.dart';
-import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 
 class ProfileDialog extends ConsumerStatefulWidget {
@@ -16,7 +15,6 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
   late TextEditingController _fullName, _position, _initials;
   String _avatarColor = '#4361EE';
   bool _loading = false;
-  Profile? _profile;
 
   final _colors = [
     '#4361EE', '#E24B4A', '#1D9E75', '#EF9F27',
@@ -33,14 +31,17 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
   }
 
   Future<void> _loadProfile() async {
-    final p = await ref.read(profileServiceProvider).get();
-    setState(() {
-      _profile = p;
-      _fullName.text = p.fullName;
-      _position.text = p.position;
-      _initials.text = p.initials;
-      _avatarColor = p.avatarColor;
-    });
+    try {
+      final p = await ref.read(profileServiceProvider).get();
+      if (mounted) {
+        setState(() {
+          _fullName.text = p?.fullName ?? '';
+          _position.text = p?.position ?? '';
+          _initials.text = p?.initials ?? '';
+          _avatarColor = p?.avatarColor ?? '#4361EE';
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -56,23 +57,40 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
   }
 
   Future<void> _save() async {
-    if (_profile == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Сохранить профиль?'),
+        content: const Text('Данные профиля будут обновлены.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     setState(() => _loading = true);
     try {
       final updated = Profile(
-        id: _profile!.id,
+        id: '',
         fullName: _fullName.text.trim(),
         position: _position.text.trim(),
         initials: _initials.text.trim().toUpperCase(),
         avatarColor: _avatarColor,
       );
-      await ref.read(profileServiceProvider).update(_profile!.id, updated);
+      await ref.read(profileServiceProvider).save(updated);
       ref.invalidate(profileProvider);
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')));
+            SnackBar(content: Text('Ошибка: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -88,7 +106,6 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Превью аватара
             Center(
               child: CircleAvatar(
                 radius: 36,
@@ -101,7 +118,6 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            // Выбор цвета аватара
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: _colors.map((c) => GestureDetector(
@@ -158,26 +174,31 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
         ),
       ),
       actions: [
-        TextButton(
-  onPressed: () async {
-    Navigator.pop(context);
-    await ref.read(authServiceProvider).signOut();
-  },
-  style: TextButton.styleFrom(
-      foregroundColor: const Color(0xFFE24B4A)),
-  child: const Text('Выйти из системы'),
-),
-const Spacer(),
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
-        ),
-        FilledButton(
-          onPressed: _loading ? null : _save,
-          child: _loading
-              ? const SizedBox(width: 16, height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Сохранить'),
+        Row(
+          children: [
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await ref.read(authServiceProvider).signOut();
+              },
+              style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFE24B4A)),
+              child: const Text('Выйти из системы'),
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: _loading ? null : _save,
+              child: _loading
+                  ? const SizedBox(width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Сохранить'),
+            ),
+          ],
         ),
       ],
     );

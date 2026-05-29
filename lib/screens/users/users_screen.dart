@@ -861,6 +861,24 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
   }
 
   Future<void> _save() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Сохранить права?'),
+        content: Text('Права доступа пользователя «${widget.user.fullName}» будут обновлены.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     setState(() => _loading = true);
     try {
       await supabase.from('user_roles').update({

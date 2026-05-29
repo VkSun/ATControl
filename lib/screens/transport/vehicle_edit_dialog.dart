@@ -52,6 +52,27 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final isEdit = widget.vehicle != null;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isEdit ? 'Сохранить изменения?' : 'Добавить транспорт?'),
+        content: Text(isEdit
+            ? 'Данные транспортного средства будут обновлены.'
+            : 'Транспортное средство будет добавлено в систему.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     setState(() => _loading = true);
     try {
       final service = ref.read(vehicleServiceProvider);

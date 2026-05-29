@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/task.dart';
 import 'vehicle_service.dart';
 
@@ -61,6 +60,10 @@ class TaskService {
 
   Future<void> toggleComplete(String id, bool value) async {
     await supabase.from(_table).update({'is_completed': value}).eq('id', id);
+  }
+
+  Future<void> update(String id, Task t) async {
+    await supabase.from(_table).update(t.toJson()).eq('id', id);
   }
 
   Future<void> delete(String id) async {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/driver.dart';
-import '../../models/vehicle.dart';
 import '../../services/driver_service.dart';
 import '../../services/vehicle_service.dart';
 
@@ -52,6 +51,27 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final isEdit = widget.driver != null;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isEdit ? 'Сохранить изменения?' : 'Добавить водителя?'),
+        content: Text(isEdit
+            ? 'Данные водителя будут обновлены.'
+            : 'Водитель будет добавлен в систему.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     setState(() => _loading = true);
     try {
       final service = ref.read(driverServiceProvider);
