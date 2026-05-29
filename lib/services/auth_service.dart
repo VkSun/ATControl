@@ -43,8 +43,10 @@ class AuthService {
     if (response.user == null) throw Exception('Ошибка регистрации');
 
     final initials = _getInitials(fullName);
+    final userId = response.user!.id;
+
     final role = await supabase.from('user_roles').insert({
-      'user_id': response.user!.id,
+      'user_id': userId,
       'full_name': fullName,
       'position': position,
       'initials': initials,
@@ -58,6 +60,14 @@ class AuthService {
       'perm_own_only': false,
       'is_active': true,
     }).select().single();
+
+    await supabase.from('profiles').insert({
+      'id': userId,
+      'full_name': fullName,
+      'position': position,
+      'initials': initials,
+      'avatar_color': '#4361EE',
+    });
 
     return UserRole.fromJson(role);
   }
@@ -122,10 +132,12 @@ class AuthService {
     if (response.user == null) throw Exception('Ошибка регистрации');
 
     final initials = _getInitials(invitation.fullName ?? '');
+    final userId = response.user!.id;
+    final fullName = invitation.fullName ?? '';
 
     await supabase.from('user_roles').insert({
-      'user_id': response.user!.id,
-      'full_name': invitation.fullName ?? '',
+      'user_id': userId,
+      'full_name': fullName,
       'position': invitation.position,
       'initials': initials,
       'avatar_color': '#4361EE',
@@ -137,6 +149,14 @@ class AuthService {
       'perm_write': invitation.permWrite,
       'perm_own_only': invitation.permOwnOnly,
       'is_active': true,
+    });
+
+    await supabase.from('profiles').insert({
+      'id': userId,
+      'full_name': fullName,
+      'position': invitation.position,
+      'initials': initials,
+      'avatar_color': '#4361EE',
     });
 
     await supabase

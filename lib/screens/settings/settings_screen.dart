@@ -258,7 +258,7 @@ class _SelectSetting extends StatelessWidget {
   }
 }
 
-class _PathSetting extends StatelessWidget {
+class _PathSetting extends StatefulWidget {
   final String label, desc, value;
   final ValueChanged<String> onChanged;
   final AppColors colors;
@@ -269,19 +269,45 @@ class _PathSetting extends StatelessWidget {
   });
 
   @override
+  State<_PathSetting> createState() => _PathSettingState();
+}
+
+class _PathSettingState extends State<_PathSetting> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(_PathSetting old) {
+    super.didUpdateWidget(old);
+    if (old.value != widget.value && _ctrl.text != widget.value) {
+      _ctrl.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final ctrl = TextEditingController(text: value);
     return _SettingCard(
-      colors: colors,
+      colors: widget.colors,
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontSize: 13)),
+                Text(widget.label, style: const TextStyle(fontSize: 13)),
                 const SizedBox(height: 2),
-                Text(desc, style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
+                Text(widget.desc, style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
               ],
             ),
           ),
@@ -289,8 +315,8 @@ class _PathSetting extends StatelessWidget {
           SizedBox(
             width: 200,
             child: TextField(
-              controller: ctrl,
-              onChanged: onChanged,
+              controller: _ctrl,
+              onChanged: widget.onChanged,
               decoration: InputDecoration(
                 isDense: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),

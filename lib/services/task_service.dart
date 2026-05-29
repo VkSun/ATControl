@@ -17,38 +17,45 @@ class TaskService {
   String? get _userId => supabase.auth.currentUser?.id;
 
   Future<List<Task>> getAll() async {
-    final data = await supabase
-        .from(_table)
-        .select()
-        .or('type.eq.expiry,user_id.eq.$_userId')
-        .order('due_date')
-        .order('due_time');
-    return (data as List).map((e) => Task.fromJson(e)).toList();
+    final uid = _userId;
+    final data = uid != null
+        ? await supabase.from(_table).select()
+            .or('type.eq.expiry,user_id.eq.$uid')
+            .order('due_date').order('due_time')
+        : await supabase.from(_table).select()
+            .eq('type', 'expiry')
+            .order('due_date').order('due_time');
+    return data.map((e) => Task.fromJson(e)).toList();
   }
 
   Future<List<Task>> getToday() async {
+    final uid = _userId;
     final today = DateTime.now().toIso8601String().split('T')[0];
-    final data = await supabase
-        .from(_table)
-        .select()
-        .or('type.eq.expiry,user_id.eq.$_userId')
-        .eq('due_date', today)
-        .order('due_time');
-    return (data as List).map((e) => Task.fromJson(e)).toList();
+    final data = uid != null
+        ? await supabase.from(_table).select()
+            .or('type.eq.expiry,user_id.eq.$uid')
+            .eq('due_date', today).order('due_time')
+        : await supabase.from(_table).select()
+            .eq('type', 'expiry')
+            .eq('due_date', today).order('due_time');
+    return data.map((e) => Task.fromJson(e)).toList();
   }
 
   Future<List<Task>> getTodayAndTomorrow() async {
+    final uid = _userId;
     final now = DateTime.now();
     final today = now.toIso8601String().split('T')[0];
     final tomorrow = now.add(const Duration(days: 1)).toIso8601String().split('T')[0];
-    final data = await supabase
-        .from(_table)
-        .select()
-        .or('type.eq.expiry,user_id.eq.$_userId')
-        .inFilter('due_date', [today, tomorrow])
-        .order('due_date')
-        .order('due_time');
-    return (data as List).map((e) => Task.fromJson(e)).toList();
+    final data = uid != null
+        ? await supabase.from(_table).select()
+            .or('type.eq.expiry,user_id.eq.$uid')
+            .inFilter('due_date', [today, tomorrow])
+            .order('due_date').order('due_time')
+        : await supabase.from(_table).select()
+            .eq('type', 'expiry')
+            .inFilter('due_date', [today, tomorrow])
+            .order('due_date').order('due_time');
+    return data.map((e) => Task.fromJson(e)).toList();
   }
 
   Future<Task> create(Task t) async {
@@ -71,14 +78,16 @@ class TaskService {
   }
 
   Future<int> countPending() async {
+    final uid = _userId;
     final today = DateTime.now().toIso8601String().split('T')[0];
-    final data = await supabase
-        .from(_table)
-        .select()
-        .or('type.eq.expiry,user_id.eq.$_userId')
-        .eq('is_completed', false)
-        .lte('due_date', today);
-    return (data as List).length;
+    final data = uid != null
+        ? await supabase.from(_table).select()
+            .or('type.eq.expiry,user_id.eq.$uid')
+            .eq('is_completed', false).lte('due_date', today)
+        : await supabase.from(_table).select()
+            .eq('type', 'expiry')
+            .eq('is_completed', false).lte('due_date', today);
+    return data.length;
   }
 
   Future<void> syncExpiryTasks(List<Map<String, dynamic>> expiringItems) async {
