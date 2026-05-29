@@ -7,23 +7,32 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Get dependencies
-        run: flutter pub get
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter build windows --release
 
-      - name: Analyze
-        run: flutter analyze --no-fatal-infos
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Build Windows (release)
-        run: flutter build windows --release
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+      - run: flutter build apk --release
