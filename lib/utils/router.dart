@@ -9,11 +9,13 @@ import '../screens/planner/planner_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/users/users_screen.dart';
 import '../services/auth_service.dart';
+import '../services/vehicle_service.dart';
 import '../widgets/main_layout.dart';
 import '../screens/auth/invite_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(currentUserProvider);
+  final userRoleAsync = ref.watch(currentUserRoleProvider);
 
   return GoRouter(
     initialLocation: '/',
@@ -25,6 +27,16 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!isLoggedIn && !isAuthRoute) return '/login';
       if (isLoggedIn && isAuthRoute) return '/';
+
+      // Выкидываем заблокированного пользователя
+      if (isLoggedIn && !isAuthRoute) {
+        final role = userRoleAsync.value;
+        if (role != null && !role.isActive) {
+          supabase.auth.signOut();
+          return '/login';
+        }
+      }
+
       return null;
     },
     routes: [

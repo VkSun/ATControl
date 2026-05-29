@@ -79,8 +79,14 @@ class AuthService {
           .select()
           .eq('user_id', response.user!.id)
           .single();
-      return UserRole.fromJson(data);
-    } catch (_) {
+      final role = UserRole.fromJson(data);
+      if (!role.isActive) {
+        await supabase.auth.signOut();
+        throw Exception('Ваш аккаунт заблокирован. Обратитесь к администратору.');
+      }
+      return role;
+    } catch (e) {
+      if (e.toString().contains('заблокирован')) rethrow;
       return null;
     }
   }

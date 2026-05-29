@@ -37,7 +37,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: _passwordCtrl.text,
       );
     } catch (e) {
-      setState(() => _error = 'Неверный логин или пароль');
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      setState(() => _error = msg);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
