@@ -55,6 +55,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
         title: Text(isEdit ? 'Сохранить изменения?' : 'Добавить водителя?'),
         content: Text(isEdit
             ? 'Данные водителя будут обновлены.'
@@ -123,6 +125,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
     final vehiclesAsync = ref.watch(vehiclesProvider);
 
     return AlertDialog(
+      backgroundColor: Theme.of(context).cardColor,
+      surfaceTintColor: Colors.transparent,
       title: Text(title),
       content: SizedBox(
         width: 500,
@@ -185,6 +189,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
                 title: const Text('Удалить водителя?'),
                 content: Text(
                   '${widget.driver!.fullName}\n\nЭто действие нельзя отменить.'),

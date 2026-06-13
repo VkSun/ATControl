@@ -245,6 +245,8 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: Theme.of(context).cardColor,
+      surfaceTintColor: Colors.transparent,
       title: Row(
         children: [
           const Icon(Icons.upload_file, size: 20),

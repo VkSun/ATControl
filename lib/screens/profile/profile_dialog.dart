@@ -60,6 +60,8 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
         title: const Text('Сохранить профиль?'),
         content: const Text('Данные профиля будут обновлены.'),
         actions: [
@@ -100,6 +102,8 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: Theme.of(context).cardColor,
+      surfaceTintColor: Colors.transparent,
       title: const Text('Профиль'),
       content: SizedBox(
         width: 380,

@@ -593,6 +593,8 @@ class _TaskRow extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
         title: const Text('Удалить задачу?'),
         content: Text('«${task.title}»\n\nЭто действие нельзя отменить.'),
         actions: [
@@ -760,6 +762,8 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
         title: const Text('Обновить срок?'),
         content: const Text('Дата окончания срока будет обновлена.'),
         actions: [
@@ -1122,6 +1126,8 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
         title: Text(isEdit ? 'Сохранить изменения?' : 'Добавить задачу?'),
         content: Text(isEdit ? 'Задача будет обновлена.' : 'Задача будет добавлена в планировщик.'),
         actions: [

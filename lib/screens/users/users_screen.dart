@@ -435,6 +435,8 @@ class _UsersTab extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
         title: Text(user.isActive
             ? 'Заблокировать пользователя?'
             : 'Разблокировать пользователя?'),
@@ -675,6 +677,8 @@ class _InvitationRow extends StatelessWidget {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
                     title: const Text('Удалить код?'),
                     content: Text('Код ${invitation.code} будет удалён.'),
                     actions: [
@@ -946,6 +950,8 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
         title: const Text('Сохранить права?'),
         content: Text('Права доступа пользователя «${widget.user.fullName}» будут обновлены.'),
         actions: [

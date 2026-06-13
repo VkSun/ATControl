@@ -56,6 +56,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
         title: Text(isEdit ? 'Сохранить изменения?' : 'Добавить транспорт?'),
         content: Text(isEdit
             ? 'Данные транспортного средства будут обновлены.'
@@ -124,6 +126,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   Widget build(BuildContext context) {
     final title = widget.vehicle == null ? 'Добавить транспорт' : 'Редактировать транспорт';
     return AlertDialog(
+      backgroundColor: Theme.of(context).cardColor,
+      surfaceTintColor: Colors.transparent,
       title: Text(title),
       content: SizedBox(
         width: 560,
@@ -198,6 +202,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
                 title: const Text('Удалить транспорт?'),
                 content: Text(
                   '${widget.vehicle!.brandModel} (${widget.vehicle!.govNumber})\n\nЭто действие нельзя отменить.'),
