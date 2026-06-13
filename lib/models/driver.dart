@@ -11,7 +11,7 @@ class Driver {
   final DateTime? licenseExpiry;
   final String? licenseCategories;
   final DateTime? medicalExpiry;
-  final String? vehicleId;
+  final List<String> vehicleIds;
   final String? notes;
 
   Driver({
@@ -27,9 +27,11 @@ class Driver {
     this.licenseExpiry,
     this.licenseCategories,
     this.medicalExpiry,
-    this.vehicleId,
+    this.vehicleIds = const [],
     this.notes,
   });
+
+  String? get vehicleId => vehicleIds.firstOrNull;
 
   String get fullName => '$lastName $firstName${middleName != null ? ' $middleName' : ''}';
   String get shortName => '$lastName ${firstName[0]}.${middleName != null ? '${middleName![0]}.' : ''}';
@@ -47,7 +49,7 @@ class Driver {
     licenseExpiry: json['license_expiry'] != null ? DateTime.parse(json['license_expiry']) : null,
     licenseCategories: json['license_categories'],
     medicalExpiry: json['medical_expiry'] != null ? DateTime.parse(json['medical_expiry']) : null,
-    vehicleId: json['vehicle_id'],
+    vehicleIds: (json['vehicle_ids'] as List?)?.map((e) => e.toString()).toList() ?? [],
     notes: json['notes'],
   );
 
@@ -63,7 +65,7 @@ class Driver {
     'license_expiry': licenseExpiry?.toIso8601String().split('T')[0],
     'license_categories': licenseCategories,
     'medical_expiry': medicalExpiry?.toIso8601String().split('T')[0],
-    'vehicle_id': vehicleId,
+    'vehicle_ids': vehicleIds,
     'notes': notes,
   };
 }

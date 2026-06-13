@@ -23,6 +23,10 @@ class AppTheme {
       elevation: 0,
       surfaceTintColor: Colors.transparent,
     ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+    ),
     textTheme: const TextTheme(
       bodyMedium: TextStyle(fontSize: 13, color: Color(0xFF333333)),
       bodySmall: TextStyle(fontSize: 11, color: Color(0xFF888888)),
@@ -58,6 +62,10 @@ class AppTheme {
       backgroundColor: Color(0xFF242438),
       foregroundColor: Color(0xFFEEEEEE),
       elevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: Color(0xFF242438),
       surfaceTintColor: Colors.transparent,
     ),
     extensions: const [

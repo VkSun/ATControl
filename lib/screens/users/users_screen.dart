@@ -9,6 +9,7 @@ import '../../services/vehicle_service.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/theme.dart';
+import '../../utils/responsive.dart';
 
 final invitationsProvider = FutureProvider<List<InvitationCode>>((ref) async {
   final data = await supabase
@@ -36,6 +37,40 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
+    final mobile = isMobile(context);
+
+    if (mobile) {
+      return DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: Column(
+            children: [
+              TabBar(
+                tabs: const [
+                  Tab(text: 'Пользователи'),
+                  Tab(text: 'Приглашения'),
+                ],
+                labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _UsersTab(colors: colors, ref: ref),
+                    _InvitationsTab(colors: colors, ref: ref),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _openCreateInvitation(context),
+            tooltip: 'Создать приглашение',
+            child: const Icon(Icons.add),
+          ),
+        ),
+      );
+    }
 
     return Column(
       children: [
@@ -47,11 +82,9 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
           child: Row(
             children: [
-              _TabBtn('Пользователи', 0, _tab, (v) => setState(() => _tab = v),
-                  colors),
+              _TabBtn('Пользователи', 0, _tab, (v) => setState(() => _tab = v), colors),
               const SizedBox(width: 8),
-              _TabBtn('Коды приглашений', 1, _tab,
-                  (v) => setState(() => _tab = v), colors),
+              _TabBtn('Коды приглашений', 1, _tab, (v) => setState(() => _tab = v), colors),
             ],
           ),
         ),
@@ -198,6 +231,89 @@ class _UsersTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(usersProvider);
+    final mobile = isMobile(context);
+
+    if (mobile) {
+      return usersAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Ошибка: $e')),
+        data: (users) {
+          if (users.isEmpty) return const Center(child: Text('Нет пользователей'));
+          return ListView.builder(
+            padding: const EdgeInsets.only(top: 8, bottom: 80),
+            itemCount: users.length,
+            itemBuilder: (context, i) {
+              final u = users[i];
+              final avatarColor = Color(int.parse(u.avatarColor.replaceFirst('#', '0xFF')));
+              return InkWell(
+                onTap: u.isAdmin ? null : () => showDialog(
+                  context: context,
+                  builder: (_) => _EditUserDialog(
+                    user: u,
+                    onSaved: () => ref.invalidate(usersProvider),
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: avatarColor,
+                        child: Text(u.initials,
+                            style: const TextStyle(fontSize: 11, color: Colors.white)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(u.fullName,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                            Text(u.position ?? '—',
+                                style: TextStyle(fontSize: 11,
+                                    color: Theme.of(context).textTheme.bodySmall!.color)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: u.isActive ? colors.badgeGreen : colors.badgeRed,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          u.isActive ? 'Активен' : 'Блок.',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: u.isActive ? colors.badgeGreenText : colors.badgeRedText),
+                        ),
+                      ),
+                      if (!u.isAdmin) ...[
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: Icon(
+                            u.isActive ? Icons.block_outlined : Icons.check_circle_outline,
+                            size: 18,
+                          ),
+                          onPressed: () => _toggleActive(context, ref, u),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          color: u.isActive ? const Color(0xFFE24B4A) : const Color(0xFF639922),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -210,8 +326,7 @@ class _UsersTab extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              border: Border(
-                  bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+              border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
             ),
             child: Row(
               children: [
@@ -228,30 +343,23 @@ class _UsersTab extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Ошибка: $e')),
               data: (users) {
-                if (users.isEmpty) {
-                  return const Center(child: Text('Нет пользователей'));
-                }
+                if (users.isEmpty) return const Center(child: Text('Нет пользователей'));
                 return ListView.builder(
                   itemCount: users.length,
                   itemBuilder: (context, i) {
                     final u = users[i];
                     return GestureDetector(
-                      onTap: u.isAdmin
-                          ? null
-                          : () => showDialog(
-                                context: context,
-                                builder: (_) => _EditUserDialog(
-                                  user: u,
-                                  onSaved: () => ref.invalidate(usersProvider),
-                                ),
-                              ),
+                      onTap: u.isAdmin ? null : () => showDialog(
+                        context: context,
+                        builder: (_) => _EditUserDialog(
+                          user: u,
+                          onSaved: () => ref.invalidate(usersProvider),
+                        ),
+                      ),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          border: Border(
-                              bottom: BorderSide(
-                                  color: colors.tableBorder, width: 0.5)),
+                          border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
                         ),
                         child: Row(
                           children: [
@@ -261,12 +369,10 @@ class _UsersTab extends ConsumerWidget {
                                 children: [
                                   CircleAvatar(
                                     radius: 14,
-                                    backgroundColor: Color(int.parse(u
-                                        .avatarColor
-                                        .replaceFirst('#', '0xFF'))),
+                                    backgroundColor: Color(int.parse(
+                                        u.avatarColor.replaceFirst('#', '0xFF'))),
                                     child: Text(u.initials,
-                                        style: const TextStyle(
-                                            fontSize: 10, color: Colors.white)),
+                                        style: const TextStyle(fontSize: 10, color: Colors.white)),
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
@@ -276,54 +382,30 @@ class _UsersTab extends ConsumerWidget {
                                 ],
                               ),
                             ),
-                            SizedBox(
-                                width: 160,
-                                child: Text(u.position ?? '—',
-                                    style: const TextStyle(fontSize: 12))),
-                            SizedBox(
-                                width: 220,
-                                child: Text(_permsText(u),
-                                    style: const TextStyle(fontSize: 11),
-                                    overflow: TextOverflow.ellipsis)),
+                            SizedBox(width: 160, child: Text(u.position ?? '—', style: const TextStyle(fontSize: 12))),
+                            SizedBox(width: 220, child: Text(_permsText(u), style: const TextStyle(fontSize: 11), overflow: TextOverflow.ellipsis)),
                             SizedBox(
                               width: 100,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: u.isActive
-                                      ? colors.badgeGreen
-                                      : colors.badgeRed,
+                                  color: u.isActive ? colors.badgeGreen : colors.badgeRed,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: Text(
-                                    u.isActive ? 'Активен' : 'Заблокирован',
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color: u.isActive
-                                            ? colors.badgeGreenText
-                                            : colors.badgeRedText)),
+                                child: Text(u.isActive ? 'Активен' : 'Заблокирован',
+                                    style: TextStyle(fontSize: 10,
+                                        color: u.isActive ? colors.badgeGreenText : colors.badgeRedText)),
                               ),
                             ),
                             const Spacer(),
                             if (!u.isAdmin)
                               IconButton(
-                                icon: Icon(
-                                  u.isActive
-                                      ? Icons.block_outlined
-                                      : Icons.check_circle_outline,
-                                  size: 16,
-                                ),
+                                icon: Icon(u.isActive ? Icons.block_outlined : Icons.check_circle_outline, size: 16),
                                 onPressed: () => _toggleActive(context, ref, u),
-                                tooltip: u.isActive
-                                    ? 'Заблокировать'
-                                    : 'Разблокировать',
+                                tooltip: u.isActive ? 'Заблокировать' : 'Разблокировать',
                                 padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                    minWidth: 28, minHeight: 28),
-                                color: u.isActive
-                                    ? const Color(0xFFE24B4A)
-                                    : const Color(0xFF639922),
+                                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                color: u.isActive ? const Color(0xFFE24B4A) : const Color(0xFF639922),
                               ),
                           ],
                         ),

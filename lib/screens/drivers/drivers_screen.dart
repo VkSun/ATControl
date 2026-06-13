@@ -344,7 +344,7 @@ class _DriverTable extends StatelessWidget {
                     children: [
                       SizedBox(width: 200, child: Text(d.fullName, style: const TextStyle(fontSize: 12))),
                       SizedBox(width: 90, child: Text(d.tabNumber, style: const TextStyle(fontSize: 12))),
-                      SizedBox(width: 90, child: _VehicleCell(vehicleId: d.vehicleId, ref: ref)),
+                      SizedBox(width: 90, child: _VehicleCell(vehicleIds: d.vehicleIds, ref: ref)),
                       SizedBox(width: 140, child: _DateCell(date: d.licenseExpiry, fmt: fmt, colors: colors)),
                       SizedBox(width: 120, child: _DateCell(date: d.medicalExpiry, fmt: fmt, colors: colors)),
                       SizedBox(width: 120, child: Text(d.birthDate != null ? fmt.format(d.birthDate!) : '—',
@@ -412,20 +412,25 @@ class _DateCell extends StatelessWidget {
   }
 }
 class _VehicleCell extends ConsumerWidget {
-  final String? vehicleId;
+  final List<String> vehicleIds;
   final WidgetRef ref;
-  const _VehicleCell({required this.vehicleId, required this.ref});
+  const _VehicleCell({required this.vehicleIds, required this.ref});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (vehicleId == null) return const Text('—', style: TextStyle(fontSize: 12));
+    if (vehicleIds.isEmpty) return const Text('—', style: TextStyle(fontSize: 12));
     final vehiclesAsync = ref.watch(vehiclesProvider);
     return vehiclesAsync.when(
       loading: () => const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5)),
       error: (_, __) => const Text('—', style: TextStyle(fontSize: 12)),
       data: (vehicles) {
-        final v = vehicles.where((v) => v.id == vehicleId).firstOrNull;
-        return Text(v?.invNumber ?? '—', style: const TextStyle(fontSize: 12));
+        final invNums = vehicleIds
+            .map((id) => vehicles.where((v) => v.id == id).firstOrNull?.invNumber)
+            .whereType<String>()
+            .join(', ');
+        return Text(invNums.isEmpty ? '—' : invNums,
+            style: const TextStyle(fontSize: 12),
+            overflow: TextOverflow.ellipsis);
       },
     );
   }

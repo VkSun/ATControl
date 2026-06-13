@@ -867,7 +867,7 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
                 licenseCategories: d.licenseCategories,
                 licenseExpiry: _newDate,
                 medicalExpiry: d.medicalExpiry,
-                vehicleId: d.vehicleId,
+                vehicleIds: d.vehicleIds,
                 notes: d.notes);
           } else {
             updated = Driver(
@@ -883,7 +883,7 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
                 licenseCategories: d.licenseCategories,
                 licenseExpiry: d.licenseExpiry,
                 medicalExpiry: _newDate,
-                vehicleId: d.vehicleId,
+                vehicleIds: d.vehicleIds,
                 notes: d.notes);
           }
           await ref.read(driverServiceProvider).update(d.id, updated);

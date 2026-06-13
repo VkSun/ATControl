@@ -4,14 +4,13 @@ import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
+import 'import_dialog.dart';
 
 final fontSizeProvider = StateProvider<double>((ref) => 1.0);
 final scaleProvider = StateProvider<double>((ref) => 1.0);
 final notifyDay30Provider = StateProvider<bool>((ref) => true);
 final notifyDay14Provider = StateProvider<bool>((ref) => true);
 final notifyDay7Provider = StateProvider<bool>((ref) => true);
-final importPathProvider = StateProvider<String>((ref) => 'C:\\Users\\Export\\Import');
-final exportPathProvider = StateProvider<String>((ref) => 'C:\\Users\\Export\\Export');
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -89,22 +88,8 @@ class SettingsScreen extends ConsumerWidget {
                   },
                   colors: colors,
                 ),
-                const _SectionLabel('Данные'),
-                _PathSetting(
-                  label: 'Путь для импорта XLS',
-                  desc: 'Папка для загрузки данных из Excel-файлов',
-                  value: ref.watch(importPathProvider),
-                  onChanged: (v) => ref.read(importPathProvider.notifier).state = v,
-                  colors: colors,
-                ),
-                const SizedBox(height: 8),
-                _PathSetting(
-                  label: 'Путь для экспорта XLS',
-                  desc: 'Папка для сохранения экспортированных данных',
-                  value: ref.watch(exportPathProvider),
-                  onChanged: (v) => ref.read(exportPathProvider.notifier).state = v,
-                  colors: colors,
-                ),
+                const _SectionLabel('Импорт и экспорт'),
+                _ImportExportCard(colors: colors),
               ],
             ),
           ),
@@ -252,6 +237,46 @@ class _SelectSetting extends StatelessWidget {
             onChanged: (v) => v != null ? onChanged(v) : null,
             underline: const SizedBox(),
             isDense: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImportExportCard extends StatelessWidget {
+  final AppColors colors;
+  const _ImportExportCard({required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingCard(
+      colors: colors,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text('Импорт данных из Excel', style: TextStyle(fontSize: 13)),
+                SizedBox(height: 2),
+                Text('Загрузка транспорта и водителей из xlsx-файлов',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF888888))),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.icon(
+            onPressed: () => showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const ImportDialog(),
+            ),
+            icon: const Icon(Icons.upload_file, size: 16),
+            label: const Text('Импортировать', style: TextStyle(fontSize: 12)),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            ),
           ),
         ],
       ),
