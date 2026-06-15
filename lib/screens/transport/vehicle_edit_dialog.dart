@@ -196,14 +196,15 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
           ),
         ),
       ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
         TextButton(
           onPressed: widget.vehicle == null ? null : () async {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
-        backgroundColor: Theme.of(ctx).cardColor,
-        surfaceTintColor: Colors.transparent,
+                backgroundColor: Theme.of(ctx).cardColor,
+                surfaceTintColor: Colors.transparent,
                 title: const Text('Удалить транспорт?'),
                 content: Text(
                   '${widget.vehicle!.brandModel} (${widget.vehicle!.govNumber})\n\nЭто действие нельзя отменить.'),
@@ -230,17 +231,22 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
           style: TextButton.styleFrom(foregroundColor: const Color(0xFFE24B4A)),
           child: const Text('Удалить'),
         ),
-        const Spacer(),
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
-        ),
-        FilledButton(
-          onPressed: _loading ? null : _save,
-          child: _loading
-              ? const SizedBox(width: 16, height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Сохранить'),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: _loading ? null : _save,
+              child: _loading
+                  ? const SizedBox(width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Сохранить'),
+            ),
+          ],
         ),
       ],
     );

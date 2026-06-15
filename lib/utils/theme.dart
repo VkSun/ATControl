@@ -26,11 +26,13 @@ class AppTheme {
     dialogTheme: const DialogThemeData(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+      contentTextStyle: TextStyle(fontSize: 13, color: Color(0xFF333333)),
     ),
     textTheme: const TextTheme(
       bodyMedium: TextStyle(fontSize: 13, color: Color(0xFF333333)),
       bodySmall: TextStyle(fontSize: 11, color: Color(0xFF888888)),
-      titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1A1A2E)),
     ),
     extensions: const [
       AppColors(
@@ -67,6 +69,8 @@ class AppTheme {
     dialogTheme: const DialogThemeData(
       backgroundColor: Color(0xFF242438),
       surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFFEEEEEE)),
+      contentTextStyle: TextStyle(fontSize: 13, color: Color(0xFFCCCCCC)),
     ),
     extensions: const [
       AppColors(
