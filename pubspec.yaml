@@ -1,7 +1,7 @@
 name: atcontrol
 description: Система управления автопарком ATControl
 publish_to: 'none'
-version: 0.2.2+4
+version: 0.2.3+5
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -39,7 +39,17 @@ dependencies:
   # Погода
   http: ^1.2.0
 
-  package_info_plus: ^8.0.0 
+  package_info_plus: ^8.0.0
+
+  # Уведомления ОС
+  flutter_local_notifications: ^18.0.1
+
+  # Автозагрузка (Windows/macOS)
+  launch_at_startup: ^0.5.1
+
+  # Постоянное хранение настроек
+  shared_preferences: ^2.3.0
+  local_notifier: ^0.1.6
 
 dev_dependencies:
   flutter_test:

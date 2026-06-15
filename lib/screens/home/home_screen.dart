@@ -7,16 +7,37 @@ import '../../models/driver.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/task_service.dart';
+import '../../services/notification_service.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
+import '../settings/settings_screen.dart' show notifyDay7Provider, notifyDay14Provider, notifyDay30Provider;
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _triggerNotifications());
+  }
+
+  void _triggerNotifications() {
+    NotificationService.checkAndNotify(
+      notify7: ref.read(notifyDay7Provider),
+      notify14: ref.read(notifyDay14Provider),
+      notify30: ref.read(notifyDay30Provider),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final mobile = isMobile(context);
 

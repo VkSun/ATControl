@@ -4,11 +4,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'utils/router.dart';
 import 'utils/theme.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'services/notification_service.dart';
+import 'services/autostart_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await initializeDateFormatting('ru', null);
+  await NotificationService.init();
+  await AutostartService.init();
 
   await Supabase.initialize(
     url: 'https://gmekcuwebewdhupywyal.supabase.co',

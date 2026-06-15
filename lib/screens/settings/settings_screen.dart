@@ -1,16 +1,56 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
 import '../../services/profile_service.dart';
+import '../../services/autostart_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import 'import_dialog.dart';
 
 final fontSizeProvider = StateProvider<double>((ref) => 1.0);
 final scaleProvider = StateProvider<double>((ref) => 1.0);
-final notifyDay30Provider = StateProvider<bool>((ref) => true);
-final notifyDay14Provider = StateProvider<bool>((ref) => true);
-final notifyDay7Provider = StateProvider<bool>((ref) => true);
+
+// Провайдеры уведомлений с сохранением в SharedPreferences
+final notifyDay30Provider = StateNotifierProvider<_BoolPref, bool>(
+    (_) => _BoolPref('notify_30', true));
+final notifyDay14Provider = StateNotifierProvider<_BoolPref, bool>(
+    (_) => _BoolPref('notify_14', true));
+final notifyDay7Provider = StateNotifierProvider<_BoolPref, bool>(
+    (_) => _BoolPref('notify_7', true));
+
+class _BoolPref extends StateNotifier<bool> {
+  final String _key;
+  _BoolPref(this._key, bool def) : super(def) {
+    SharedPreferences.getInstance().then((p) {
+      if (p.containsKey(_key)) state = p.getBool(_key)!;
+    });
+  }
+  Future<void> set(bool v) async {
+    state = v;
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_key, v);
+  }
+}
+
+// Провайдер автозагрузки (только Windows)
+final autostartProvider = StateNotifierProvider<_AutostartNotifier, AsyncValue<bool>>(
+    (_) => _AutostartNotifier());
+
+class _AutostartNotifier extends StateNotifier<AsyncValue<bool>> {
+  _AutostartNotifier() : super(const AsyncValue.loading()) {
+    _load();
+  }
+  Future<void> _load() async {
+    final v = await AutostartService.isEnabled();
+    state = AsyncValue.data(v);
+  }
+  Future<void> set(bool v) async {
+    await AutostartService.setEnabled(v);
+    state = AsyncValue.data(v);
+  }
+}
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -32,7 +72,7 @@ class SettingsScreen extends ConsumerWidget {
                   label: 'Уведомления за 30 дней',
                   desc: 'Предупреждения за 30 дней до истечения срока',
                   value: ref.watch(notifyDay30Provider),
-                  onChanged: (v) => ref.read(notifyDay30Provider.notifier).state = v,
+                  onChanged: (v) => ref.read(notifyDay30Provider.notifier).set(v),
                   colors: colors,
                 ),
                 const SizedBox(height: 8),
@@ -40,7 +80,7 @@ class SettingsScreen extends ConsumerWidget {
                   label: 'Уведомления за 14 дней',
                   desc: 'Предупреждения за 14 дней до истечения срока',
                   value: ref.watch(notifyDay14Provider),
-                  onChanged: (v) => ref.read(notifyDay14Provider.notifier).state = v,
+                  onChanged: (v) => ref.read(notifyDay14Provider.notifier).set(v),
                   colors: colors,
                 ),
                 const SizedBox(height: 8),
@@ -48,7 +88,7 @@ class SettingsScreen extends ConsumerWidget {
                   label: 'Уведомления за 7 дней',
                   desc: 'Срочные предупреждения за 7 дней до истечения',
                   value: ref.watch(notifyDay7Provider),
-                  onChanged: (v) => ref.read(notifyDay7Provider.notifier).state = v,
+                  onChanged: (v) => ref.read(notifyDay7Provider.notifier).set(v),
                   colors: colors,
                 ),
                 const _SectionLabel('Внешний вид'),
@@ -88,6 +128,10 @@ class SettingsScreen extends ConsumerWidget {
                   },
                   colors: colors,
                 ),
+                if (Platform.isWindows) ...[
+                  const _SectionLabel('Система'),
+                  _AutostartCard(colors: colors),
+                ],
                 const _SectionLabel('Импорт и экспорт'),
                 _ImportExportCard(colors: colors),
               ],
@@ -276,6 +320,47 @@ class _ImportExportCard extends StatelessWidget {
             label: const Text('Импортировать', style: TextStyle(fontSize: 12)),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AutostartCard extends ConsumerWidget {
+  final AppColors colors;
+  const _AutostartCard({required this.colors});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(autostartProvider);
+    return _SettingCard(
+      colors: colors,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text('Автозагрузка при старте Windows',
+                    style: TextStyle(fontSize: 13)),
+                SizedBox(height: 2),
+                Text('Запускать ATControl автоматически при входе в систему',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF888888))),
+              ],
+            ),
+          ),
+          state.when(
+            loading: () => const SizedBox(
+                width: 24, height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2)),
+            error: (_, __) => const Icon(Icons.error_outline,
+                color: Color(0xFFE24B4A), size: 20),
+            data: (enabled) => Switch(
+              value: enabled,
+              onChanged: (v) => ref.read(autostartProvider.notifier).set(v),
+              activeThumbColor: const Color(0xFF4361EE),
             ),
           ),
         ],
