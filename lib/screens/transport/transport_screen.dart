@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../../models/vehicle.dart';
 import '../../services/vehicle_service.dart';
@@ -77,7 +78,6 @@ class TransportScreen extends ConsumerWidget {
                 data: (vehicles) => _VehicleTable(
                   vehicles: buildList(vehicles),
                   colors: colors,
-                  ref: ref,
                   mobile: true,
                 ),
               ),
@@ -121,8 +121,6 @@ class TransportScreen extends ConsumerWidget {
                       data: (vehicles) => _VehicleTable(
                         vehicles: buildList(vehicles),
                         colors: colors,
-                        ref: ref,
-                        mobile: false,
                       ),
                     ),
                   ),
@@ -286,30 +284,92 @@ class _SortBtn extends StatelessWidget {
   }
 }
 
-class _VehicleTable extends StatelessWidget {
+class _VehicleTable extends ConsumerStatefulWidget {
   final List<Vehicle> vehicles;
   final AppColors colors;
-  final WidgetRef ref;
   final bool mobile;
 
-  const _VehicleTable({required this.vehicles, required this.colors, required this.ref, this.mobile = false});
+  const _VehicleTable({required this.vehicles, required this.colors, this.mobile = false});
+
+  @override
+  ConsumerState<_VehicleTable> createState() => _VehicleTableState();
+}
+
+class _VehicleTableState extends ConsumerState<_VehicleTable> {
+  static const _prefsKey = 'vehicle_col_widths';
+  static const _labels = ['Инв. номер', 'Марка/модель', 'Гос. номер', 'Техосмотр', 'Страховка', 'Спец. разр.', 'ТО авто', 'ТО оборуд.'];
+  static const _defaults = [90.0, 130.0, 100.0, 100.0, 100.0, 100.0, 140.0, 140.0];
+  late List<double> _widths;
+
+  @override
+  void initState() {
+    super.initState();
+    _widths = List.of(_defaults);
+    _load();
+  }
+
+  Future<void> _load() async {
+    final p = await SharedPreferences.getInstance();
+    final saved = p.getStringList(_prefsKey);
+    if (saved != null && saved.length == _defaults.length) {
+      setState(() => _widths = saved.map(double.parse).toList());
+    }
+  }
+
+  Future<void> _save() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setStringList(_prefsKey, _widths.map((w) => w.toStringAsFixed(1)).toList());
+  }
+
+  Widget _resizableHeader(int i) {
+    return SizedBox(
+      width: _widths[i],
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(_labels[i],
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF888888))),
+          ),
+          MouseRegion(
+            cursor: SystemMouseCursors.resizeColumn,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragUpdate: (d) => setState(() {
+                _widths[i] = (_widths[i] + d.delta.dx).clamp(50.0, 500.0);
+              }),
+              onHorizontalDragEnd: (_) => _save(),
+              child: SizedBox(
+                width: 8,
+                height: 24,
+                child: Center(
+                  child: Container(width: 1, height: 16, color: widget.colors.tableBorder),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd.MM.yyyy');
     final perms = ref.watch(permissionsProvider);
 
-    if (mobile) {
+    if (widget.mobile) {
       return ListView.builder(
         padding: const EdgeInsets.only(top: 8, bottom: 80),
-        itemCount: vehicles.length,
+        itemCount: widget.vehicles.length,
         itemBuilder: (context, i) => _VehicleRow(
-          vehicle: vehicles[i],
-          colors: colors,
+          vehicle: widget.vehicles[i],
+          colors: widget.colors,
           fmt: fmt,
           canEdit: perms.canEditVehicle,
-          onEdit: () => _openEdit(context, vehicles[i]),
+          onEdit: () => _openEdit(context, widget.vehicles[i]),
           mobile: true,
+          widths: _widths,
         ),
       );
     }
@@ -319,58 +379,41 @@ class _VehicleTable extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+            border: Border(bottom: BorderSide(color: widget.colors.tableBorder, width: 0.5)),
           ),
           child: Row(
             children: [
-              _th('Инв. номер', 90),
-              _th('Марка/модель', 130),
-              _th('Гос. номер', 100),
-              _th('Техосмотр', 100),
-              _th('Страховка', 100),
-              _th('Спец. разр.', 100),
-              _th('ТО авто', 140),
-              _th('ТО оборуд.', 140),
+              for (int i = 0; i < _labels.length; i++) _resizableHeader(i),
               const Spacer(),
             ],
           ),
         ),
         Expanded(
           child: ListView.builder(
-            itemCount: vehicles.length,
+            itemCount: widget.vehicles.length,
             itemBuilder: (context, i) => _VehicleRow(
-              vehicle: vehicles[i],
-              colors: colors,
+              vehicle: widget.vehicles[i],
+              colors: widget.colors,
               fmt: fmt,
               canEdit: perms.canEditVehicle,
-              onEdit: () => _openEdit(context, vehicles[i]),
+              onEdit: () => _openEdit(context, widget.vehicles[i]),
+              widths: _widths,
             ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.all(12),
-          child: Text('Записей: ${vehicles.length}',
+          child: Text('Записей: ${widget.vehicles.length}',
               style: Theme.of(context).textTheme.bodySmall),
         ),
       ],
     );
   }
 
-  Widget _th(String label, double width) {
-    return SizedBox(
-      width: width,
-      child: Text(label,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500,
-            color: Color(0xFF888888))),
-    );
-  }
-
   void _openEdit(BuildContext context, Vehicle v) {
     showDialog(
       context: context,
-      builder: (_) => VehicleEditDialog(vehicle: v, onSaved: () {
-        ref.invalidate(vehiclesProvider);
-      }),
+      builder: (_) => VehicleEditDialog(vehicle: v, onSaved: () => ref.invalidate(vehiclesProvider)),
     );
   }
 }
@@ -382,6 +425,7 @@ class _VehicleRow extends StatelessWidget {
   final VoidCallback onEdit;
   final bool canEdit;
   final bool mobile;
+  final List<double> widths;
 
   const _VehicleRow({
     required this.vehicle,
@@ -389,6 +433,7 @@ class _VehicleRow extends StatelessWidget {
     required this.fmt,
     required this.onEdit,
     required this.canEdit,
+    required this.widths,
     this.mobile = false,
   });
 
@@ -433,19 +478,19 @@ class _VehicleRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            SizedBox(width: 90,
+            SizedBox(width: widths[0],
               child: Text(vehicle.invNumber, style: const TextStyle(fontSize: 12))),
-            SizedBox(width: 130,
+            SizedBox(width: widths[1],
               child: Text(vehicle.brandModel, style: const TextStyle(fontSize: 12))),
-            SizedBox(width: 100,
+            SizedBox(width: widths[2],
               child: Text(vehicle.govNumber, style: const TextStyle(fontSize: 12))),
-            SizedBox(width: 100,
+            SizedBox(width: widths[3],
               child: _DateCell(date: vehicle.inspectionDate, fmt: fmt, colors: colors)),
-            SizedBox(width: 100,
+            SizedBox(width: widths[4],
               child: _DateCell(date: vehicle.insuranceDate, fmt: fmt, colors: colors)),
-            SizedBox(width: 100,
+            SizedBox(width: widths[5],
               child: _DateCell(date: vehicle.specialPermitDate, fmt: fmt, colors: colors)),
-            SizedBox(width: 140,
+            SizedBox(width: widths[6],
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -457,7 +502,7 @@ class _VehicleRow extends StatelessWidget {
                 ],
               ),
             ),
-            SizedBox(width: 140,
+            SizedBox(width: widths[7],
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

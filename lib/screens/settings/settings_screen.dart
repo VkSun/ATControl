@@ -9,9 +9,6 @@ import '../../services/autostart_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import 'import_dialog.dart';
 
-final fontSizeProvider = StateProvider<double>((ref) => 1.0);
-final scaleProvider = StateProvider<double>((ref) => 1.0);
-
 // Провайдеры уведомлений с сохранением в SharedPreferences
 final notifyDay30Provider = StateNotifierProvider<_BoolPref, bool>(
     (_) => _BoolPref('notify_30', true));
@@ -98,8 +95,8 @@ class SettingsScreen extends ConsumerWidget {
                       : ref.watch(themeModeProvider) == ThemeMode.dark ? 'Тёмная' : 'Системная',
                   options: const ['Светлая', 'Тёмная', 'Системная'],
                   onChanged: (v) {
-                    ref.read(themeModeProvider.notifier).state = v == 'Светлая'
-                        ? ThemeMode.light : v == 'Тёмная' ? ThemeMode.dark : ThemeMode.system;
+                    ref.read(themeModeProvider.notifier).set(v == 'Светлая'
+                        ? ThemeMode.light : v == 'Тёмная' ? ThemeMode.dark : ThemeMode.system);
                   },
                   colors: colors,
                 ),
@@ -110,8 +107,8 @@ class SettingsScreen extends ConsumerWidget {
                       : ref.watch(fontSizeProvider) == 1.1 ? 'Большой' : 'Средний',
                   options: const ['Маленький', 'Средний', 'Большой'],
                   onChanged: (v) {
-                    ref.read(fontSizeProvider.notifier).state =
-                        v == 'Маленький' ? 0.9 : v == 'Большой' ? 1.1 : 1.0;
+                    ref.read(fontSizeProvider.notifier).set(
+                        v == 'Маленький' ? 0.9 : v == 'Большой' ? 1.1 : 1.0);
                   },
                   colors: colors,
                 ),
@@ -123,8 +120,8 @@ class SettingsScreen extends ConsumerWidget {
                       : ref.watch(scaleProvider) == 1.25 ? '125%' : '100%',
                   options: const ['90%', '100%', '110%', '125%'],
                   onChanged: (v) {
-                    ref.read(scaleProvider.notifier).state =
-                        v == '90%' ? 0.9 : v == '110%' ? 1.1 : v == '125%' ? 1.25 : 1.0;
+                    ref.read(scaleProvider.notifier).set(
+                        v == '90%' ? 0.9 : v == '110%' ? 1.1 : v == '125%' ? 1.25 : 1.0);
                   },
                   colors: colors,
                 ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:async';
+import 'dart:io';
 import '../utils/theme.dart';
 import '../utils/responsive.dart';
 import '../services/weather_service.dart';
@@ -91,8 +92,8 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
               themeMode: themeMode,
               collapsed: collapsed,
               onThemeToggle: () {
-                ref.read(themeModeProvider.notifier).state =
-                    themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+                ref.read(themeModeProvider.notifier).set(
+                    themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light);
               },
               onToggleCollapse: () {
                 ref.read(sidebarCollapsedProvider.notifier).state = !collapsed;
@@ -241,8 +242,8 @@ class _MobileLayout extends ConsumerWidget {
                     size: 20,
                   ),
                   onPressed: () {
-                    ref.read(themeModeProvider.notifier).state =
-                        themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+                    ref.read(themeModeProvider.notifier).set(
+                        themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark);
                   },
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -299,6 +300,7 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
           _SidebarBottomProfile(collapsed: collapsed, colors: colors),
+          _SidebarNetworkStatus(collapsed: collapsed, colors: colors),
           _SidebarBottom(collapsed: collapsed),
         ],
       ),
@@ -367,10 +369,22 @@ class _SidebarTop extends StatelessWidget {
           ),
           if (!collapsed) ...[
             const SizedBox(height: 14),
-            Text(timeStr,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500)),
+            SizedBox(
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.fitWidth,
+                alignment: Alignment.centerLeft,
+                child: Text(timeStr,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500)),
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(dateStr, style: Theme.of(context).textTheme.bodySmall),
+            SizedBox(
+              width: double.infinity,
+              child: Text(dateStr,
+                style: Theme.of(context).textTheme.bodySmall,
+                overflow: TextOverflow.ellipsis),
+            ),
             const SizedBox(height: 4),
             Consumer(
               builder: (context, ref, _) {
@@ -620,6 +634,91 @@ class _SidebarBottomProfile extends ConsumerWidget {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _SidebarNetworkStatus extends StatefulWidget {
+  final bool collapsed;
+  final AppColors colors;
+  const _SidebarNetworkStatus({required this.collapsed, required this.colors});
+
+  @override
+  State<_SidebarNetworkStatus> createState() => _SidebarNetworkStatusState();
+}
+
+class _SidebarNetworkStatusState extends State<_SidebarNetworkStatus> {
+  bool? _connected;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _check());
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  Future<void> _check() async {
+    try {
+      final result = await InternetAddress.lookup('supabase.co')
+          .timeout(const Duration(seconds: 5));
+      final ok = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+      if (mounted) setState(() => _connected = ok);
+    } catch (_) {
+      if (mounted) setState(() => _connected = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final connected = _connected;
+    final isOnline = connected == true;
+    final dotColor = connected == null
+        ? const Color(0xFF888888)
+        : isOnline
+            ? const Color(0xFF4CAF50)
+            : const Color(0xFFE24B4A);
+    final label = connected == null
+        ? 'Проверка...'
+        : isOnline
+            ? 'Подключено'
+            : 'Нет подключения';
+
+    if (widget.collapsed) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Tooltip(
+          message: label,
+          preferBelow: false,
+          child: Center(
+            child: Container(
+              width: 8, height: 8,
+              decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Text(label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
+        ],
+      ),
     );
   }
 }

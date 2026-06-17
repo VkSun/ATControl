@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../../models/driver.dart';
 import '../../services/driver_service.dart';
@@ -73,7 +74,6 @@ class DriversScreen extends ConsumerWidget {
                 data: (drivers) => _DriverTable(
                   drivers: _buildList(drivers, search, sort),
                   colors: colors,
-                  ref: ref,
                   mobile: true,
                 ),
               ),
@@ -116,7 +116,6 @@ class DriversScreen extends ConsumerWidget {
                       data: (drivers) => _DriverTable(
                         drivers: _buildList(drivers, search, sort),
                         colors: colors,
-                        ref: ref,
                       ),
                     ),
                   ),
@@ -264,31 +263,92 @@ class _SortBtn extends StatelessWidget {
   }
 }
 
-class _DriverTable extends StatelessWidget {
+class _DriverTable extends ConsumerStatefulWidget {
   final List<Driver> drivers;
   final AppColors colors;
-  final WidgetRef ref;
   final bool mobile;
 
-  const _DriverTable({required this.drivers, required this.colors, required this.ref, this.mobile = false});
+  const _DriverTable({required this.drivers, required this.colors, this.mobile = false});
+
+  @override
+  ConsumerState<_DriverTable> createState() => _DriverTableState();
+}
+
+class _DriverTableState extends ConsumerState<_DriverTable> {
+  static const _prefsKey = 'driver_col_widths';
+  static const _labels = ['ФИО', 'Таб. номер', 'Инв. ТС', 'Вод. удостоверение', 'Мед. справка', 'Дата рождения'];
+  static const _defaults = [200.0, 90.0, 90.0, 140.0, 120.0, 120.0];
+  late List<double> _widths;
+
+  @override
+  void initState() {
+    super.initState();
+    _widths = List.of(_defaults);
+    _load();
+  }
+
+  Future<void> _load() async {
+    final p = await SharedPreferences.getInstance();
+    final saved = p.getStringList(_prefsKey);
+    if (saved != null && saved.length == _defaults.length) {
+      setState(() => _widths = saved.map(double.parse).toList());
+    }
+  }
+
+  Future<void> _save() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setStringList(_prefsKey, _widths.map((w) => w.toStringAsFixed(1)).toList());
+  }
+
+  Widget _resizableHeader(int i) {
+    return SizedBox(
+      width: _widths[i],
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(_labels[i],
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF888888))),
+          ),
+          MouseRegion(
+            cursor: SystemMouseCursors.resizeColumn,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragUpdate: (d) => setState(() {
+                _widths[i] = (_widths[i] + d.delta.dx).clamp(50.0, 500.0);
+              }),
+              onHorizontalDragEnd: (_) => _save(),
+              child: SizedBox(
+                width: 8,
+                height: 24,
+                child: Center(
+                  child: Container(width: 1, height: 16, color: widget.colors.tableBorder),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd.MM.yyyy');
     final perms = ref.watch(permissionsProvider);
 
-    if (mobile) {
+    if (widget.mobile) {
       return ListView.builder(
         padding: const EdgeInsets.only(top: 8, bottom: 80),
-        itemCount: drivers.length,
+        itemCount: widget.drivers.length,
         itemBuilder: (context, i) {
-          final d = drivers[i];
+          final d = widget.drivers[i];
           return InkWell(
             onTap: perms.canEditDriver ? () => _openEdit(context, d) : null,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+                border: Border(bottom: BorderSide(color: widget.colors.tableBorder, width: 0.5)),
               ),
               child: Row(
                 children: [
@@ -314,40 +374,35 @@ class _DriverTable extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+            border: Border(bottom: BorderSide(color: widget.colors.tableBorder, width: 0.5)),
           ),
           child: Row(
             children: [
-              _th('ФИО', 200),
-              _th('Таб. номер', 90),
-              _th('Инв. ТС', 90),
-              _th('Вод. удостоверение', 140),
-              _th('Мед. справка', 120),
-              _th('Дата рождения', 120),
+              for (int i = 0; i < _labels.length; i++) _resizableHeader(i),
               const Spacer(),
             ],
           ),
         ),
         Expanded(
           child: ListView.builder(
-            itemCount: drivers.length,
+            itemCount: widget.drivers.length,
             itemBuilder: (context, i) {
-              final d = drivers[i];
+              final d = widget.drivers[i];
               return InkWell(
                 onTap: perms.canEditDriver ? () => _openEdit(context, d) : null,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+                    border: Border(bottom: BorderSide(color: widget.colors.tableBorder, width: 0.5)),
                   ),
                   child: Row(
                     children: [
-                      SizedBox(width: 200, child: Text(d.fullName, style: const TextStyle(fontSize: 12))),
-                      SizedBox(width: 90, child: Text(d.tabNumber, style: const TextStyle(fontSize: 12))),
-                      SizedBox(width: 90, child: _VehicleCell(vehicleIds: d.vehicleIds, ref: ref)),
-                      SizedBox(width: 140, child: _DateCell(date: d.licenseExpiry, fmt: fmt, colors: colors)),
-                      SizedBox(width: 120, child: _DateCell(date: d.medicalExpiry, fmt: fmt, colors: colors)),
-                      SizedBox(width: 120, child: Text(d.birthDate != null ? fmt.format(d.birthDate!) : '—',
+                      SizedBox(width: _widths[0], child: Text(d.fullName, style: const TextStyle(fontSize: 12))),
+                      SizedBox(width: _widths[1], child: Text(d.tabNumber, style: const TextStyle(fontSize: 12))),
+                      SizedBox(width: _widths[2], child: _VehicleCell(vehicleIds: d.vehicleIds, ref: ref)),
+                      SizedBox(width: _widths[3], child: _DateCell(date: d.licenseExpiry, fmt: fmt, colors: widget.colors)),
+                      SizedBox(width: _widths[4], child: _DateCell(date: d.medicalExpiry, fmt: fmt, colors: widget.colors)),
+                      SizedBox(width: _widths[5], child: Text(d.birthDate != null ? fmt.format(d.birthDate!) : '—',
                         style: const TextStyle(fontSize: 12))),
                       const Spacer(),
                       if (perms.canEditDriver)
@@ -366,17 +421,12 @@ class _DriverTable extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.all(12),
-          child: Text('Записей: ${drivers.length}',
+          child: Text('Записей: ${widget.drivers.length}',
               style: Theme.of(context).textTheme.bodySmall),
         ),
       ],
     );
   }
-
-  Widget _th(String label, double width) => SizedBox(
-    width: width,
-    child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF888888))),
-  );
 
   void _openEdit(BuildContext context, Driver d) {
     showDialog(

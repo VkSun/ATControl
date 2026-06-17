@@ -1,7 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
+final themeModeProvider =
+    StateNotifierProvider<_ThemePref, ThemeMode>((_) => _ThemePref());
+
+class _ThemePref extends StateNotifier<ThemeMode> {
+  _ThemePref() : super(ThemeMode.light) {
+    SharedPreferences.getInstance().then((p) {
+      final v = p.getString('theme_mode');
+      if (v == 'dark') {
+        state = ThemeMode.dark;
+      } else if (v == 'system') {
+        state = ThemeMode.system;
+      }
+    });
+  }
+  Future<void> set(ThemeMode v) async {
+    state = v;
+    final p = await SharedPreferences.getInstance();
+    await p.setString('theme_mode',
+        v == ThemeMode.dark ? 'dark' : v == ThemeMode.system ? 'system' : 'light');
+  }
+}
+
+final fontSizeProvider =
+    StateNotifierProvider<_DoublePref, double>((_) => _DoublePref('font_size', 1.0));
+
+final scaleProvider =
+    StateNotifierProvider<_DoublePref, double>((_) => _DoublePref('ui_scale', 1.0));
+
+class _DoublePref extends StateNotifier<double> {
+  final String _key;
+  _DoublePref(this._key, double def) : super(def) {
+    SharedPreferences.getInstance().then((p) {
+      if (p.containsKey(_key)) state = p.getDouble(_key)!;
+    });
+  }
+  Future<void> set(double v) async {
+    state = v;
+    final p = await SharedPreferences.getInstance();
+    await p.setDouble(_key, v);
+  }
+}
 
 class AppTheme {
   static const _primary = Color(0xFF4361EE);
@@ -33,6 +74,21 @@ class AppTheme {
       bodyMedium: TextStyle(fontSize: 13, color: Color(0xFF333333)),
       bodySmall: TextStyle(fontSize: 11, color: Color(0xFF888888)),
       titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1A1A2E)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _primary,
+        foregroundColor: Colors.white,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _primary,
+        side: const BorderSide(color: _primary),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: _primary),
     ),
     extensions: const [
       AppColors(
@@ -71,6 +127,21 @@ class AppTheme {
       surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFFEEEEEE)),
       contentTextStyle: TextStyle(fontSize: 13, color: Color(0xFFCCCCCC)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _primary,
+        foregroundColor: Colors.white,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _primary,
+        side: const BorderSide(color: _primary),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: _primary),
     ),
     extensions: const [
       AppColors(

@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -25,6 +26,7 @@ class PlannerScreen extends ConsumerStatefulWidget {
 
 class _PlannerScreenState extends ConsumerState<PlannerScreen> {
   late TextEditingController _notesCtrl;
+  Timer? _debounceTimer;
   DateTime _calendarMonth = DateTime.now();
   bool _notesSaving = false;
   bool _syncing = false;
@@ -141,8 +143,17 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
     }
   }
 
+  void _onNotesChanged(String _) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(seconds: 10), _saveNotes);
+  }
+
   @override
   void dispose() {
+    if (_debounceTimer?.isActive == true) {
+      _debounceTimer!.cancel();
+      _saveNotes();
+    }
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -209,20 +220,13 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                                 if (_notesSaving)
                                   const SizedBox(
                                       width: 14, height: 14,
-                                      child: CircularProgressIndicator(strokeWidth: 2))
-                                else
-                                  IconButton(
-                                    icon: const Icon(Icons.save_outlined, size: 16),
-                                    onPressed: _saveNotes,
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                    tooltip: 'Сохранить',
-                                  ),
+                                      child: CircularProgressIndicator(strokeWidth: 2)),
                               ],
                             ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: _notesCtrl,
+                              onChanged: _onNotesChanged,
                               maxLines: 6,
                               decoration: InputDecoration(
                                 hintText: 'Введите заметку...',
@@ -358,25 +362,18 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                     padding: const EdgeInsets.all(14),
                     child: Column(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (_notesSaving)
-                              const SizedBox(
-                                  width: 18, height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2))
-                            else
-                              TextButton.icon(
-                                onPressed: _saveNotes,
-                                icon: const Icon(Icons.save_outlined, size: 16),
-                                label: const Text('Сохранить'),
-                              ),
-                          ],
-                        ),
+                        if (_notesSaving)
+                          const Align(
+                            alignment: Alignment.centerRight,
+                            child: SizedBox(
+                                width: 18, height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2)),
+                          ),
                         const SizedBox(height: 8),
                         Expanded(
                           child: TextField(
                             controller: _notesCtrl,
+                            onChanged: _onNotesChanged,
                             maxLines: null,
                             expands: true,
                             textAlignVertical: TextAlignVertical.top,
