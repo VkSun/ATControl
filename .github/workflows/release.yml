@@ -81,7 +81,7 @@ jobs:
           path: ATControl-${{ github.event.inputs.version || github.ref_name }}-android.apk
 
   release:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' && github.event.inputs.version != 'manual')
     needs: [build-windows, build-android]
     runs-on: ubuntu-latest
     permissions:
@@ -98,8 +98,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "ATControl ${{ github.ref_name }}"
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: "ATControl ${{ github.event.inputs.version || github.ref_name }}"
           generate_release_notes: true
           files: |
-            ATControl-${{ github.ref_name }}-windows.zip
-            ATControl-${{ github.ref_name }}-android.apk
+            ATControl-${{ github.event.inputs.version || github.ref_name }}-windows.zip
+            ATControl-${{ github.event.inputs.version || github.ref_name }}-android.apk
