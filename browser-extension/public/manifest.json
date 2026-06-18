@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "ATControl — Новая вкладка",
+  "version": "1.0.0",
+  "description": "Новая вкладка с синхронизацией задач ATControl",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://gmekcuwebewdhupywyal.supabase.co/*"
+  ],
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  }
+}
