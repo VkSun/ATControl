@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label (e.g. v0.2.5)'
+        required: false
+        default: 'manual'
 
 jobs:
   build-windows:
@@ -24,7 +30,7 @@ jobs:
 
       - name: Package Windows ZIP
         run: |
-          $tag = "${{ github.ref_name }}"
+          $tag = "${{ github.event.inputs.version || github.ref_name }}"
           $name = "ATControl-$tag-windows"
           Copy-Item -Recurse "build\windows\x64\runner\Release" $name
           Compress-Archive -Path $name -DestinationPath "$name.zip"
@@ -32,7 +38,7 @@ jobs:
       - uses: actions/upload-artifact@v4.6.2
         with:
           name: windows-build
-          path: ATControl-${{ github.ref_name }}-windows.zip
+          path: ATControl-${{ github.event.inputs.version || github.ref_name }}-windows.zip
 
   build-android:
     runs-on: ubuntu-latest
@@ -67,14 +73,15 @@ jobs:
       - name: Rename APK
         run: |
           mv build/app/outputs/flutter-apk/app-release.apk \
-             ATControl-${{ github.ref_name }}-android.apk
+             ATControl-${{ github.event.inputs.version || github.ref_name }}-android.apk
 
       - uses: actions/upload-artifact@v4.6.2
         with:
           name: android-build
-          path: ATControl-${{ github.ref_name }}-android.apk
+          path: ATControl-${{ github.event.inputs.version || github.ref_name }}-android.apk
 
   release:
+    if: startsWith(github.ref, 'refs/tags/')
     needs: [build-windows, build-android]
     runs-on: ubuntu-latest
     permissions:
@@ -96,4 +103,3 @@ jobs:
           files: |
             ATControl-${{ github.ref_name }}-windows.zip
             ATControl-${{ github.ref_name }}-android.apk
-
