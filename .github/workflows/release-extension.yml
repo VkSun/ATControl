@@ -7,6 +7,10 @@ on:
         description: 'Version tag (e.g. v1.0.0)'
         required: true
         default: 'v1.0.0'
+      ref:
+        description: 'Branch or commit to build from'
+        required: false
+        default: 'main'
 
 jobs:
   build-and-release:
