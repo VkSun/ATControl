@@ -1,0 +1,64 @@
+name: Release Extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: browser-extension
+        run: npm ci
+
+      - name: Build extension
+        working-directory: browser-extension
+        run: npm run build
+
+      - name: Package ZIP
+        run: |
+          cd browser-extension
+          zip -r ../atcontrol-newtab-${{ github.event.inputs.version }}.zip dist/
+          echo "Package size: $(du -sh ../atcontrol-newtab-${{ github.event.inputs.version }}.zip)"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: newtab-${{ github.event.inputs.version }}
+          name: "ATControl New Tab ${{ github.event.inputs.version }}"
+          generate_release_notes: false
+          body: |
+            ## ATControl — Расширение для браузера (Новая вкладка)
+
+            Chrome/Chromium расширение, заменяющее новую вкладку дашбордом в стиле Mazer с синхронизацией задач ATControl.
+
+            ### Установка
+            1. Скачайте и распакуйте `atcontrol-newtab-${{ github.event.inputs.version }}.zip`
+            2. Откройте `chrome://extensions`
+            3. Включите **«Режим разработчика»** (переключатель справа вверху)
+            4. Нажмите **«Загрузить распакованное расширение»**
+            5. Выберите папку `dist/` из распакованного архива
+
+            ### Возможности
+            - 🔑 Авторизация через Supabase (тот же аккаунт что в ATControl)
+            - ✅ Синхронизация задач с ATControl в реальном времени
+            - 🕐 Живые часы с датой
+            - 🔍 Поиск (Google, Яндекс, DuckDuckGo, Bing)
+            - 🌤 Виджет погоды
+            - 🔖 Закладки (редактируемые)
+            - 📅 Мини-календарь
+            - ⚙️ Настройки темы (акцент, фон, приветствие)
+          files: atcontrol-newtab-${{ github.event.inputs.version }}.zip
