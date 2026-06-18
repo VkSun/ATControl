@@ -12,8 +12,6 @@ const ACCENTS = [
 export default function SettingsDrawer({ open, onClose, settings, onSettingsChange }) {
   const update = (key, val) => {
     const next = { ...settings, [key]: val }
-    onSettingsChange(next)
-    localStorage.setItem('atc_settings', JSON.stringify(next))
     if (key === 'accent') {
       const acc = ACCENTS.find(a => a.key === val)
       if (acc) {
@@ -22,6 +20,7 @@ export default function SettingsDrawer({ open, onClose, settings, onSettingsChan
         document.documentElement.style.setProperty('--primary-soft', acc.soft)
       }
     }
+    onSettingsChange(next)
   }
 
   const handleLogout = async () => {
@@ -31,9 +30,7 @@ export default function SettingsDrawer({ open, onClose, settings, onSettingsChan
 
   return (
     <>
-      {/* Overlay */}
       {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(37,57,111,.25)', backdropFilter: 'blur(2px)', zIndex: 99 }} />}
-      {/* Drawer */}
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 320,
         background: 'var(--surface)', boxShadow: 'var(--shadow-lg)', zIndex: 100,
@@ -47,7 +44,6 @@ export default function SettingsDrawer({ open, onClose, settings, onSettingsChan
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 99, border: 'none', background: 'var(--surface-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>{I.close({ size: 16 })}</button>
         </div>
 
-        {/* Accent color */}
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Цвет акцента</div>
           <div style={{ display: 'flex', gap: 10 }}>
@@ -61,7 +57,6 @@ export default function SettingsDrawer({ open, onClose, settings, onSettingsChan
           </div>
         </div>
 
-        {/* Greeting */}
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Поиск</div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
@@ -79,15 +74,6 @@ export default function SettingsDrawer({ open, onClose, settings, onSettingsChan
           </label>
         </div>
 
-        {/* User name */}
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Имя пользователя</div>
-          <input value={settings.userName || ''} onChange={e => update('userName', e.target.value)}
-            placeholder="Ваше имя..."
-            style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--line)', borderRadius: 10, fontSize: 13, fontFamily: 'Inter', outline: 'none', background: 'var(--surface-2)', color: 'var(--ink)' }} />
-        </div>
-
-        {/* Logout */}
         <div style={{ marginTop: 'auto' }}>
           <button onClick={handleLogout} style={{
             width: '100%', padding: '11px', background: 'transparent', border: '1.5px solid var(--danger)',

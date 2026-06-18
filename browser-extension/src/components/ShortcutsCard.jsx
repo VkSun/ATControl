@@ -1,40 +1,70 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 import { I } from './Icons'
 
 const DEFAULT_SHORTCUTS = [
-  { id: 1, label: 'Gmail',      url: 'https://mail.google.com',    letter: 'G', color: '#EA4335' },
-  { id: 2, label: 'YouTube',    url: 'https://youtube.com',        letter: 'Y', color: '#FF0000' },
-  { id: 3, label: 'GitHub',     url: 'https://github.com',         letter: 'H', color: '#181717' },
-  { id: 4, label: 'Supabase',   url: 'https://supabase.com',       letter: 'S', color: '#3ECF8E' },
-  { id: 5, label: 'ATControl',  url: 'https://atcontrol.app',      letter: 'A', color: '#435EBE' },
-  { id: 6, label: 'Figma',      url: 'https://figma.com',          letter: 'F', color: '#A259FF' },
+  { label: 'Gmail',     url: 'https://mail.google.com', letter: 'G', color: '#EA4335', sort_order: 0 },
+  { label: 'YouTube',   url: 'https://youtube.com',     letter: 'Y', color: '#FF0000', sort_order: 1 },
+  { label: 'GitHub',    url: 'https://github.com',      letter: 'H', color: '#181717', sort_order: 2 },
+  { label: 'Supabase',  url: 'https://supabase.com',    letter: 'S', color: '#3ECF8E', sort_order: 3 },
+  { label: 'ATControl', url: 'https://atcontrol.app',   letter: 'A', color: '#435EBE', sort_order: 4 },
+  { label: 'Figma',     url: 'https://figma.com',       letter: 'F', color: '#A259FF', sort_order: 5 },
 ]
 
 const PALETTE = ['#435EBE','#E74C5E','#20C997','#F5A623','#3BAFDA','#A259FF','#181717','#EA4335']
 
-function load() {
-  try { return JSON.parse(localStorage.getItem('atc_shortcuts')) || DEFAULT_SHORTCUTS } catch { return DEFAULT_SHORTCUTS }
-}
-
-export default function ShortcutsCard() {
-  const [shortcuts, setShortcuts] = useState(load)
+export default function ShortcutsCard({ userId }) {
+  const [shortcuts, setShortcuts] = useState([])
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ label: '', url: '', color: '#435EBE' })
   const [hovered, setHovered] = useState(null)
 
-  const save = (arr) => { setShortcuts(arr); localStorage.setItem('atc_shortcuts', JSON.stringify(arr)) }
+  useEffect(() => {
+    if (!userId) return
+    loadShortcuts()
+  }, [userId])
 
-  const addShortcut = () => {
+  async function loadShortcuts() {
+    const { data, error } = await supabase
+      .from('newtab_shortcuts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('sort_order', { ascending: true })
+
+    if (error) return
+
+    if (data.length === 0) {
+      const rows = DEFAULT_SHORTCUTS.map(s => ({ ...s, user_id: userId }))
+      const { data: seeded } = await supabase.from('newtab_shortcuts').insert(rows).select()
+      if (seeded) setShortcuts(seeded)
+    } else {
+      setShortcuts(data)
+    }
+  }
+
+  const addShortcut = async () => {
     if (!form.label || !form.url) return
     const url = form.url.startsWith('http') ? form.url : 'https://' + form.url
     const letter = form.label[0].toUpperCase()
-    const newS = { id: Date.now(), label: form.label, url, letter, color: form.color }
-    save([...shortcuts, newS])
-    setForm({ label: '', url: '', color: '#435EBE' })
-    setAdding(false)
+    const { data, error } = await supabase.from('newtab_shortcuts').insert({
+      user_id: userId,
+      label: form.label,
+      url,
+      letter,
+      color: form.color,
+      sort_order: shortcuts.length,
+    }).select().single()
+    if (!error && data) {
+      setShortcuts(prev => [...prev, data])
+      setForm({ label: '', url: '', color: '#435EBE' })
+      setAdding(false)
+    }
   }
 
-  const removeShortcut = (id) => save(shortcuts.filter(s => s.id !== id))
+  const removeShortcut = async (id) => {
+    await supabase.from('newtab_shortcuts').delete().eq('id', id)
+    setShortcuts(prev => prev.filter(s => s.id !== id))
+  }
 
   return (
     <div className="mz-card">
