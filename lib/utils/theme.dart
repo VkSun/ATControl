@@ -86,7 +86,7 @@ class _DoublePref extends StateNotifier<double> {
 }
 
 class AppTheme {
-  static const _primary = Color(0xFF4361EE);
+  static const _primary = Color(0xFF435EBE);
   static const _danger  = Color(0xFFE24B4A);
   static const _amber   = Color(0xFFEF9F27);
   static const _green   = Color(0xFF639922);
@@ -95,7 +95,7 @@ class AppTheme {
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(seedColor: _primary, brightness: Brightness.light),
-    scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+    scaffoldBackgroundColor: const Color(0xFFF4F6FA),
     cardColor: Colors.white,
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.white,
@@ -128,7 +128,7 @@ class AppTheme {
         sidebarActive: _primary,
         sidebarText: Color(0xFF1A1A2E),
         sidebarTextSecondary: Color(0xFF888888),
-        tableBorder: Color(0xFFEEEEEE),
+        tableBorder: Color(0xFFE9ECF3),
         badgeRed: Color(0xFFFCEBEB),     badgeRedText: Color(0xFFA32D2D),
         badgeAmber: Color(0xFFFAEEDA),   badgeAmberText: Color(0xFF854F0B),
         badgeGreen: Color(0xFFEAF3DE),   badgeGreenText: Color(0xFF3B6D11),

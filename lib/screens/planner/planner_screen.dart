@@ -244,8 +244,15 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                       Container(
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: colors.tableBorder, width: 0.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 12,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         padding: const EdgeInsets.all(14),
                         child: tasksAsync.when(
@@ -966,7 +973,7 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
   }
 }
 
-class _MiniCalendar extends StatelessWidget {
+class _MiniCalendar extends StatefulWidget {
   final DateTime month;
   final List<Task> tasks;
   final AppColors colors;
@@ -980,45 +987,85 @@ class _MiniCalendar extends StatelessWidget {
   });
 
   @override
+  State<_MiniCalendar> createState() => _MiniCalendarState();
+}
+
+class _MiniCalendarState extends State<_MiniCalendar> {
+  int? _selectedDay;
+
+  @override
+  void didUpdateWidget(_MiniCalendar old) {
+    super.didUpdateWidget(old);
+    if (old.month.year != widget.month.year ||
+        old.month.month != widget.month.month) {
+      _selectedDay = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('MMMM yyyy', 'ru');
     final today = DateTime.now();
+    final month = widget.month;
+    final tasks = widget.tasks;
+    final colors = widget.colors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     final firstDay = DateTime(month.year, month.month, 1);
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     final startWeekday = firstDay.weekday - 1;
 
-    final taskDays = <int>{};
+    final tasksByDay = <int, List<Task>>{};
     for (final t in tasks) {
       if (t.dueDate != null &&
           t.dueDate!.year == month.year &&
           t.dueDate!.month == month.month) {
-        taskDays.add(t.dueDate!.day);
+        tasksByDay.putIfAbsent(t.dueDate!.day, () => []).add(t);
       }
     }
 
+    final List<Task> displayTasks;
+    final String sectionLabel;
+    if (_selectedDay != null) {
+      displayTasks = tasksByDay[_selectedDay] ?? [];
+      const monthNames = ['января','февраля','марта','апреля','мая','июня',
+        'июля','августа','сентября','октября','ноября','декабря'];
+      sectionLabel = '$_selectedDay ${monthNames[month.month - 1]}';
+    } else {
+      final todayDate = DateTime(today.year, today.month, today.day);
+      final upcoming = tasks
+          .where((t) => t.dueDate != null && !t.isCompleted &&
+              !t.dueDate!.isBefore(todayDate))
+          .toList()
+        ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
+      displayTasks = upcoming.take(4).toList();
+      sectionLabel = 'Ближайшие задачи';
+    }
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             IconButton(
               icon: const Icon(Icons.chevron_left, size: 16),
               onPressed: () =>
-                  onMonthChanged(DateTime(month.year, month.month - 1)),
+                  widget.onMonthChanged(DateTime(month.year, month.month - 1)),
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             ),
             Expanded(
               child: Text(fmt.format(month),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w500)),
+                      fontSize: 13, fontWeight: FontWeight.w700)),
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right, size: 16),
               onPressed: () =>
-                  onMonthChanged(DateTime(month.year, month.month + 1)),
+                  widget.onMonthChanged(DateTime(month.year, month.month + 1)),
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             ),
           ],
         ),
@@ -1030,7 +1077,7 @@ class _MiniCalendar extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w700,
                           color: Color(0xFF888888)))))
               .toList(),
         ),
@@ -1042,7 +1089,7 @@ class _MiniCalendar extends StatelessWidget {
             crossAxisCount: 7,
             mainAxisSpacing: 2,
             crossAxisSpacing: 2,
-            childAspectRatio: 1.2,
+            childAspectRatio: 1.1,
           ),
           itemCount: startWeekday + daysInMonth,
           itemBuilder: (context, i) {
@@ -1051,38 +1098,135 @@ class _MiniCalendar extends StatelessWidget {
             final isToday = today.year == month.year &&
                 today.month == month.month &&
                 today.day == day;
-            final hasTask = taskDays.contains(day);
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color:
-                        isToday ? const Color(0xFF4361EE) : Colors.transparent,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text('$day',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: isToday
-                              ? Colors.white
-                              : Theme.of(context).textTheme.bodyMedium!.color)),
-                ),
-                if (hasTask && !isToday)
-                  Positioned(
-                    bottom: 2,
-                    child: Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                          color: colors.badgeRedText, shape: BoxShape.circle),
+            final isSelected = day == _selectedDay;
+            final dayTasks = tasksByDay[day] ?? [];
+            final hasActive = dayTasks.any((t) => !t.isCompleted);
+            final hasTasks = dayTasks.isNotEmpty;
+
+            final Color bgColor;
+            final Color textColor;
+            if (isToday) {
+              bgColor = primary;
+              textColor = Colors.white;
+            } else if (isSelected) {
+              bgColor = primary.withOpacity(0.12);
+              textColor = Theme.of(context).textTheme.bodyMedium!.color!;
+            } else {
+              bgColor = Colors.transparent;
+              textColor = Theme.of(context).textTheme.bodyMedium!.color!;
+            }
+
+            return GestureDetector(
+              onTap: () => setState(
+                  () => _selectedDay = day == _selectedDay ? null : day),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    alignment: Alignment.center,
+                    child: Text('$day',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight:
+                                isToday ? FontWeight.w700 : FontWeight.w500,
+                            color: textColor)),
                   ),
-              ],
+                  SizedBox(
+                    height: 6,
+                    child: hasTasks
+                        ? Center(
+                            child: Container(
+                              width: 4, height: 4,
+                              decoration: BoxDecoration(
+                                color: isToday
+                                    ? Colors.white.withOpacity(0.8)
+                                    : hasActive ? primary : colors.success,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ],
+              ),
             );
           },
         ),
+        if (displayTasks.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Text(
+            sectionLabel.toUpperCase(),
+            style: const TextStyle(
+                fontSize: 10, fontWeight: FontWeight.w700,
+                color: Color(0xFF888888), letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 8),
+          ...displayTasks.map((t) {
+            final isExpiry = t.type == 'expiry';
+            final isHigh = t.priority == 'high';
+            final accentColor =
+                isExpiry ? colors.amber : isHigh ? colors.danger : primary;
+            final fmtShort = DateFormat('d MMM', 'ru');
+            return Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.tableBorder, width: 0.5),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 3, height: 24,
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(t.title,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            decoration: t.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.color)),
+                  ),
+                  if (t.dueDate != null) ...[
+                    const SizedBox(width: 8),
+                    Text(fmtShort.format(t.dueDate!),
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFF888888))),
+                    const SizedBox(width: 10),
+                  ],
+                ],
+              ),
+            );
+          }),
+        ],
+        if (displayTasks.isEmpty && _selectedDay != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: Center(
+              child: Text(
+                'Нет задач',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
+              ),
+            ),
+          ),
       ],
     );
   }

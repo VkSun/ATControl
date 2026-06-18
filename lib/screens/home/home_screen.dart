@@ -152,8 +152,15 @@ class _ExpiryCard extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: colors.tableBorder, width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,8 +308,15 @@ class _TasksCard extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: colors.tableBorder, width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,50 +411,75 @@ class _TaskRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final isExpiry = task.type == 'expiry';
+    final isHigh = task.priority == 'high';
+    final accentColor = isExpiry ? colors.amber : isHigh ? colors.danger : primary;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.tableBorder, width: 0.5),
       ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () async {
-              await ref.read(taskServiceProvider).toggleComplete(task.id, !task.isCompleted);
-              ref.invalidate(tasksProvider);
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 16, height: 16,
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Container(
+              width: 3,
               decoration: BoxDecoration(
-                color: task.isCompleted ? const Color(0xFF4361EE) : Colors.transparent,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: task.isCompleted ? const Color(0xFF4361EE) : colors.tableBorder,
-                  width: 1.5,
+                color: accentColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(7.5),
+                  bottomLeft: Radius.circular(7.5),
                 ),
               ),
-              child: task.isCompleted
-                  ? const Icon(Icons.check, size: 10, color: Colors.white)
-                  : null,
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(task.title,
-              style: TextStyle(
-                fontSize: 12,
-                decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        await ref.read(taskServiceProvider).toggleComplete(task.id, !task.isCompleted);
+                        ref.invalidate(tasksProvider);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        width: 16, height: 16,
+                        decoration: BoxDecoration(
+                          color: task.isCompleted ? primary : Colors.transparent,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: task.isCompleted ? primary : colors.tableBorder,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: task.isCompleted
+                            ? const Icon(Icons.check, size: 10, color: Colors.white)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(task.title,
+                        style: TextStyle(
+                          fontSize: 12,
+                          decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                    ),
+                    if (task.dueTime != null)
+                      Text(task.dueTime!.substring(0, 5),
+                        style: TextStyle(fontSize: 10, color: colors.badgeAmberText)),
+                  ],
+                ),
               ),
             ),
-          ),
-          if (task.dueTime != null)
-            Text(task.dueTime!.substring(0, 5),
-              style: TextStyle(fontSize: 10, color: colors.badgeAmberText)),
-        ],
+          ],
+        ),
       ),
     );
   }
