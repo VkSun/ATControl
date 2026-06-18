@@ -28,6 +28,10 @@ const WMO = {
   99: { icon: 'wind',  label: 'Гроза с градом',    color: '#435EBE' },
 }
 
+const LAT = 53.9045
+const LON = 27.5615
+const CITY = 'Минск'
+
 const CACHE_KEY = 'atc_weather_cache'
 const CACHE_TTL = 30 * 60 * 1000
 
@@ -45,7 +49,6 @@ function setCache(data) {
 
 export default function WeatherCard() {
   const [weather, setWeather] = useState(null)
-  const [city, setCity] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -53,54 +56,26 @@ export default function WeatherCard() {
     const cached = getCache()
     if (cached) {
       setWeather({ temp: cached.temp, code: cached.code })
-      setCity(cached.city || '')
       setLoading(false)
       return
     }
 
-    if (!navigator.geolocation) {
-      setError('Геолокация недоступна')
-      setLoading(false)
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords: { latitude: lat, longitude: lon } }) => {
-        try {
-          const [wRes, gRes] = await Promise.all([
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&timezone=auto`),
-            fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
-              headers: { 'Accept-Language': 'ru,en' }
-            }),
-          ])
-          const wData = await wRes.json()
-          const gData = await gRes.json()
-
-          const temp = Math.round(wData.current.temperature_2m)
-          const code = wData.current.weathercode
-          const cityName = gData.address?.city || gData.address?.town || gData.address?.village || gData.address?.county || ''
-
-          setWeather({ temp, code })
-          setCity(cityName)
-          setCache({ temp, code, city: cityName })
-        } catch {
-          setError('Ошибка загрузки погоды')
-        } finally {
-          setLoading(false)
-        }
-      },
-      () => {
-        setError('Нет доступа к геолокации')
-        setLoading(false)
-      },
-      { timeout: 8000 }
-    )
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weathercode&timezone=auto`)
+      .then(r => r.json())
+      .then(data => {
+        const temp = Math.round(data.current.temperature_2m)
+        const code = data.current.weathercode
+        setWeather({ temp, code })
+        setCache({ temp, code })
+      })
+      .catch(() => setError('Ошибка загрузки погоды'))
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) {
     return (
       <div className="mz-card" style={{ textAlign: 'center', padding: '20px 16px' }}>
-        <div style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 500 }}>Определяем погоду...</div>
+        <div style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 500 }}>Загрузка погоды...</div>
       </div>
     )
   }
@@ -108,7 +83,7 @@ export default function WeatherCard() {
   if (error || !weather) {
     return (
       <div className="mz-card" style={{ textAlign: 'center', padding: '20px 16px' }}>
-        <div style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 500, lineHeight: 1.4 }}>{error || 'Нет данных о погоде'}</div>
+        <div style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 500, lineHeight: 1.4 }}>{error || 'Нет данных'}</div>
       </div>
     )
   }
@@ -122,7 +97,7 @@ export default function WeatherCard() {
         {weather.temp > 0 ? '+' : ''}{weather.temp}°
       </div>
       <div style={{ marginTop: 4, fontWeight: 600, fontSize: 13, color: 'var(--muted)' }}>{info.label}</div>
-      {city && <div style={{ marginTop: 3, fontWeight: 500, fontSize: 11, color: 'var(--line-2)' }}>{city}</div>}
+      <div style={{ marginTop: 3, fontWeight: 500, fontSize: 11, color: 'var(--line-2)' }}>{CITY}</div>
     </div>
   )
 }
