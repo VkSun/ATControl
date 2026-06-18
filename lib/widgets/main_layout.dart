@@ -69,7 +69,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final themeMode = ref.watch(themeModeProvider);
+    final themeVariant = ref.watch(themeVariantProvider);
     final location = GoRouterState.of(context).uri.toString();
     final collapsed = ref.watch(sidebarCollapsedProvider);
     final mobile = isMobile(context);
@@ -89,11 +89,10 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
               colors: colors,
               now: _now,
               currentLocation: location,
-              themeMode: themeMode,
+              themeVariant: themeVariant,
               collapsed: collapsed,
-              onThemeToggle: () {
-                ref.read(themeModeProvider.notifier).set(
-                    themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light);
+              onThemeChange: (v) {
+                ref.read(themeVariantProvider.notifier).set(v);
               },
               onToggleCollapse: () {
                 ref.read(sidebarCollapsedProvider.notifier).state = !collapsed;
@@ -150,7 +149,7 @@ class _MobileLayout extends ConsumerWidget {
     final initials = profileAsync.value?.initials ?? 'АИ';
     final avatarHex = profileAsync.value?.avatarColor ?? '#4361EE';
     final avatarColor = Color(int.parse(avatarHex.replaceFirst('#', '0xFF')));
-    final themeMode = ref.watch(themeModeProvider);
+    final themeVariant = ref.watch(themeVariantProvider);
     final currentIdx = _locationToIndex(location);
 
     return Scaffold(
@@ -234,19 +233,21 @@ class _MobileLayout extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
-                IconButton(
-                  icon: Icon(
-                    themeMode == ThemeMode.dark
-                        ? Icons.wb_sunny_outlined
-                        : Icons.nightlight_round,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    ref.read(themeModeProvider.notifier).set(
-                        themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark);
+                GestureDetector(
+                  onTap: () {
+                    ref.read(themeVariantProvider.notifier).set(themeVariant.next);
                   },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  child: Tooltip(
+                    message: 'Тема: ${themeVariant.label}',
+                    child: Container(
+                      width: 22, height: 22,
+                      decoration: BoxDecoration(
+                        color: themeVariant.swatchColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: colors.tableBorder, width: 1.5),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -263,18 +264,18 @@ class _Sidebar extends StatelessWidget {
   final AppColors colors;
   final DateTime now;
   final String currentLocation;
-  final ThemeMode themeMode;
+  final AppThemeVariant themeVariant;
   final bool collapsed;
-  final VoidCallback onThemeToggle;
+  final ValueChanged<AppThemeVariant> onThemeChange;
   final VoidCallback onToggleCollapse;
 
   const _Sidebar({
     required this.colors,
     required this.now,
     required this.currentLocation,
-    required this.themeMode,
+    required this.themeVariant,
     required this.collapsed,
-    required this.onThemeToggle,
+    required this.onThemeChange,
     required this.onToggleCollapse,
   });
 
@@ -287,9 +288,9 @@ class _Sidebar extends StatelessWidget {
           _SidebarTop(
             colors: colors,
             now: now,
-            themeMode: themeMode,
+            themeVariant: themeVariant,
             collapsed: collapsed,
-            onThemeToggle: onThemeToggle,
+            onThemeChange: onThemeChange,
             onToggleCollapse: onToggleCollapse,
           ),
           Expanded(
@@ -301,7 +302,7 @@ class _Sidebar extends StatelessWidget {
           ),
           _SidebarBottomProfile(collapsed: collapsed, colors: colors),
           _SidebarNetworkStatus(collapsed: collapsed, colors: colors),
-          _SidebarBottom(collapsed: collapsed),
+          _SidebarBottom(collapsed: collapsed, colors: colors),
         ],
       ),
     );
@@ -311,17 +312,17 @@ class _Sidebar extends StatelessWidget {
 class _SidebarTop extends StatelessWidget {
   final AppColors colors;
   final DateTime now;
-  final ThemeMode themeMode;
+  final AppThemeVariant themeVariant;
   final bool collapsed;
-  final VoidCallback onThemeToggle;
+  final ValueChanged<AppThemeVariant> onThemeChange;
   final VoidCallback onToggleCollapse;
 
   const _SidebarTop({
     required this.colors,
     required this.now,
-    required this.themeMode,
+    required this.themeVariant,
     required this.collapsed,
-    required this.onThemeToggle,
+    required this.onThemeChange,
     required this.onToggleCollapse,
   });
 
@@ -355,19 +356,42 @@ class _SidebarTop extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text('ATControl',
-                    style: Theme.of(context).textTheme.titleMedium),
+                    style: TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w500,
+                      color: colors.sidebarText,
+                    )),
                 ),
                 IconButton(
                   onPressed: onToggleCollapse,
                   icon: const Icon(Icons.chevron_left, size: 18),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                  color: Theme.of(context).textTheme.bodySmall!.color,
+                  color: colors.sidebarTextSecondary,
                 ),
               ],
             ],
           ),
-          if (!collapsed) ...[
+          if (collapsed) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => onThemeChange(themeVariant.next),
+              child: Tooltip(
+                message: themeVariant.label,
+                preferBelow: false,
+                child: Container(
+                  width: 20, height: 20,
+                  decoration: BoxDecoration(
+                    color: themeVariant.swatchColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: colors.sidebarTextSecondary.withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
@@ -375,14 +399,17 @@ class _SidebarTop extends StatelessWidget {
                 fit: BoxFit.fitWidth,
                 alignment: Alignment.centerLeft,
                 child: Text(timeStr,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500)),
+                  style: TextStyle(
+                    fontSize: 24, fontWeight: FontWeight.w500,
+                    color: colors.sidebarText,
+                  )),
               ),
             ),
             const SizedBox(height: 2),
             SizedBox(
               width: double.infinity,
               child: Text(dateStr,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: TextStyle(fontSize: 11, color: colors.sidebarTextSecondary),
                 overflow: TextOverflow.ellipsis),
             ),
             const SizedBox(height: 4),
@@ -391,16 +418,16 @@ class _SidebarTop extends StatelessWidget {
                 final weatherAsync = ref.watch(weatherProvider);
                 return weatherAsync.when(
                   loading: () => Text('загрузка...',
-                    style: Theme.of(context).textTheme.bodySmall),
+                    style: TextStyle(fontSize: 11, color: colors.sidebarTextSecondary)),
                   error: (_, __) => Text('погода недоступна',
-                    style: Theme.of(context).textTheme.bodySmall),
+                    style: TextStyle(fontSize: 11, color: colors.sidebarTextSecondary)),
                   data: (w) => Row(
                     children: [
                       Text(w.icon, style: const TextStyle(fontSize: 13)),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text('${w.temp.round()}°C • ${w.description}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: TextStyle(fontSize: 11, color: colors.sidebarTextSecondary),
                           overflow: TextOverflow.ellipsis),
                       ),
                     ],
@@ -410,35 +437,33 @@ class _SidebarTop extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Row(
-              children: [
-                const Icon(Icons.wb_sunny_outlined, size: 13),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: onThemeToggle,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 36, height: 20,
-                    decoration: BoxDecoration(
-                      color: themeMode == ThemeMode.dark
-                          ? colors.sidebarActive : colors.tableBorder,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: AnimatedAlign(
-                      duration: const Duration(milliseconds: 200),
-                      alignment: themeMode == ThemeMode.dark
-                          ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.all(2),
+              children: AppThemeVariant.values.map((v) {
+                final isSelected = v == themeVariant;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 7),
+                  child: Tooltip(
+                    message: v.label,
+                    child: GestureDetector(
+                      onTap: () => onThemeChange(v),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
                         width: 16, height: 16,
-                        decoration: const BoxDecoration(
-                            color: Colors.white, shape: BoxShape.circle),
+                        decoration: BoxDecoration(
+                          color: v.swatchColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? Colors.white : Colors.transparent,
+                            width: 2,
+                          ),
+                          boxShadow: isSelected
+                              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 3)]
+                              : null,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(Icons.nightlight_round, size: 13),
-              ],
+                );
+              }).toList(),
             ),
           ],
         ],
@@ -504,8 +529,7 @@ class _SidebarNav extends ConsumerWidget {
                       alignment: Alignment.center,
                       children: [
                         Icon(item.icon, size: 20,
-                          color: isActive ? Colors.white
-                              : Theme.of(context).textTheme.bodySmall!.color),
+                          color: isActive ? Colors.white : colors.sidebarTextSecondary),
                         if (item.badge > 0)
                           Positioned(
                             top: 0, right: 4,
@@ -528,15 +552,13 @@ class _SidebarNav extends ConsumerWidget {
                   : Row(
                       children: [
                         Icon(item.icon, size: 16,
-                          color: isActive ? Colors.white
-                              : Theme.of(context).textTheme.bodySmall!.color),
+                          color: isActive ? Colors.white : colors.sidebarTextSecondary),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(item.label,
                             style: TextStyle(
                               fontSize: 13,
-                              color: isActive ? Colors.white
-                                  : Theme.of(context).textTheme.bodyMedium!.color,
+                              color: isActive ? Colors.white : colors.sidebarText,
                             ),
                           ),
                         ),
@@ -621,16 +643,15 @@ class _SidebarBottomProfile extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(profileAsync.value?.fullName ?? '',
-                            style: const TextStyle(fontSize: 12),
+                            style: TextStyle(fontSize: 12, color: colors.sidebarText),
                             overflow: TextOverflow.ellipsis),
                         Text(profileAsync.value?.position ?? '',
-                            style: const TextStyle(
-                                fontSize: 10, color: Color(0xFF888888)),
+                            style: TextStyle(fontSize: 10, color: colors.sidebarTextSecondary),
                             overflow: TextOverflow.ellipsis),
                       ],
                     ),
                   ),
-                  const Icon(Icons.notifications_outlined, size: 16),
+                  Icon(Icons.notifications_outlined, size: 16, color: colors.sidebarTextSecondary),
                 ],
               ),
             ),
@@ -716,7 +737,7 @@ class _SidebarNetworkStatusState extends State<_SidebarNetworkStatus> {
           ),
           const SizedBox(width: 8),
           Text(label,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
+            style: TextStyle(fontSize: 11, color: widget.colors.sidebarTextSecondary)),
         ],
       ),
     );
@@ -725,7 +746,8 @@ class _SidebarNetworkStatusState extends State<_SidebarNetworkStatus> {
 
 class _SidebarBottom extends StatefulWidget {
   final bool collapsed;
-  const _SidebarBottom({required this.collapsed});
+  final AppColors colors;
+  const _SidebarBottom({required this.collapsed, required this.colors});
 
   @override
   State<_SidebarBottom> createState() => _SidebarBottomState();
@@ -748,7 +770,7 @@ class _SidebarBottomState extends State<_SidebarBottom> {
     return Container(
       padding: const EdgeInsets.all(14),
       child: Text('Версия $_version',
-        style: Theme.of(context).textTheme.bodySmall),
+        style: TextStyle(fontSize: 11, color: widget.colors.sidebarTextSecondary)),
     );
   }
 }

@@ -35,7 +35,7 @@ class ATControlApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
-    final themeMode = ref.watch(themeModeProvider);
+    final resolvedTheme = ref.watch(resolvedThemeProvider);
     final fontSize = ref.watch(fontSizeProvider);
     final scale = ref.watch(scaleProvider);
 
@@ -45,9 +45,8 @@ class ATControlApp extends ConsumerWidget {
       locale: const Locale('ru'),
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       supportedLocales: const [Locale('ru'), Locale('en')],
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
+      theme: resolvedTheme,
+      themeMode: ThemeMode.light,
       routerConfig: router,
       builder: (context, child) {
         final mq = MediaQuery.of(context);

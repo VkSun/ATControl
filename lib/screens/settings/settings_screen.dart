@@ -91,12 +91,12 @@ class SettingsScreen extends ConsumerWidget {
                 const _SectionLabel('Внешний вид'),
                 _SelectSetting(
                   label: 'Тема оформления',
-                  value: ref.watch(themeModeProvider) == ThemeMode.light ? 'Светлая'
-                      : ref.watch(themeModeProvider) == ThemeMode.dark ? 'Тёмная' : 'Системная',
-                  options: const ['Светлая', 'Тёмная', 'Системная'],
+                  value: ref.watch(themeVariantProvider).label,
+                  options: AppThemeVariant.values.map((v) => v.label).toList(),
                   onChanged: (v) {
-                    ref.read(themeModeProvider.notifier).set(v == 'Светлая'
-                        ? ThemeMode.light : v == 'Тёмная' ? ThemeMode.dark : ThemeMode.system);
+                    final variant = AppThemeVariant.values
+                        .firstWhere((e) => e.label == v);
+                    ref.read(themeVariantProvider.notifier).set(variant);
                   },
                   colors: colors,
                 ),
