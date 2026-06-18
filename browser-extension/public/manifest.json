@@ -1,12 +1,15 @@
 {
   "manifest_version": 3,
   "name": "ATControl — Новая вкладка",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Новая вкладка с синхронизацией задач ATControl",
   "permissions": ["storage"],
   "host_permissions": [
     "https://gmekcuwebewdhupywyal.supabase.co/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; connect-src https://gmekcuwebewdhupywyal.supabase.co wss://gmekcuwebewdhupywyal.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;"
+  },
   "chrome_url_overrides": {
     "newtab": "index.html"
   }
