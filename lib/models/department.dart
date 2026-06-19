@@ -1,12 +1,14 @@
 class Department {
   final String id;
   final String name;
+  final String? parentId;
 
-  const Department({required this.id, required this.name});
+  const Department({required this.id, required this.name, this.parentId});
 
   factory Department.fromJson(Map<String, dynamic> json) => Department(
         id: json['id'],
         name: json['name'],
+        parentId: json['parent_id'],
       );
 
   Map<String, dynamic> toJson() => {'name': name};

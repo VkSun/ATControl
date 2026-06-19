@@ -26,10 +26,10 @@ class DepartmentService {
     return (data as List).map((e) => Section.fromJson(e)).toList();
   }
 
-  Future<Department> createDepartment(String name) async {
+  Future<Department> createDepartment(String name, {String? parentId}) async {
     final data = await supabase
         .from('departments')
-        .insert({'name': name})
+        .insert({'name': name, if (parentId != null) 'parent_id': parentId})
         .select()
         .single();
     return Department.fromJson(data);
