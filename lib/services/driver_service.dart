@@ -27,13 +27,13 @@ class DriverService {
   final _table = 'drivers';
 
   Future<List<Driver>> getAll({String? departmentId, String? sectionId}) async {
-    var q = supabase.from(_table).select().order('last_name');
-    if (sectionId != null) {
-      q = q.eq('section_id', sectionId);
-    } else if (departmentId != null) {
-      q = q.eq('department_id', departmentId);
-    }
-    final data = await q;
+    final base = supabase.from(_table).select();
+    final q = sectionId != null
+        ? base.eq('section_id', sectionId)
+        : departmentId != null
+            ? base.eq('department_id', departmentId)
+            : base;
+    final data = await q.order('last_name');
     return (data as List).map((e) => Driver.fromJson(e)).toList();
   }
 

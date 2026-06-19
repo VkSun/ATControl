@@ -19,10 +19,10 @@ class DepartmentService {
   }
 
   Future<List<Section>> getSections({String? departmentId}) async {
-    final q = supabase.from('sections').select().order('name');
+    final base = supabase.from('sections').select();
     final data = departmentId != null
-        ? await q.eq('department_id', departmentId)
-        : await q;
+        ? await base.eq('department_id', departmentId).order('name')
+        : await base.order('name');
     return (data as List).map((e) => Section.fromJson(e)).toList();
   }
 
