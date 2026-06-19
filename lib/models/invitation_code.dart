@@ -14,6 +14,8 @@ class InvitationCode {
   final bool permOwnOnly;
   final DateTime? expiresAt;
   final DateTime createdAt;
+  final String? departmentId;
+  final String? sectionId;
 
   InvitationCode({
     required this.id,
@@ -31,6 +33,8 @@ class InvitationCode {
     required this.permOwnOnly,
     this.expiresAt,
     required this.createdAt,
+    this.departmentId,
+    this.sectionId,
   });
 
   bool get isExpired => expiresAt != null && expiresAt!.isBefore(DateTime.now());
@@ -53,6 +57,8 @@ class InvitationCode {
     expiresAt: json['expires_at'] != null
         ? DateTime.parse(json['expires_at']) : null,
     createdAt: DateTime.parse(json['created_at']),
+    departmentId: json['department_id'],
+    sectionId: json['section_id'],
   );
 
   Map<String, dynamic> toJson() => {

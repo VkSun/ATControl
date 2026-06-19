@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/driver.dart';
+import '../../models/department.dart';
 import '../../services/driver_service.dart';
 import '../../services/vehicle_service.dart';
+import '../../services/department_service.dart';
 
 class DriverEditDialog extends ConsumerStatefulWidget {
   final Driver? driver;
@@ -20,6 +22,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
   late TextEditingController _phone, _licenseNumber, _licenseCategories, _notes;
   DateTime? _birthDate, _licenseExpiry, _medicalExpiry;
   List<String> _selectedVehicleIds = [];
+  String? _departmentId;
+  String? _sectionId;
   bool _loading = false;
 
   @override
@@ -38,6 +42,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
     _licenseExpiry = d?.licenseExpiry;
     _medicalExpiry = d?.medicalExpiry;
     _selectedVehicleIds = List.from(d?.vehicleIds ?? []);
+    _departmentId = d?.departmentId;
+    _sectionId = d?.sectionId;
   }
 
   @override
@@ -91,6 +97,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
         licenseExpiry: _licenseExpiry,
         medicalExpiry: _medicalExpiry,
         vehicleIds: _selectedVehicleIds,
+        departmentId: _departmentId,
+        sectionId: _sectionId,
       );
       if (widget.driver == null) {
         await service.create(driver);
@@ -123,6 +131,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
   Widget build(BuildContext context) {
     final title = widget.driver == null ? 'Добавить водителя' : 'Редактировать водителя';
     final vehiclesAsync = ref.watch(vehiclesProvider);
+    final departmentsAsync = ref.watch(departmentsProvider);
+    final sectionsAsync = ref.watch(sectionsProvider);
 
     return AlertDialog(
       backgroundColor: Theme.of(context).cardColor,
@@ -166,7 +176,25 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
                   (d) => setState(() => _medicalExpiry = d)),
                 const SizedBox(height: 10),
 
-                // Выбор закреплённых ТС (мультиселект)
+                // Подразделение / Участок
+                departmentsAsync.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const SizedBox(),
+                  data: (departments) => _DeptSectionPicker(
+                    departments: departments,
+                    sections: sectionsAsync.value ?? [],
+                    departmentId: _departmentId,
+                    sectionId: _sectionId,
+                    onDeptChanged: (id) => setState(() {
+                      _departmentId = id;
+                      _sectionId = null;
+                    }),
+                    onSectionChanged: (id) => setState(() => _sectionId = id),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Выбор закреплённых ТС
                 vehiclesAsync.when(
                   loading: () => const LinearProgressIndicator(),
                   error: (_, __) => const SizedBox(),
@@ -275,6 +303,89 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
           ),
+      ],
+    );
+  }
+}
+
+class _DeptSectionPicker extends StatelessWidget {
+  final List<Department> departments;
+  final List<Section> sections;
+  final String? departmentId;
+  final String? sectionId;
+  final ValueChanged<String?> onDeptChanged;
+  final ValueChanged<String?> onSectionChanged;
+
+  const _DeptSectionPicker({
+    required this.departments,
+    required this.sections,
+    required this.departmentId,
+    required this.sectionId,
+    required this.onDeptChanged,
+    required this.onSectionChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final deptSections = sections.where((s) => s.departmentId == departmentId).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Подразделение / участок',
+            style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String?>(
+                value: departmentId,
+                isDense: true,
+                decoration: const InputDecoration(
+                  labelText: 'Подразделение',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Не указано', style: TextStyle(fontSize: 13)),
+                  ),
+                  ...departments.map((d) => DropdownMenuItem<String?>(
+                        value: d.id,
+                        child: Text(d.name, style: const TextStyle(fontSize: 13)),
+                      )),
+                ],
+                onChanged: onDeptChanged,
+              ),
+            ),
+            if (deptSections.isNotEmpty) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                child: DropdownButtonFormField<String?>(
+                  value: sectionId,
+                  isDense: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Участок',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Не указан', style: TextStyle(fontSize: 13)),
+                    ),
+                    ...deptSections.map((s) => DropdownMenuItem<String?>(
+                          value: s.id,
+                          child: Text(s.name, style: const TextStyle(fontSize: 13)),
+                        )),
+                  ],
+                  onChanged: onSectionChanged,
+                ),
+              ),
+            ],
+          ],
+        ),
       ],
     );
   }

@@ -778,14 +778,14 @@ class _SidebarBottomState extends State<_SidebarBottom> {
 final pendingCountProvider = FutureProvider<int>((ref) async {
   final now = DateTime.now();
   int count = 0;
-  final vehicles = await ref.read(vehicleServiceProvider).getAll();
+  final vehicles = await ref.watch(vehiclesProvider.future);
   for (final v in vehicles) {
     for (final date in [v.inspectionDate, v.insuranceDate, v.specialPermitDate]) {
       if (date == null) continue;
       if (date.difference(now).inDays <= 7) count++;
     }
   }
-  final drivers = await ref.read(driverServiceProvider).getAll();
+  final drivers = await ref.watch(driversProvider.future);
   for (final d in drivers) {
     for (final date in [d.licenseExpiry, d.medicalExpiry]) {
       if (date == null) continue;

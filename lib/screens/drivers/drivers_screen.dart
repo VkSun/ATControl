@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../../models/driver.dart';
 import '../../services/driver_service.dart';
+import '../../services/department_service.dart';
 import '../../utils/theme.dart';
 import 'driver_edit_dialog.dart';
 import '../../services/vehicle_service.dart';
@@ -137,6 +138,17 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(permissionsProvider);
+    final showFilter = perms.isAdmin || perms.canFullAccess;
+    final departmentsAsync = showFilter ? ref.watch(departmentsProvider) : null;
+    final sectionsAsync = showFilter ? ref.watch(sectionsProvider) : null;
+    final selectedDept = showFilter ? ref.watch(selectedDepartmentProvider) : null;
+    final selectedSec = showFilter ? ref.watch(selectedSectionProvider) : null;
+
+    final departments = departmentsAsync?.value ?? [];
+    final deptSections = (sectionsAsync?.value ?? [])
+        .where((s) => s.departmentId == selectedDept)
+        .toList();
+
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -164,6 +176,31 @@ class _TopBar extends StatelessWidget {
               ),
             ),
           const Spacer(),
+          // Фильтр по подразделению (только admin/full_access)
+          if (showFilter && departments.isNotEmpty) ...[
+            _DeptFilterDropdown(
+              label: 'Подразделение',
+              value: selectedDept,
+              items: departments.map((d) => (d.id, d.name)).toList(),
+              onChanged: (id) {
+                ref.read(selectedDepartmentProvider.notifier).state = id;
+                ref.read(selectedSectionProvider.notifier).state = null;
+              },
+              colors: colors,
+            ),
+            if (deptSections.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              _DeptFilterDropdown(
+                label: 'Участок',
+                value: selectedSec,
+                items: deptSections.map((s) => (s.id, s.name)).toList(),
+                onChanged: (id) =>
+                    ref.read(selectedSectionProvider.notifier).state = id,
+                colors: colors,
+              ),
+            ],
+            const SizedBox(width: 8),
+          ],
           if (isMobile(context)) ...[
             const Icon(Icons.notifications_outlined, size: 20),
             const SizedBox(width: 12),
@@ -184,6 +221,59 @@ class _TopBar extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _DeptFilterDropdown extends StatelessWidget {
+  final String label;
+  final String? value;
+  final List<(String, String)> items;
+  final ValueChanged<String?> onChanged;
+  final AppColors colors;
+
+  const _DeptFilterDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.tableBorder),
+        borderRadius: BorderRadius.circular(8),
+        color: Theme.of(context).cardColor,
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: value,
+          isDense: true,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).textTheme.bodyMedium!.color,
+          ),
+          hint: Text(label,
+              style: TextStyle(fontSize: 12, color: colors.tableBorder)),
+          items: [
+            DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Все ($label)',
+                  style: const TextStyle(fontSize: 12)),
+            ),
+            ...items.map((e) => DropdownMenuItem<String?>(
+                  value: e.$1,
+                  child: Text(e.$2, style: const TextStyle(fontSize: 12)),
+                )),
+          ],
+          onChanged: onChanged,
+        ),
       ),
     );
   }

@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/invitation_code.dart';
 import '../../models/user_role.dart';
+import '../../models/department.dart';
 import '../../services/auth_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/profile_service.dart';
+import '../../services/department_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
@@ -85,15 +87,19 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
               _TabBtn('Пользователи', 0, _tab, (v) => setState(() => _tab = v), colors),
               const SizedBox(width: 8),
               _TabBtn('Коды приглашений', 1, _tab, (v) => setState(() => _tab = v), colors),
+              const SizedBox(width: 8),
+              _TabBtn('Подразделения', 2, _tab, (v) => setState(() => _tab = v), colors),
             ],
           ),
         ),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: _tab == 0
-                ? _UsersTab(colors: colors, ref: ref)
-                : _InvitationsTab(colors: colors, ref: ref),
+            child: switch (_tab) {
+              0 => _UsersTab(colors: colors, ref: ref),
+              1 => _InvitationsTab(colors: colors, ref: ref),
+              _ => _DepartmentsTab(colors: colors),
+            },
           ),
         ),
       ],
@@ -728,6 +734,8 @@ class _CreateInvitationDialogState
   bool _permRead = true;
   bool _permWrite = false;
   bool _permOwnOnly = false;
+  String? _departmentId;
+  String? _sectionId;
   bool _loading = false;
 
   @override
@@ -753,6 +761,8 @@ class _CreateInvitationDialogState
                 permRead: _permRead,
                 permWrite: _permWrite,
                 permOwnOnly: _permOwnOnly,
+                departmentId: _departmentId,
+                sectionId: _sectionId,
               );
       widget.onSaved();
       if (mounted) {
@@ -774,11 +784,17 @@ class _CreateInvitationDialogState
 
   @override
   Widget build(BuildContext context) {
+    final departments = ref.watch(departmentsProvider).value ?? [];
+    final deptSections = (ref.watch(sectionsProvider).value ?? [])
+        .where((s) => s.departmentId == _departmentId)
+        .toList();
+
     return AlertDialog(
       title: const Text('Создать приглашение'),
       content: SizedBox(
         width: 440,
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
@@ -798,6 +814,63 @@ class _CreateInvitationDialogState
                 isDense: true,
               ),
             ),
+            if (departments.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String?>(
+                      value: _departmentId,
+                      isDense: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Подразделение',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Не указано', style: TextStyle(fontSize: 13)),
+                        ),
+                        ...departments.map((d) => DropdownMenuItem<String?>(
+                              value: d.id,
+                              child: Text(d.name, style: const TextStyle(fontSize: 13)),
+                            )),
+                      ],
+                      onChanged: (id) => setState(() {
+                        _departmentId = id;
+                        _sectionId = null;
+                      }),
+                    ),
+                  ),
+                  if (deptSections.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<String?>(
+                        value: _sectionId,
+                        isDense: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Участок',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Не указан', style: TextStyle(fontSize: 13)),
+                          ),
+                          ...deptSections.map((s) => DropdownMenuItem<String?>(
+                                value: s.id,
+                                child: Text(s.name, style: const TextStyle(fontSize: 13)),
+                              )),
+                        ],
+                        onChanged: (id) => setState(() => _sectionId = id),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,
@@ -831,6 +904,7 @@ class _CreateInvitationDialogState
             _PermCheckbox('Только свой транспорт и водители', _permOwnOnly,
                 (v) => setState(() => _permOwnOnly = v)),
           ],
+        ),
         ),
       ),
       actions: [
@@ -935,6 +1009,8 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
   late bool _permRead;
   late bool _permWrite;
   late bool _permOwnOnly;
+  String? _departmentId;
+  String? _sectionId;
   bool _loading = false;
 
   @override
@@ -946,6 +1022,8 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
     _permRead = widget.user.permRead;
     _permWrite = widget.user.permWrite;
     _permOwnOnly = widget.user.permOwnOnly;
+    _departmentId = widget.user.departmentId;
+    _sectionId = widget.user.sectionId;
   }
 
   Future<void> _save() async {
@@ -978,6 +1056,8 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
         'perm_read': _permRead,
         'perm_write': _permWrite,
         'perm_own_only': _permOwnOnly,
+        'department_id': _departmentId,
+        'section_id': _sectionId,
       }).eq('id', widget.user.id);
       widget.onSaved();
       if (mounted) Navigator.pop(context);
@@ -993,45 +1073,116 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final departmentsAsync = ref.watch(departmentsProvider);
+    final sectionsAsync = ref.watch(sectionsProvider);
+    final departments = departmentsAsync.value ?? [];
+    final deptSections = (sectionsAsync.value ?? [])
+        .where((s) => s.departmentId == _departmentId)
+        .toList();
+
     return AlertDialog(
       title: Text('Права: ${widget.user.fullName}'),
       content: SizedBox(
-        width: 380,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.user.position ?? '',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
-            const SizedBox(height: 16),
-            const Text('ПРАВА ДОСТУПА',
-                style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF888888),
-                    letterSpacing: 0.5)),
-            const SizedBox(height: 8),
-            _PermRow(
-                'Полный доступ',
-                _permFullAccess,
-                (v) => setState(() {
-                      _permFullAccess = v;
-                      if (v) {
-                        _permEdit =
-                            _permExecute = _permRead = _permWrite = true;
-                        _permOwnOnly = false;
-                      }
-                    })),
-            _PermRow(
-                'Изменение', _permEdit, (v) => setState(() => _permEdit = v)),
-            _PermRow('Выполнение', _permExecute,
-                (v) => setState(() => _permExecute = v)),
-            _PermRow('Чтение', _permRead, (v) => setState(() => _permRead = v)),
-            _PermRow(
-                'Запись', _permWrite, (v) => setState(() => _permWrite = v)),
-            _PermRow('Только свой транспорт и водители', _permOwnOnly,
-                (v) => setState(() => _permOwnOnly = v)),
-          ],
+        width: 400,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.user.position ?? '',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
+              const SizedBox(height: 16),
+              const Text('ПОДРАЗДЕЛЕНИЕ',
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF888888),
+                      letterSpacing: 0.5)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String?>(
+                      value: _departmentId,
+                      isDense: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Подразделение',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Не указано', style: TextStyle(fontSize: 13)),
+                        ),
+                        ...departments.map((d) => DropdownMenuItem<String?>(
+                              value: d.id,
+                              child: Text(d.name, style: const TextStyle(fontSize: 13)),
+                            )),
+                      ],
+                      onChanged: (id) => setState(() {
+                        _departmentId = id;
+                        _sectionId = null;
+                      }),
+                    ),
+                  ),
+                  if (deptSections.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<String?>(
+                        value: _sectionId,
+                        isDense: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Участок',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Не указан', style: TextStyle(fontSize: 13)),
+                          ),
+                          ...deptSections.map((s) => DropdownMenuItem<String?>(
+                                value: s.id,
+                                child: Text(s.name, style: const TextStyle(fontSize: 13)),
+                              )),
+                        ],
+                        onChanged: (id) => setState(() => _sectionId = id),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text('ПРАВА ДОСТУПА',
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF888888),
+                      letterSpacing: 0.5)),
+              const SizedBox(height: 8),
+              _PermRow(
+                  'Полный доступ',
+                  _permFullAccess,
+                  (v) => setState(() {
+                        _permFullAccess = v;
+                        if (v) {
+                          _permEdit =
+                              _permExecute = _permRead = _permWrite = true;
+                          _permOwnOnly = false;
+                        }
+                      })),
+              _PermRow(
+                  'Изменение', _permEdit, (v) => setState(() => _permEdit = v)),
+              _PermRow('Выполнение', _permExecute,
+                  (v) => setState(() => _permExecute = v)),
+              _PermRow('Чтение', _permRead, (v) => setState(() => _permRead = v)),
+              _PermRow(
+                  'Запись', _permWrite, (v) => setState(() => _permWrite = v)),
+              _PermRow('Только свой транспорт и водители', _permOwnOnly,
+                  (v) => setState(() => _permOwnOnly = v)),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -1059,5 +1210,462 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
         Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
       ],
     );
+  }
+}
+
+// ─── ВКЛАДКА ПОДРАЗДЕЛЕНИЯ ────────────────────────────────────────────────────
+
+class _DepartmentsTab extends ConsumerStatefulWidget {
+  final AppColors colors;
+  const _DepartmentsTab({required this.colors});
+
+  @override
+  ConsumerState<_DepartmentsTab> createState() => _DepartmentsTabState();
+}
+
+class _DepartmentsTabState extends ConsumerState<_DepartmentsTab> {
+  String? _selectedDeptId;
+
+  @override
+  Widget build(BuildContext context) {
+    final departmentsAsync = ref.watch(departmentsProvider);
+    final sectionsAsync = ref.watch(sectionsProvider);
+    final colors = widget.colors;
+
+    final departments = departmentsAsync.value ?? [];
+    final allSections = sectionsAsync.value ?? [];
+    final deptSections = allSections
+        .where((s) => s.departmentId == _selectedDeptId)
+        .toList();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Список цехов
+        Expanded(
+          flex: 2,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.tableBorder, width: 0.5),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border(
+                        bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Подразделения (цеха)',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add, size: 16),
+                        onPressed: () => _showAddDept(context),
+                        tooltip: 'Добавить подразделение',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: departmentsAsync.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('Ошибка: $e')),
+                    data: (depts) {
+                      if (depts.isEmpty) {
+                        return const Center(
+                            child: Text('Нет подразделений',
+                                style: TextStyle(fontSize: 12)));
+                      }
+                      return ListView.builder(
+                        itemCount: depts.length,
+                        itemBuilder: (context, i) {
+                          final d = depts[i];
+                          final isSelected = d.id == _selectedDeptId;
+                          final secCount = allSections
+                              .where((s) => s.departmentId == d.id)
+                              .length;
+                          return InkWell(
+                            onTap: () =>
+                                setState(() => _selectedDeptId = d.id),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.08)
+                                    : Colors.transparent,
+                                border: Border(
+                                    bottom: BorderSide(
+                                        color: colors.tableBorder,
+                                        width: 0.5)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(d.name,
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w500
+                                                : FontWeight.normal)),
+                                  ),
+                                  if (secCount > 0)
+                                    Text('$secCount уч.',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF888888))),
+                                  const SizedBox(width: 4),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined,
+                                        size: 14),
+                                    onPressed: () =>
+                                        _showEditDept(context, d),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                        minWidth: 24, minHeight: 24),
+                                    color: const Color(0xFF888888),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline,
+                                        size: 14),
+                                    onPressed: () =>
+                                        _deleteDept(context, d),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                        minWidth: 24, minHeight: 24),
+                                    color: const Color(0xFFE24B4A),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        // Список участков выбранного цеха
+        Expanded(
+          flex: 3,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.tableBorder, width: 0.5),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border(
+                        bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedDeptId == null
+                              ? 'Выберите подразделение'
+                              : 'Участки: ${departments.firstWhere((d) => d.id == _selectedDeptId, orElse: () => const Department(id: '', name: '')).name}',
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      if (_selectedDeptId != null)
+                        IconButton(
+                          icon: const Icon(Icons.add, size: 16),
+                          onPressed: () => _showAddSection(context),
+                          tooltip: 'Добавить участок',
+                          padding: EdgeInsets.zero,
+                          constraints:
+                              const BoxConstraints(minWidth: 28, minHeight: 28),
+                        ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _selectedDeptId == null
+                      ? const Center(
+                          child: Text('Выберите подразделение слева',
+                              style: TextStyle(
+                                  fontSize: 12, color: Color(0xFF888888))))
+                      : sectionsAsync.when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (e, _) => Center(child: Text('Ошибка: $e')),
+                          data: (_) {
+                            if (deptSections.isEmpty) {
+                              return const Center(
+                                  child: Text('Нет участков',
+                                      style: TextStyle(fontSize: 12)));
+                            }
+                            return ListView.builder(
+                              itemCount: deptSections.length,
+                              itemBuilder: (context, i) {
+                                final s = deptSections[i];
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                        bottom: BorderSide(
+                                            color: colors.tableBorder,
+                                            width: 0.5)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(s.name,
+                                            style: const TextStyle(
+                                                fontSize: 13)),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_outlined,
+                                            size: 14),
+                                        onPressed: () =>
+                                            _showEditSection(context, s),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                            minWidth: 24, minHeight: 24),
+                                        color: const Color(0xFF888888),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline,
+                                            size: 14),
+                                        onPressed: () =>
+                                            _deleteSection(context, s),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                            minWidth: 24, minHeight: 24),
+                                        color: const Color(0xFFE24B4A),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showAddDept(BuildContext context) async {
+    final ctrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Добавить подразделение'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Название',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Отмена')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Добавить')),
+        ],
+      ),
+    );
+    if (confirmed == true && ctrl.text.trim().isNotEmpty) {
+      await ref.read(departmentServiceProvider).createDepartment(ctrl.text.trim());
+      ref.invalidate(departmentsProvider);
+    }
+    ctrl.dispose();
+  }
+
+  Future<void> _showEditDept(BuildContext context, Department dept) async {
+    final ctrl = TextEditingController(text: dept.name);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Переименовать подразделение'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Название',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Отмена')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Сохранить')),
+        ],
+      ),
+    );
+    if (confirmed == true && ctrl.text.trim().isNotEmpty) {
+      await ref.read(departmentServiceProvider).updateDepartment(dept.id, ctrl.text.trim());
+      ref.invalidate(departmentsProvider);
+    }
+    ctrl.dispose();
+  }
+
+  Future<void> _deleteDept(BuildContext context, Department dept) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Удалить подразделение?'),
+        content: Text(
+            '«${dept.name}» и все его участки будут удалены.\n\nЭто действие нельзя отменить.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Отмена')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style:
+                  FilledButton.styleFrom(backgroundColor: const Color(0xFFE24B4A)),
+              child: const Text('Удалить')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref.read(departmentServiceProvider).deleteDepartment(dept.id);
+      if (_selectedDeptId == dept.id) setState(() => _selectedDeptId = null);
+      ref.invalidate(departmentsProvider);
+      ref.invalidate(sectionsProvider);
+    }
+  }
+
+  Future<void> _showAddSection(BuildContext context) async {
+    final ctrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Добавить участок'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Название участка',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Отмена')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Добавить')),
+        ],
+      ),
+    );
+    if (confirmed == true && ctrl.text.trim().isNotEmpty) {
+      await ref
+          .read(departmentServiceProvider)
+          .createSection(ctrl.text.trim(), _selectedDeptId!);
+      ref.invalidate(sectionsProvider);
+    }
+    ctrl.dispose();
+  }
+
+  Future<void> _showEditSection(BuildContext context, Section section) async {
+    final ctrl = TextEditingController(text: section.name);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Переименовать участок'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Название',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Отмена')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Сохранить')),
+        ],
+      ),
+    );
+    if (confirmed == true && ctrl.text.trim().isNotEmpty) {
+      await ref
+          .read(departmentServiceProvider)
+          .updateSection(section.id, ctrl.text.trim());
+      ref.invalidate(sectionsProvider);
+    }
+    ctrl.dispose();
+  }
+
+  Future<void> _deleteSection(BuildContext context, Section section) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Удалить участок?'),
+        content: Text(
+            '«${section.name}» будет удалён.\n\nЭто действие нельзя отменить.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Отмена')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style:
+                  FilledButton.styleFrom(backgroundColor: const Color(0xFFE24B4A)),
+              child: const Text('Удалить')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref.read(departmentServiceProvider).deleteSection(section.id);
+      ref.invalidate(sectionsProvider);
+    }
   }
 }

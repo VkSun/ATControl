@@ -16,6 +16,8 @@ class Vehicle {
   final DateTime? equipmentToDate;
   final int? equipmentHours;
   final String? notes;
+  final String? departmentId;
+  final String? sectionId;
 
   Vehicle({
     required this.id,
@@ -35,6 +37,8 @@ class Vehicle {
     this.equipmentToDate,
     this.equipmentHours,
     this.notes,
+    this.departmentId,
+    this.sectionId,
   });
 
   String get brandModel => '$brand $model';
@@ -62,6 +66,8 @@ class Vehicle {
         ? DateTime.parse(json['equipment_to_date']) : null,
     equipmentHours: json['equipment_hours'],
     notes: json['notes'],
+    departmentId: json['department_id'],
+    sectionId: json['section_id'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -81,6 +87,8 @@ class Vehicle {
     'equipment_to_date': equipmentToDate?.toIso8601String().split('T')[0],
     'equipment_hours': equipmentHours,
     'notes': notes,
+    'department_id': departmentId,
+    'section_id': sectionId,
   };
 
   static int dateStatus(DateTime? date) {

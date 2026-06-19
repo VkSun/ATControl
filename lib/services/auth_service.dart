@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_role.dart';
 import '../models/invitation_code.dart';
-import 'vehicle_service.dart';
+import 'supabase_client.dart';
 
 final authServiceProvider = Provider((ref) => AuthService());
 
@@ -149,6 +149,8 @@ class AuthService {
       'perm_write': invitation.permWrite,
       'perm_own_only': invitation.permOwnOnly,
       'is_active': true,
+      'department_id': invitation.departmentId,
+      'section_id': invitation.sectionId,
     });
 
     await supabase.from('profiles').insert({
@@ -183,6 +185,8 @@ class AuthService {
     required bool permRead,
     required bool permWrite,
     required bool permOwnOnly,
+    String? departmentId,
+    String? sectionId,
   }) async {
     final code = _generateCode();
     final data = await supabase.from('invitation_codes').insert({
@@ -196,6 +200,8 @@ class AuthService {
       'perm_read': permRead,
       'perm_write': permWrite,
       'perm_own_only': permOwnOnly,
+      'department_id': departmentId,
+      'section_id': sectionId,
     }).select().single();
     return InvitationCode.fromJson(data);
   }

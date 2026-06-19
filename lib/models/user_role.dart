@@ -13,6 +13,8 @@ class UserRole {
   final bool permWrite;
   final bool permOwnOnly;
   final bool isActive;
+  final String? departmentId;
+  final String? sectionId;
 
   UserRole({
     required this.id,
@@ -29,6 +31,8 @@ class UserRole {
     required this.permWrite,
     required this.permOwnOnly,
     required this.isActive,
+    this.departmentId,
+    this.sectionId,
   });
 
   bool get canEdit => permFullAccess || permEdit;
@@ -51,6 +55,8 @@ class UserRole {
     permWrite: json['perm_write'] ?? false,
     permOwnOnly: json['perm_own_only'] ?? false,
     isActive: json['is_active'] ?? true,
+    departmentId: json['department_id'],
+    sectionId: json['section_id'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -67,5 +73,7 @@ class UserRole {
     'perm_write': permWrite,
     'perm_own_only': permOwnOnly,
     'is_active': isActive,
+    'department_id': departmentId,
+    'section_id': sectionId,
   };
 }

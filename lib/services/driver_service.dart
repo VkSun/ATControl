@@ -1,21 +1,39 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/driver.dart';
+import '../services/auth_service.dart';
 import 'vehicle_service.dart';
 
 final driverServiceProvider = Provider((ref) => DriverService());
 
 final driversProvider = FutureProvider<List<Driver>>((ref) async {
-  return ref.read(driverServiceProvider).getAll();
+  final role = await ref.watch(currentUserRoleProvider.future);
+
+  if (role != null && !role.isAdmin && !role.permFullAccess) {
+    return ref.read(driverServiceProvider).getAll(
+          departmentId: role.departmentId,
+          sectionId: role.sectionId,
+        );
+  }
+
+  final deptId = ref.watch(selectedDepartmentProvider);
+  final secId = ref.watch(selectedSectionProvider);
+  return ref.read(driverServiceProvider).getAll(
+        departmentId: deptId,
+        sectionId: secId,
+      );
 });
 
 class DriverService {
   final _table = 'drivers';
 
-  Future<List<Driver>> getAll() async {
-    final data = await supabase
-        .from(_table)
-        .select()
-        .order('last_name');
+  Future<List<Driver>> getAll({String? departmentId, String? sectionId}) async {
+    var q = supabase.from(_table).select().order('last_name');
+    if (sectionId != null) {
+      q = q.eq('section_id', sectionId);
+    } else if (departmentId != null) {
+      q = q.eq('department_id', departmentId);
+    }
+    final data = await q;
     return (data as List).map((e) => Driver.fromJson(e)).toList();
   }
 
@@ -39,8 +57,11 @@ class DriverService {
     await supabase.from(_table).delete().eq('id', id);
   }
 
-  Future<List<Map<String, dynamic>>> getExpiring() async {
-    final all = await getAll();
+  Future<List<Map<String, dynamic>>> getExpiring({
+    String? departmentId,
+    String? sectionId,
+  }) async {
+    final all = await getAll(departmentId: departmentId, sectionId: sectionId);
     final now = DateTime.now();
     final result = <Map<String, dynamic>>[];
 
