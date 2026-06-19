@@ -56,18 +56,9 @@ class DriversScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Column(
           children: [
-            Padding(
+            _SearchBar(
+              colors: colors,
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: TextField(
-                onChanged: (v) => ref.read(driverSearchProvider.notifier).state = v,
-                decoration: InputDecoration(
-                  hintText: 'Поиск по ФИО...',
-                  prefixIcon: const Icon(Icons.search, size: 18),
-                  isDense: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
-              ),
             ),
             Expanded(
               child: driversAsync.when(
@@ -117,7 +108,7 @@ class DriversScreen extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  _SearchBar(colors: colors, ref: ref),
+                  _SearchBar(colors: colors),
                   Expanded(
                     child: driversAsync.when(
                       loading: () => const Center(child: CircularProgressIndicator()),
@@ -198,24 +189,60 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _SearchBar extends StatelessWidget {
+class _SearchBar extends ConsumerStatefulWidget {
   final AppColors colors;
-  final WidgetRef ref;
-  const _SearchBar({required this.colors, required this.ref});
+  final EdgeInsets padding;
+  const _SearchBar({
+    required this.colors,
+    this.padding = const EdgeInsets.fromLTRB(14, 14, 14, 8),
+  });
+
+  @override
+  ConsumerState<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends ConsumerState<_SearchBar> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: ref.read(driverSearchProvider));
+    _ctrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _clear() {
+    _ctrl.clear();
+    ref.read(driverSearchProvider.notifier).state = '';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      padding: widget.padding,
       child: TextField(
+        controller: _ctrl,
         onChanged: (v) => ref.read(driverSearchProvider.notifier).state = v,
         decoration: InputDecoration(
           hintText: 'Поиск по ФИО...',
           isDense: true,
           prefixIcon: const Icon(Icons.search, size: 16),
+          suffixIcon: _ctrl.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close, size: 16),
+                  onPressed: _clear,
+                  splashRadius: 14,
+                )
+              : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: colors.tableBorder),
+            borderSide: BorderSide(color: widget.colors.tableBorder),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
