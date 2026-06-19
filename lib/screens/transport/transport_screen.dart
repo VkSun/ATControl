@@ -11,9 +11,14 @@ import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
 
-enum VehicleSort { invNumber, brand, govNumber }
+enum VehicleSort {
+  invNumber, brand, govNumber,
+  inspectionDate, insuranceDate, specialPermitDate,
+  toDate, equipmentToDate,
+}
 
 final vehicleSortProvider = StateProvider<VehicleSort>((ref) => VehicleSort.invNumber);
+final vehicleSortAscProvider = StateProvider<bool>((ref) => true);
 final vehicleSearchProvider = StateProvider<String>((ref) => '');
 
 class TransportScreen extends ConsumerWidget {
@@ -23,6 +28,7 @@ class TransportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final sort = ref.watch(vehicleSortProvider);
+    final asc = ref.watch(vehicleSortAscProvider);
     final search = ref.watch(vehicleSearchProvider);
     final vehiclesAsync = ref.watch(vehiclesProvider);
     final mobile = isMobile(context);
@@ -38,14 +44,19 @@ class TransportScreen extends ConsumerWidget {
           v.govNumber.toLowerCase().contains(q)).toList();
       }
       list = [...list];
-      switch (sort) {
-        case VehicleSort.brand:
-          list.sort((a, b) => a.brandModel.compareTo(b.brandModel));
-        case VehicleSort.govNumber:
-          list.sort((a, b) => a.govNumber.compareTo(b.govNumber));
-        case VehicleSort.invNumber:
-          list.sort((a, b) => a.invNumber.compareTo(b.invNumber));
-      }
+      list.sort((a, b) {
+        final r = switch (sort) {
+          VehicleSort.invNumber       => a.invNumber.compareTo(b.invNumber),
+          VehicleSort.brand           => a.brandModel.compareTo(b.brandModel),
+          VehicleSort.govNumber       => a.govNumber.compareTo(b.govNumber),
+          VehicleSort.inspectionDate  => (a.inspectionDate ?? DateTime(2099)).compareTo(b.inspectionDate ?? DateTime(2099)),
+          VehicleSort.insuranceDate   => (a.insuranceDate ?? DateTime(2099)).compareTo(b.insuranceDate ?? DateTime(2099)),
+          VehicleSort.specialPermitDate => (a.specialPermitDate ?? DateTime(2099)).compareTo(b.specialPermitDate ?? DateTime(2099)),
+          VehicleSort.toDate          => (a.toDate ?? DateTime(2099)).compareTo(b.toDate ?? DateTime(2099)),
+          VehicleSort.equipmentToDate => (a.equipmentToDate ?? DateTime(2099)).compareTo(b.equipmentToDate ?? DateTime(2099)),
+        };
+        return asc ? r : -r;
+      });
       return list;
     }
 
@@ -107,12 +118,19 @@ class TransportScreen extends ConsumerWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: colors.tableBorder, width: 0.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
-                  _SearchAndSort(colors: colors, sort: sort, ref: ref),
+                  _SearchBar(colors: colors, ref: ref),
                   Expanded(
                     child: vehiclesAsync.when(
                       loading: () =>
@@ -177,7 +195,7 @@ class _TopBar extends StatelessWidget {
               builder: (context, ref, _) {
                 final profileAsync = ref.watch(profileProvider);
                 final initials = profileAsync.value?.initials ?? 'АИ';
-                final color = profileAsync.value?.avatarColor ?? '#4361EE';
+                final color = profileAsync.value?.avatarColor ?? '#435EBE';
                 final avatarColor = Color(int.parse(
                     color.replaceFirst('#', '0xFF')));
                 return GestureDetector(
@@ -201,85 +219,26 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _SearchAndSort extends StatelessWidget {
+class _SearchBar extends StatelessWidget {
   final AppColors colors;
-  final VehicleSort sort;
   final WidgetRef ref;
-
-  const _SearchAndSort({required this.colors, required this.sort, required this.ref});
+  const _SearchBar({required this.colors, required this.ref});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Введите для поиска марку, модель, гос.номер или инвентарный номер',
-            style: Theme.of(context).textTheme.bodySmall,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      child: TextField(
+        onChanged: (v) => ref.read(vehicleSearchProvider.notifier).state = v,
+        decoration: InputDecoration(
+          hintText: 'Поиск по марке, модели, гос. номеру или инв. номеру...',
+          isDense: true,
+          prefixIcon: const Icon(Icons.search, size: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: colors.tableBorder),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  onChanged: (v) => ref.read(vehicleSearchProvider.notifier).state = v,
-                  decoration: InputDecoration(
-                    hintText: 'Поиск...',
-                    isDense: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: colors.tableBorder),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text('Сортировать по:', style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(width: 8),
-              _SortBtn('Инв. номер', VehicleSort.invNumber, sort, ref, colors),
-              const SizedBox(width: 4),
-              _SortBtn('Марка', VehicleSort.brand, sort, ref, colors),
-              const SizedBox(width: 4),
-              _SortBtn('Гос. номер', VehicleSort.govNumber, sort, ref, colors),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SortBtn extends StatelessWidget {
-  final String label;
-  final VehicleSort value;
-  final VehicleSort current;
-  final WidgetRef ref;
-  final AppColors colors;
-
-  const _SortBtn(this.label, this.value, this.current, this.ref, this.colors);
-
-  @override
-  Widget build(BuildContext context) {
-    final active = value == current;
-    return GestureDetector(
-      onTap: () => ref.read(vehicleSortProvider.notifier).state = value,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF4361EE) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: active ? const Color(0xFF4361EE) : colors.tableBorder,
-          ),
-        ),
-        child: Text(label,
-          style: TextStyle(
-            fontSize: 11,
-            color: active ? Colors.white : Theme.of(context).textTheme.bodySmall!.color,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
     );
@@ -301,6 +260,16 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
   static const _prefsKey = 'vehicle_col_widths';
   static const _labels = ['Инв. номер', 'Марка/модель', 'Гос. номер', 'Техосмотр', 'Страховка', 'Спец. разр.', 'ТО авто', 'ТО оборуд.'];
   static const _defaults = [90.0, 130.0, 100.0, 100.0, 100.0, 100.0, 140.0, 140.0];
+  static const _sortCols = <VehicleSort?>[
+    VehicleSort.invNumber,
+    VehicleSort.brand,
+    VehicleSort.govNumber,
+    VehicleSort.inspectionDate,
+    VehicleSort.insuranceDate,
+    VehicleSort.specialPermitDate,
+    VehicleSort.toDate,
+    VehicleSort.equipmentToDate,
+  ];
   late List<double> _widths;
 
   @override
@@ -323,15 +292,49 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
     await p.setStringList(_prefsKey, _widths.map((w) => w.toStringAsFixed(1)).toList());
   }
 
-  Widget _resizableHeader(int i) {
+  Widget _resizableHeader(int i, VehicleSort currentSort, bool currentAsc, Color primary) {
+    final sortCol = _sortCols[i];
+    final isActive = sortCol != null && sortCol == currentSort;
+
     return SizedBox(
       width: _widths[i],
       child: Row(
         children: [
           Expanded(
-            child: Text(_labels[i],
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF888888))),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () {
+                  if (currentSort == sortCol) {
+                    ref.read(vehicleSortAscProvider.notifier).state = !currentAsc;
+                  } else {
+                    ref.read(vehicleSortProvider.notifier).state = sortCol!;
+                    ref.read(vehicleSortAscProvider.notifier).state = true;
+                  }
+                },
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(_labels[i],
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                          color: isActive ? primary : const Color(0xFF888888),
+                        )),
+                    ),
+                    if (isActive) ...[
+                      const SizedBox(width: 2),
+                      Icon(
+                        currentAsc ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                        size: 11,
+                        color: primary,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
           MouseRegion(
             cursor: SystemMouseCursors.resizeColumn,
@@ -342,8 +345,7 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
               }),
               onHorizontalDragEnd: (_) => _save(),
               child: SizedBox(
-                width: 8,
-                height: 24,
+                width: 8, height: 24,
                 child: Center(
                   child: Container(width: 1, height: 16, color: widget.colors.tableBorder),
                 ),
@@ -359,6 +361,9 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd.MM.yyyy');
     final perms = ref.watch(permissionsProvider);
+    final currentSort = ref.watch(vehicleSortProvider);
+    final currentAsc = ref.watch(vehicleSortAscProvider);
+    final primary = Theme.of(context).colorScheme.primary;
 
     if (widget.mobile) {
       return ListView.builder(
@@ -385,7 +390,8 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
           ),
           child: Row(
             children: [
-              for (int i = 0; i < _labels.length; i++) _resizableHeader(i),
+              for (int i = 0; i < _labels.length; i++)
+                _resizableHeader(i, currentSort, currentAsc, primary),
               const Spacer(),
             ],
           ),

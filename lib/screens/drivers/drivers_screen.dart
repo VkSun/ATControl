@@ -12,31 +12,32 @@ import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
 
-enum DriverSort { fullName, licenseExpiry, medicalExpiry, birthDate }
+enum DriverSort { fullName, tabNumber, licenseExpiry, medicalExpiry, birthDate }
 
 final driverSortProvider = StateProvider<DriverSort>((ref) => DriverSort.fullName);
+final driverSortAscProvider = StateProvider<bool>((ref) => true);
 final driverSearchProvider = StateProvider<String>((ref) => '');
 
 class DriversScreen extends ConsumerWidget {
   const DriversScreen({super.key});
 
-  List<Driver> _buildList(List<Driver> drivers, String search, DriverSort sort) {
+  List<Driver> _buildList(List<Driver> drivers, String search, DriverSort sort, bool asc) {
     var list = drivers;
     if (search.isNotEmpty) {
       final q = search.toLowerCase();
       list = list.where((d) => d.fullName.toLowerCase().contains(q)).toList();
     }
     list = [...list];
-    switch (sort) {
-      case DriverSort.licenseExpiry:
-        list.sort((a, b) => (a.licenseExpiry ?? DateTime(2099)).compareTo(b.licenseExpiry ?? DateTime(2099)));
-      case DriverSort.medicalExpiry:
-        list.sort((a, b) => (a.medicalExpiry ?? DateTime(2099)).compareTo(b.medicalExpiry ?? DateTime(2099)));
-      case DriverSort.birthDate:
-        list.sort((a, b) => (a.birthDate ?? DateTime(2099)).compareTo(b.birthDate ?? DateTime(2099)));
-      case DriverSort.fullName:
-        list.sort((a, b) => a.fullName.compareTo(b.fullName));
-    }
+    list.sort((a, b) {
+      final r = switch (sort) {
+        DriverSort.fullName      => a.fullName.compareTo(b.fullName),
+        DriverSort.tabNumber     => a.tabNumber.compareTo(b.tabNumber),
+        DriverSort.licenseExpiry => (a.licenseExpiry ?? DateTime(2099)).compareTo(b.licenseExpiry ?? DateTime(2099)),
+        DriverSort.medicalExpiry => (a.medicalExpiry ?? DateTime(2099)).compareTo(b.medicalExpiry ?? DateTime(2099)),
+        DriverSort.birthDate     => (a.birthDate ?? DateTime(2099)).compareTo(b.birthDate ?? DateTime(2099)),
+      };
+      return asc ? r : -r;
+    });
     return list;
   }
 
@@ -44,6 +45,7 @@ class DriversScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final sort = ref.watch(driverSortProvider);
+    final asc = ref.watch(driverSortAscProvider);
     final search = ref.watch(driverSearchProvider);
     final driversAsync = ref.watch(driversProvider);
     final mobile = isMobile(context);
@@ -72,7 +74,7 @@ class DriversScreen extends ConsumerWidget {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('Ошибка: $e')),
                 data: (drivers) => _DriverTable(
-                  drivers: _buildList(drivers, search, sort),
+                  drivers: _buildList(drivers, search, sort, asc),
                   colors: colors,
                   mobile: true,
                 ),
@@ -103,18 +105,25 @@ class DriversScreen extends ConsumerWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: colors.tableBorder, width: 0.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
-                  _SearchAndSort(colors: colors, sort: sort, ref: ref),
+                  _SearchBar(colors: colors, ref: ref),
                   Expanded(
                     child: driversAsync.when(
                       loading: () => const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(child: Text('Ошибка: $e')),
                       data: (drivers) => _DriverTable(
-                        drivers: _buildList(drivers, search, sort),
+                        drivers: _buildList(drivers, search, sort, asc),
                         colors: colors,
                       ),
                     ),
@@ -171,7 +180,7 @@ class _TopBar extends StatelessWidget {
               builder: (context, ref, _) {
                 final profileAsync = ref.watch(profileProvider);
                 final initials = profileAsync.value?.initials ?? 'АИ';
-                final color = profileAsync.value?.avatarColor ?? '#4361EE';
+                final color = profileAsync.value?.avatarColor ?? '#435EBE';
                 final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
                 return GestureDetector(
                   onTap: () => showDialog(context: context,
@@ -189,76 +198,26 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _SearchAndSort extends StatelessWidget {
+class _SearchBar extends StatelessWidget {
   final AppColors colors;
-  final DriverSort sort;
   final WidgetRef ref;
-
-  const _SearchAndSort({required this.colors, required this.sort, required this.ref});
+  const _SearchBar({required this.colors, required this.ref});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              onChanged: (v) => ref.read(driverSearchProvider.notifier).state = v,
-              decoration: InputDecoration(
-                hintText: 'Поиск по ФИО...',
-                isDense: true,
-                prefixIcon: const Icon(Icons.search, size: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: colors.tableBorder),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-            ),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      child: TextField(
+        onChanged: (v) => ref.read(driverSearchProvider.notifier).state = v,
+        decoration: InputDecoration(
+          hintText: 'Поиск по ФИО...',
+          isDense: true,
+          prefixIcon: const Icon(Icons.search, size: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: colors.tableBorder),
           ),
-          const SizedBox(width: 12),
-          Text('Сортировать по:', style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(width: 8),
-          _SortBtn('ФИО', DriverSort.fullName, sort, ref, colors),
-          const SizedBox(width: 4),
-          _SortBtn('Вод. удост.', DriverSort.licenseExpiry, sort, ref, colors),
-          const SizedBox(width: 4),
-          _SortBtn('Мед. справка', DriverSort.medicalExpiry, sort, ref, colors),
-          const SizedBox(width: 4),
-          _SortBtn('Дата рожд.', DriverSort.birthDate, sort, ref, colors),
-        ],
-      ),
-    );
-  }
-}
-
-class _SortBtn extends StatelessWidget {
-  final String label;
-  final DriverSort value;
-  final DriverSort current;
-  final WidgetRef ref;
-  final AppColors colors;
-
-  const _SortBtn(this.label, this.value, this.current, this.ref, this.colors);
-
-  @override
-  Widget build(BuildContext context) {
-    final active = value == current;
-    return GestureDetector(
-      onTap: () => ref.read(driverSortProvider.notifier).state = value,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF4361EE) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: active ? const Color(0xFF4361EE) : colors.tableBorder),
-        ),
-        child: Text(label,
-          style: TextStyle(
-            fontSize: 11,
-            color: active ? Colors.white : Theme.of(context).textTheme.bodySmall!.color,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
     );
@@ -280,6 +239,14 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
   static const _prefsKey = 'driver_col_widths';
   static const _labels = ['ФИО', 'Таб. номер', 'Инв. ТС', 'Вод. удостоверение', 'Мед. справка', 'Дата рождения'];
   static const _defaults = [200.0, 90.0, 90.0, 140.0, 120.0, 120.0];
+  static const _sortCols = <DriverSort?>[
+    DriverSort.fullName,
+    DriverSort.tabNumber,
+    null,                    // Инв. ТС — асинхронный lookup
+    DriverSort.licenseExpiry,
+    DriverSort.medicalExpiry,
+    DriverSort.birthDate,
+  ];
   late List<double> _widths;
 
   @override
@@ -302,15 +269,49 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
     await p.setStringList(_prefsKey, _widths.map((w) => w.toStringAsFixed(1)).toList());
   }
 
-  Widget _resizableHeader(int i) {
+  Widget _resizableHeader(int i, DriverSort currentSort, bool currentAsc, Color primary) {
+    final sortCol = _sortCols[i];
+    final isActive = sortCol != null && sortCol == currentSort;
+
     return SizedBox(
       width: _widths[i],
       child: Row(
         children: [
           Expanded(
-            child: Text(_labels[i],
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF888888))),
+            child: MouseRegion(
+              cursor: sortCol != null ? SystemMouseCursors.click : MouseCursor.defer,
+              child: GestureDetector(
+                onTap: sortCol == null ? null : () {
+                  if (currentSort == sortCol) {
+                    ref.read(driverSortAscProvider.notifier).state = !currentAsc;
+                  } else {
+                    ref.read(driverSortProvider.notifier).state = sortCol;
+                    ref.read(driverSortAscProvider.notifier).state = true;
+                  }
+                },
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(_labels[i],
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                          color: isActive ? primary : const Color(0xFF888888),
+                        )),
+                    ),
+                    if (isActive) ...[
+                      const SizedBox(width: 2),
+                      Icon(
+                        currentAsc ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                        size: 11,
+                        color: primary,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
           MouseRegion(
             cursor: SystemMouseCursors.resizeColumn,
@@ -321,8 +322,7 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
               }),
               onHorizontalDragEnd: (_) => _save(),
               child: SizedBox(
-                width: 8,
-                height: 24,
+                width: 8, height: 24,
                 child: Center(
                   child: Container(width: 1, height: 16, color: widget.colors.tableBorder),
                 ),
@@ -338,6 +338,9 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd.MM.yyyy');
     final perms = ref.watch(permissionsProvider);
+    final currentSort = ref.watch(driverSortProvider);
+    final currentAsc = ref.watch(driverSortAscProvider);
+    final primary = Theme.of(context).colorScheme.primary;
 
     if (widget.mobile) {
       return ListView.builder(
@@ -380,7 +383,8 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
           ),
           child: Row(
             children: [
-              for (int i = 0; i < _labels.length; i++) _resizableHeader(i),
+              for (int i = 0; i < _labels.length; i++)
+                _resizableHeader(i, currentSort, currentAsc, primary),
               const Spacer(),
             ],
           ),
@@ -460,9 +464,10 @@ class _DateCell extends StatelessWidget {
     }
     return Text(fmt.format(date!),
       style: TextStyle(fontSize: 12, fontWeight: diff <= 30 ? FontWeight.w500 : FontWeight.normal, color: textColor),
-      );
+    );
   }
 }
+
 class _VehicleCell extends ConsumerWidget {
   final List<String> vehicleIds;
   final WidgetRef ref;
