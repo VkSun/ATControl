@@ -38,11 +38,15 @@ class TransportScreen extends ConsumerWidget {
     List<Vehicle> buildList(List<Vehicle> vehicles) {
       var list = vehicles;
       if (search.isNotEmpty) {
-        final q = search.toLowerCase();
-        list = list.where((v) =>
-          v.invNumber.toLowerCase().contains(q) ||
-          v.brandModel.toLowerCase().contains(q) ||
-          v.govNumber.toLowerCase().contains(q)).toList();
+        final tokens = search.toLowerCase().split(RegExp(r'\s+'));
+        list = list.where((v) {
+          final fields = [
+            v.invNumber.toLowerCase(),
+            v.brandModel.toLowerCase(),
+            v.govNumber.toLowerCase(),
+          ];
+          return tokens.every((t) => fields.any((f) => f.contains(t)));
+        }).toList();
       }
       list = [...list];
       list.sort((a, b) {

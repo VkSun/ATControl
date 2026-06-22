@@ -38,9 +38,12 @@ class DriverService {
   }
 
   Future<List<Driver>> search(String query) async {
-    final q = query.toLowerCase();
+    final tokens = query.toLowerCase().split(RegExp(r'\s+'));
     final all = await getAll();
-    return all.where((d) => d.fullName.toLowerCase().contains(q)).toList();
+    return all.where((d) {
+      final fields = [d.fullName.toLowerCase(), d.tabNumber.toLowerCase()];
+      return tokens.every((t) => fields.any((f) => f.contains(t)));
+    }).toList();
   }
 
   Future<Driver> create(Driver d) async {

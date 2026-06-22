@@ -43,15 +43,17 @@ class VehicleService {
   }
 
   Future<List<Vehicle>> search(String query) async {
-    final q = query.toLowerCase();
+    final tokens = query.toLowerCase().split(RegExp(r'\s+'));
     final all = await getAll();
-    return all
-        .where((v) =>
-            v.invNumber.toLowerCase().contains(q) ||
-            v.brand.toLowerCase().contains(q) ||
-            v.model.toLowerCase().contains(q) ||
-            v.govNumber.toLowerCase().contains(q))
-        .toList();
+    return all.where((v) {
+      final fields = [
+        v.invNumber.toLowerCase(),
+        v.brand.toLowerCase(),
+        v.model.toLowerCase(),
+        v.govNumber.toLowerCase(),
+      ];
+      return tokens.every((t) => fields.any((f) => f.contains(t)));
+    }).toList();
   }
 
   Future<Vehicle> create(Vehicle v) async {

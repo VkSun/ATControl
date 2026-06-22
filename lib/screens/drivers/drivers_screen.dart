@@ -25,8 +25,11 @@ class DriversScreen extends ConsumerWidget {
   List<Driver> _buildList(List<Driver> drivers, String search, DriverSort sort, bool asc) {
     var list = drivers;
     if (search.isNotEmpty) {
-      final q = search.toLowerCase();
-      list = list.where((d) => d.fullName.toLowerCase().contains(q)).toList();
+      final tokens = search.toLowerCase().split(RegExp(r'\s+'));
+      list = list.where((d) {
+        final fields = [d.fullName.toLowerCase(), d.tabNumber.toLowerCase()];
+        return tokens.every((t) => fields.any((f) => f.contains(t)));
+      }).toList();
     }
     list = [...list];
     list.sort((a, b) {
