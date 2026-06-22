@@ -10,7 +10,7 @@ import CalendarCard from './components/CalendarCard'
 import SettingsDrawer from './components/SettingsDrawer'
 import { I } from './components/Icons'
 
-const DEFAULT_SETTINGS = { accent: 'blue', greeting: true }
+const DEFAULT_SETTINGS = { accent: 'blue', greeting: true, cols: { shortcuts: 1.4, todo: 1, calendar: 1 } }
 
 const ACCENTS = {
   blue:   { primary: '#435EBE', primary2: '#5A75D9', soft: '#EDF0FB' },
@@ -31,7 +31,7 @@ function applyAccent(key) {
 function loadLocalSettings() {
   try {
     const s = JSON.parse(localStorage.getItem('atc_settings'))
-    return { ...DEFAULT_SETTINGS, ...s }
+    return { ...DEFAULT_SETTINGS, ...s, cols: { ...DEFAULT_SETTINGS.cols, ...(s?.cols || {}) } }
   } catch {
     return DEFAULT_SETTINGS
   }
@@ -71,9 +71,11 @@ export default function App() {
     ])
     if (profileRes.data) setProfile(profileRes.data)
     if (settingsRes.data) {
+      const local = loadLocalSettings()
       const s = {
         accent: settingsRes.data.accent || 'blue',
         greeting: settingsRes.data.greeting ?? true,
+        cols: local.cols,
       }
       setSettings(s)
       localStorage.setItem('atc_settings', JSON.stringify(s))
@@ -113,7 +115,7 @@ export default function App() {
         <WeatherCard />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `${settings.cols?.shortcuts ?? 1.4}fr ${settings.cols?.todo ?? 1}fr ${settings.cols?.calendar ?? 1}fr`, gap: 20, alignItems: 'start' }}>
         <ShortcutsCard userId={session.user.id} />
         <TodoCard userId={session.user.id} />
         <CalendarCard userId={session.user.id} />

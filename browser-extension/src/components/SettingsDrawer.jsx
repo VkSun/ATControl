@@ -74,6 +74,23 @@ export default function SettingsDrawer({ open, onClose, settings, onSettingsChan
           </label>
         </div>
 
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Ширина карточек</div>
+          {[['shortcuts', 'Закладки'], ['todo', 'Задачи'], ['calendar', 'Календарь']].map(([key, label]) => (
+            <div key={key} style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>{label}</span>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>{((settings.cols?.[key]) ?? 1).toFixed(1)}</span>
+              </div>
+              <input type="range" min="0.5" max="3" step="0.1"
+                value={(settings.cols?.[key]) ?? 1}
+                onChange={e => update('cols', { ...(settings.cols || { shortcuts: 1.4, todo: 1, calendar: 1 }), [key]: parseFloat(e.target.value) })}
+                style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }}
+              />
+            </div>
+          ))}
+        </div>
+
         <div style={{ marginTop: 'auto' }}>
           <button onClick={handleLogout} style={{
             width: '100%', padding: '11px', background: 'transparent', border: '1.5px solid var(--danger)',

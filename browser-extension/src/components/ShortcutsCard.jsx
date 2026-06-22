@@ -19,13 +19,13 @@ const OVERLAY = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 
-function Tile({ item, hovered, onMouseEnter, onMouseLeave, onClick, onDelete, badge }) {
+function Tile({ item, hovered, onMouseEnter, onMouseLeave, onClick, onDelete, onEdit, badge }) {
   const isFolder = item.type === 'folder'
   return (
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      onClick={(e) => { if (e.target.closest('.del-btn')) return; onClick() }}
+      onClick={(e) => { if (e.target.closest('.del-btn') || e.target.closest('.edit-btn')) return; onClick() }}
       style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }}
     >
       <div style={{
@@ -53,6 +53,12 @@ function Tile({ item, hovered, onMouseEnter, onMouseLeave, onClick, onDelete, ba
         <button className="del-btn" onClick={(e) => { e.stopPropagation(); onDelete() }}
           style={{ position: 'absolute', top: -6, right: -2, width: 18, height: 18, borderRadius: 99, background: 'var(--danger)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
           {I.close({ size: 10 })}
+        </button>
+      )}
+      {hovered && onEdit && (
+        <button className="edit-btn" onClick={(e) => { e.stopPropagation(); onEdit() }}
+          style={{ position: 'absolute', top: -6, left: -2, width: 18, height: 18, borderRadius: 99, background: 'var(--primary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+          {I.edit({ size: 10 })}
         </button>
       )}
     </div>
@@ -100,7 +106,7 @@ function AddForm({ form, setForm, onSubmit, onCancel, showTypeToggle = true }) {
   )
 }
 
-const EMPTY_FORM = { label: '', url: '', color: '#435EBE', type: 'shortcut' }
+const EMPTY_FORM = { label: '', url: '', color: '#435EBE', type: 'shortcut', letter: '' }
 
 export default function ShortcutsCard({ userId }) {
   const [items, setItems] = useState([])
@@ -112,6 +118,8 @@ export default function ShortcutsCard({ userId }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [hovered, setHovered] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [editingItem, setEditingItem] = useState(null)
+  const [editForm, setEditForm] = useState(EMPTY_FORM)
 
   useEffect(() => { if (userId) loadItems() }, [userId])
 
@@ -204,6 +212,32 @@ export default function ShortcutsCard({ userId }) {
     setConfirmDelete(null)
   }
 
+  const openEdit = (item, context) => {
+    setEditingItem({ item, context })
+    setEditForm({ label: item.label, url: item.url || '', color: item.color, letter: item.letter, type: item.type })
+  }
+
+  const updateItem = async () => {
+    if (!editingItem || !editForm.label) return
+    const url = editForm.type === 'shortcut'
+      ? (editForm.url.startsWith('http') ? editForm.url : 'https://' + editForm.url)
+      : null
+    const updates = {
+      label: editForm.label,
+      url,
+      color: editForm.color,
+      letter: editForm.letter || editForm.label[0].toUpperCase(),
+    }
+    const { data, error } = await supabase.from('newtab_shortcuts').update(updates).eq('id', editingItem.item.id).select().single()
+    if (error || !data) return
+    if (editingItem.context === 'folder') {
+      setFolderItems(prev => prev.map(s => s.id === data.id ? data : s))
+    } else {
+      setItems(prev => prev.map(s => s.id === data.id ? data : s))
+    }
+    setEditingItem(null)
+  }
+
   const closeFolderModal = () => {
     setOpenFolder(null)
     setAddingInFolder(false)
@@ -232,6 +266,7 @@ export default function ShortcutsCard({ userId }) {
               onMouseLeave={() => setHovered(null)}
               onClick={() => s.type === 'folder' ? setOpenFolder(s) : (window.location.href = s.url)}
               onDelete={() => setConfirmDelete({ ...s, context: 'top' })}
+              onEdit={() => openEdit(s, 'top')}
             />
           ))}
         </div>
@@ -276,6 +311,7 @@ export default function ShortcutsCard({ userId }) {
                     onMouseLeave={() => setHovered(null)}
                     onClick={() => window.location.href = s.url}
                     onDelete={() => setConfirmDelete({ ...s, context: 'folder' })}
+                    onEdit={() => openEdit(s, 'folder')}
                   />
                 ))}
               </div>
@@ -316,6 +352,43 @@ export default function ShortcutsCard({ userId }) {
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: '9px', background: 'var(--surface-2)', color: 'var(--ink-2)', border: '1px solid var(--line)', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Отмена</button>
               <button onClick={doDelete} style={{ flex: 1, padding: '9px', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Удалить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit modal ── */}
+      {editingItem && (
+        <div style={{ ...OVERLAY, zIndex: 250 }} onClick={() => setEditingItem(null)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--surface)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--line)', padding: '24px', width: '90vw', maxWidth: 400,
+          }}>
+            <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 15, marginBottom: 16, color: 'var(--ink)' }}>
+              Редактировать {editingItem.item.type === 'folder' ? 'папку' : 'закладку'}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input value={editForm.label} onChange={e => setEditForm(f => ({ ...f, label: e.target.value }))}
+                placeholder="Название" autoFocus
+                style={{ flex: 2, padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, fontFamily: 'Inter', outline: 'none', background: 'var(--surface)' }} />
+              <input value={editForm.letter} onChange={e => setEditForm(f => ({ ...f, letter: e.target.value.slice(-1).toUpperCase() }))}
+                placeholder="A"
+                style={{ width: 44, padding: '7px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 16, fontWeight: 700, textAlign: 'center', fontFamily: 'Nunito', outline: 'none', background: 'var(--surface)' }} />
+            </div>
+            {editingItem.item.type === 'shortcut' && (
+              <input value={editForm.url} onChange={e => setEditForm(f => ({ ...f, url: e.target.value }))}
+                placeholder="URL"
+                style={{ width: '100%', padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, fontFamily: 'Inter', outline: 'none', background: 'var(--surface)', marginBottom: 8, boxSizing: 'border-box' }} />
+            )}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16, marginTop: editingItem.item.type === 'shortcut' ? 0 : 8 }}>
+              {PALETTE.map(c => (
+                <div key={c} onClick={() => setEditForm(f => ({ ...f, color: c }))}
+                  style={{ width: 22, height: 22, borderRadius: 6, background: c, cursor: 'pointer', border: editForm.color === c ? '2.5px solid var(--ink)' : '2px solid transparent' }} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={updateItem} style={{ flex: 1, padding: '8px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Сохранить</button>
+              <button onClick={() => setEditingItem(null)} style={{ flex: 1, padding: '8px', background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Отмена</button>
             </div>
           </div>
         </div>
