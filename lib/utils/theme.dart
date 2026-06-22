@@ -209,6 +209,12 @@ class AppColors extends ThemeExtension<AppColors> {
   @override
   AppColors lerp(AppColors? other, double t) => this;
 }
+final resolvedThemeProvider = Provider<ThemeData>((ref) {
+  final mode = ref.watch(themeModeProvider);
+  if (mode == ThemeMode.dark) return AppTheme.darkTheme;
+  return AppTheme.lightTheme;
+});
+
 // ─── Offline state providers ──────────────────────────────────────────────────
 final isOfflineProvider =
     ChangeNotifierProvider<ValueNotifier<bool>>((ref) => isOfflineNotifier);
