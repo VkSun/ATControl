@@ -67,7 +67,22 @@ jobs:
 
       - run: flutter pub get
 
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/keystore.jks
+            echo "Keystore decoded successfully"
+          else
+            echo "No keystore secret found, using debug signing"
+          fi
+
       - name: Build Android APK
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
         run: flutter build apk --release
 
       - name: Rename APK

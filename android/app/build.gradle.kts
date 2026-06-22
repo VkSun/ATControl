@@ -27,9 +27,27 @@ android {
         versionName = flutter.versionName
     }
 
+    val keystoreFile = rootProject.file("app/keystore.jks")
+    val keystoreExists = keystoreFile.exists()
+            && System.getenv("KEY_ALIAS") != null
+
+    if (keystoreExists) {
+        signingConfigs {
+            create("release") {
+                storeFile = keystoreFile
+                storePassword = System.getenv("STORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystoreExists)
+                signingConfigs.getByName("release")
+            else
+                signingConfigs.getByName("debug")
         }
     }
 }

@@ -46,3 +46,7 @@ app.*.map.json
 
 # Claude Code internal directory
 .claude/
+
+# Android keystore (never commit — use GitHub Secrets)
+*.jks
+*.keystore
