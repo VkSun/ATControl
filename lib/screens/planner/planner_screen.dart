@@ -1195,6 +1195,9 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
             TextField(
               controller: _titleCtrl,
               autofocus: true,
+              minLines: 1,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
               decoration: const InputDecoration(
                 labelText: 'Название задачи',
                 border: OutlineInputBorder(),
