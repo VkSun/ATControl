@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/department.dart';
 import '../../models/driver.dart';
+import '../../services/department_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../utils/date_picker.dart';
@@ -21,6 +23,7 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
   late TextEditingController _phone, _licenseNumber, _licenseCategories, _notes;
   DateTime? _birthDate, _licenseExpiry, _medicalExpiry;
   List<String> _selectedVehicleIds = [];
+  String? _departmentId, _sectionId;
   bool _loading = false;
 
   @override
@@ -39,6 +42,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
     _licenseExpiry = d?.licenseExpiry;
     _medicalExpiry = d?.medicalExpiry;
     _selectedVehicleIds = List.from(d?.vehicleIds ?? []);
+    _departmentId = d?.departmentId;
+    _sectionId = d?.sectionId;
   }
 
   @override
@@ -92,6 +97,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
         licenseExpiry: _licenseExpiry,
         medicalExpiry: _medicalExpiry,
         vehicleIds: _selectedVehicleIds,
+        departmentId: _departmentId,
+        sectionId: _sectionId,
       );
       if (widget.driver == null) {
         await service.create(driver);
@@ -124,6 +131,10 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
   Widget build(BuildContext context) {
     final title = widget.driver == null ? 'Добавить водителя' : 'Редактировать водителя';
     final vehiclesAsync = ref.watch(vehiclesProvider);
+    final departments = ref.watch(departmentsProvider).value ?? [];
+    final deptSections = (ref.watch(sectionsProvider).value ?? [])
+        .where((s) => s.departmentId == _departmentId)
+        .toList();
 
     return AlertDialog(
       backgroundColor: Theme.of(context).cardColor,
@@ -165,6 +176,54 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
                 const SizedBox(height: 10),
                 _datePicker('Мед. справка до', _medicalExpiry,
                   (d) => setState(() => _medicalExpiry = d)),
+                const SizedBox(height: 10),
+
+                // Привязка к подразделению
+                const SizedBox(height: 4),
+                const Text('ПРИВЯЗКА',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500,
+                    color: Color(0xFF888888), letterSpacing: 0.5)),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String?>(
+                      value: _departmentId,
+                      isDense: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Цех / подразделение',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('— не указан —')),
+                        ...departments.map((d) => DropdownMenuItem(
+                          value: d.id, child: Text(d.name))),
+                      ],
+                      onChanged: (id) => setState(() {
+                        _departmentId = id;
+                        _sectionId = null;
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: DropdownButtonFormField<String?>(
+                      value: _sectionId,
+                      isDense: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Участок',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('— не указан —')),
+                        ...deptSections.map((s) => DropdownMenuItem(
+                          value: s.id, child: Text(s.name))),
+                      ],
+                      onChanged: (id) => setState(() => _sectionId = id),
+                    ),
+                  ),
+                ]),
                 const SizedBox(height: 10),
 
                 // Выбор закреплённых ТС (мультиселект)

@@ -14,6 +14,7 @@ import '../services/task_service.dart';
 import '../services/offline_state.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
+import '../services/update_service.dart';
 import '../screens/profile/profile_dialog.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
@@ -40,6 +41,53 @@ class _MainLayoutState extends ConsumerState<MainLayout>
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _now = DateTime.now());
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdate());
+  }
+
+  Future<void> _checkForUpdate() async {
+    final update = await UpdateService.checkForUpdate();
+    if (update == null || !mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Доступно обновление'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Версия ${update.version} готова к установке.'),
+            const SizedBox(height: 8),
+            if (Platform.isAndroid)
+              const Text(
+                'Нажмите «Скачать» — откроется загрузка APK.\n'
+                'После загрузки установите поверх текущей версии.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+              ),
+            if (Platform.isWindows)
+              const Text(
+                'Нажмите «Скачать» — откроется страница с архивом.\n'
+                'Распакуйте и замените файлы приложения.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Позже'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              UpdateService.openDownload(update.downloadUrl);
+            },
+            child: const Text('Скачать'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

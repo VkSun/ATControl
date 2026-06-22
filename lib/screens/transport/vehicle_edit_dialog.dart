@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../models/department.dart';
 import '../../models/vehicle.dart';
+import '../../services/department_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../utils/date_picker.dart';
 
@@ -22,6 +24,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   late TextEditingController _equipmentType, _equipmentHours;
   late TextEditingController _equipmentToPeriodHours, _equipmentToPeriodMonths;
   DateTime? _inspectionDate, _insuranceDate, _specialPermitDate, _toDate, _equipmentToDate;
+  String? _departmentId, _sectionId;
   bool _loading = false;
 
   @override
@@ -46,6 +49,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
     _specialPermitDate = v?.specialPermitDate;
     _toDate = v?.toDate;
     _equipmentToDate = v?.equipmentToDate;
+    _departmentId = v?.departmentId;
+    _sectionId = v?.sectionId;
     // Rebuild when period fields change to update preview
     for (final c in [_toMileage, _toPeriodKm, _toPeriodMonths,
                      _equipmentHours, _equipmentToPeriodHours, _equipmentToPeriodMonths]) {
@@ -134,6 +139,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
         equipmentToPeriodHours: int.tryParse(_equipmentToPeriodHours.text),
         equipmentToPeriodMonths: int.tryParse(_equipmentToPeriodMonths.text),
         notes: _notes.text.trim(),
+        departmentId: _departmentId,
+        sectionId: _sectionId,
       );
       if (widget.vehicle == null) {
         await service.create(vehicle);
@@ -165,6 +172,10 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd.MM.yyyy');
     final title = widget.vehicle == null ? 'Добавить транспорт' : 'Редактировать транспорт';
+    final departments = ref.watch(departmentsProvider).value ?? [];
+    final deptSections = (ref.watch(sectionsProvider).value ?? [])
+        .where((s) => s.departmentId == _departmentId)
+        .toList();
     return AlertDialog(
       backgroundColor: Theme.of(context).cardColor,
       surfaceTintColor: Colors.transparent,
@@ -268,6 +279,50 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                     fmt: fmt,
                   ),
                 ],
+                const SizedBox(height: 14),
+
+                // Привязка к подразделению
+                _sectionLabel('Привязка'),
+                Row(children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String?>(
+                      value: _departmentId,
+                      isDense: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Цех / подразделение',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('— не указан —')),
+                        ...departments.map((d) => DropdownMenuItem(
+                          value: d.id, child: Text(d.name))),
+                      ],
+                      onChanged: (id) => setState(() {
+                        _departmentId = id;
+                        _sectionId = null;
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<String?>(
+                      value: _sectionId,
+                      isDense: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Участок',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('— не указан —')),
+                        ...deptSections.map((s) => DropdownMenuItem(
+                          value: s.id, child: Text(s.name))),
+                      ],
+                      onChanged: (id) => setState(() => _sectionId = id),
+                    ),
+                  ),
+                ]),
                 const SizedBox(height: 14),
 
                 // Заметки
