@@ -159,28 +159,30 @@ class _TopBar extends StatelessWidget {
         children: [
           Text('Настройки', style: Theme.of(context).textTheme.titleMedium),
           const Spacer(),
-          const Icon(Icons.notifications_outlined, size: 20),
-          const SizedBox(width: 12),
-          Consumer(
-            builder: (context, ref, _) {
-              final profileAsync = ref.watch(profileProvider);
-              final initials = profileAsync.value?.initials ?? 'АИ';
-              final color = profileAsync.value?.avatarColor ?? '#4361EE';
-              final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
-              return GestureDetector(
-                onTap: () => showDialog(
-                  context: context,
-                  builder: (_) => const ProfileDialog(),
-                ),
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: avatarColor,
-                  child: Text(initials,
-                    style: const TextStyle(fontSize: 11, color: Colors.white)),
-                ),
-              );
-            },
-          ),
+          if (!isMobile(context)) ...[
+            const Icon(Icons.notifications_outlined, size: 20),
+            const SizedBox(width: 12),
+            Consumer(
+              builder: (context, ref, _) {
+                final profileAsync = ref.watch(profileProvider);
+                final initials = profileAsync.value?.initials ?? 'АИ';
+                final color = profileAsync.value?.avatarColor ?? '#4361EE';
+                final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
+                return GestureDetector(
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (_) => const ProfileDialog(),
+                  ),
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: avatarColor,
+                    child: Text(initials,
+                      style: const TextStyle(fontSize: 11, color: Colors.white)),
+                  ),
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
