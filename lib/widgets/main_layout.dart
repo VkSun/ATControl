@@ -10,6 +10,8 @@ import '../utils/responsive.dart';
 import '../services/weather_service.dart';
 import '../services/vehicle_service.dart';
 import '../services/driver_service.dart';
+import '../services/task_service.dart';
+import '../services/offline_state.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../screens/profile/profile_dialog.dart';
@@ -24,7 +26,8 @@ class MainLayout extends ConsumerStatefulWidget {
   ConsumerState<MainLayout> createState() => _MainLayoutState();
 }
 
-class _MainLayoutState extends ConsumerState<MainLayout> {
+class _MainLayoutState extends ConsumerState<MainLayout>
+    with WidgetsBindingObserver {
   late Timer _timer;
   late DateTime _now;
   double? _lastWidth;
@@ -32,10 +35,26 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _now = DateTime.now();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _now = DateTime.now());
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && isOfflineNotifier.value) {
+      _retryConnection();
+    }
+  }
+
+  void _retryConnection() {
+    ref.invalidate(vehiclesProvider);
+    ref.invalidate(driversProvider);
+    ref.invalidate(tasksProvider);
+    ref.invalidate(todayTasksProvider);
+    ref.invalidate(pendingCountProvider);
   }
 
   @override
@@ -62,6 +81,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer.cancel();
     super.dispose();
   }
@@ -79,28 +99,35 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     }
 
     return Scaffold(
-      body: Row(
+      body: Column(
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            width: collapsed ? 56 : 220,
-            child: _Sidebar(
-              colors: colors,
-              now: _now,
-              currentLocation: location,
-              themeMode: themeMode,
-              collapsed: collapsed,
-              onThemeToggle: () {
-                ref.read(themeModeProvider.notifier).set(
-                    themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light);
-              },
-              onToggleCollapse: () {
-                ref.read(sidebarCollapsedProvider.notifier).state = !collapsed;
-              },
+          _OfflineBanner(onRetry: _retryConnection),
+          Expanded(
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  width: collapsed ? 56 : 220,
+                  child: _Sidebar(
+                    colors: colors,
+                    now: _now,
+                    currentLocation: location,
+                    themeMode: themeMode,
+                    collapsed: collapsed,
+                    onThemeToggle: () {
+                      ref.read(themeModeProvider.notifier).set(
+                          themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light);
+                    },
+                    onToggleCollapse: () {
+                      ref.read(sidebarCollapsedProvider.notifier).state = !collapsed;
+                    },
+                  ),
+                ),
+                Expanded(child: widget.child),
+              ],
             ),
           ),
-          Expanded(child: widget.child),
         ],
       ),
     );
@@ -154,7 +181,20 @@ class _MobileLayout extends ConsumerWidget {
     final currentIdx = _locationToIndex(location);
 
     return Scaffold(
-      body: SafeArea(child: child),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _OfflineBanner(onRetry: () {
+              ref.invalidate(vehiclesProvider);
+              ref.invalidate(driversProvider);
+              ref.invalidate(tasksProvider);
+              ref.invalidate(todayTasksProvider);
+              ref.invalidate(pendingCountProvider);
+            }),
+            Expanded(child: child),
+          ],
+        ),
+      ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -751,6 +791,56 @@ class _SidebarBottomState extends State<_SidebarBottom> {
     );
   }
 }
+
+// ─── Offline banner ───────────────────────────────────────────────────────────
+
+class _OfflineBanner extends ConsumerWidget {
+  final VoidCallback onRetry;
+  const _OfflineBanner({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isOffline = ref.watch(isOfflineProvider).value;
+    if (!isOffline) return const SizedBox.shrink();
+    final queueCount = ref.watch(offlineQueueCountProvider).value;
+    return Material(
+      color: const Color(0xFFF57C00),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(
+          children: [
+            const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 14),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                queueCount != null && queueCount > 0
+                    ? 'Офлайн · $queueCount изм. ожидают синхронизации'
+                    : 'Нет подключения к интернету',
+                style: const TextStyle(
+                  color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Обновить',
+                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Expiring documents badge count ──────────────────────────────────────────
 
 final pendingCountProvider = FutureProvider<int>((ref) async {
   final now = DateTime.now();

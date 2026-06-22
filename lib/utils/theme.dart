@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/offline_state.dart';
 
 final themeModeProvider =
     StateNotifierProvider<_ThemePref, ThemeMode>((_) => _ThemePref());
@@ -208,3 +209,9 @@ class AppColors extends ThemeExtension<AppColors> {
   @override
   AppColors lerp(AppColors? other, double t) => this;
 }
+// ─── Offline state providers ──────────────────────────────────────────────────
+final isOfflineProvider =
+    ChangeNotifierProvider<ValueNotifier<bool>>((ref) => isOfflineNotifier);
+
+final offlineQueueCountProvider =
+    ChangeNotifierProvider<ValueNotifier<int>>((ref) => queueCountNotifier);
