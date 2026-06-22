@@ -13,6 +13,7 @@ import '../../utils/responsive.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../settings/settings_screen.dart' show notifyDay7Provider, notifyDay14Provider, notifyDay30Provider;
+import '../../widgets/main_layout.dart' show SplitHandle;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -51,13 +52,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _ExpiryCard(colors: colors, limit: null)),
-                const SizedBox(width: 16),
-                Expanded(child: _TasksCard(colors: colors)),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final split = ref.watch(homeSplitProvider);
+                const gap = 16.0;
+                final availW = constraints.maxWidth - gap;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: availW * split,
+                      child: _ExpiryCard(colors: colors, limit: null),
+                    ),
+                    SplitHandle(
+                      gap: gap,
+                      colors: colors,
+                      onDrag: (d) {
+                        final newSplit = (split + d.delta.dx / constraints.maxWidth).clamp(0.2, 0.8);
+                        ref.read(homeSplitProvider.notifier).set(newSplit);
+                      },
+                    ),
+                    Expanded(child: _TasksCard(colors: colors)),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -104,30 +122,28 @@ class _TopBar extends StatelessWidget {
         children: [
           Text('Главная', style: Theme.of(context).textTheme.titleMedium),
           const Spacer(),
-          if (isMobile(context)) ...[
-            const Icon(Icons.notifications_outlined, size: 20),
-            const SizedBox(width: 12),
-            Consumer(
-              builder: (context, ref, _) {
-                final profileAsync = ref.watch(profileProvider);
-                final initials = profileAsync.value?.initials ?? 'АИ';
-                final color = profileAsync.value?.avatarColor ?? '#4361EE';
-                final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
-                return GestureDetector(
-                  onTap: () => showDialog(
-                    context: context,
-                    builder: (_) => const ProfileDialog(),
-                  ),
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: avatarColor,
-                    child: Text(initials,
-                      style: const TextStyle(fontSize: 11, color: Colors.white)),
-                  ),
-                );
-              },
-            ),
-          ],
+          const Icon(Icons.notifications_outlined, size: 20),
+          const SizedBox(width: 12),
+          Consumer(
+            builder: (context, ref, _) {
+              final profileAsync = ref.watch(profileProvider);
+              final initials = profileAsync.value?.initials ?? 'АИ';
+              final color = profileAsync.value?.avatarColor ?? '#4361EE';
+              final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
+              return GestureDetector(
+                onTap: () => showDialog(
+                  context: context,
+                  builder: (_) => const ProfileDialog(),
+                ),
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: avatarColor,
+                  child: Text(initials,
+                    style: const TextStyle(fontSize: 11, color: Colors.white)),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -152,15 +168,8 @@ class _ExpiryCard extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.tableBorder, width: 0.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,15 +317,8 @@ class _TasksCard extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.tableBorder, width: 0.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,75 +413,50 @@ class _TaskRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final isExpiry = task.type == 'expiry';
-    final isHigh = task.priority == 'high';
-    final accentColor = isExpiry ? colors.amber : isHigh ? colors.danger : primary;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.tableBorder, width: 0.5),
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            Container(
-              width: 3,
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () async {
+              await ref.read(taskServiceProvider).toggleComplete(task.id, !task.isCompleted);
+              ref.invalidate(tasksProvider);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 16, height: 16,
               decoration: BoxDecoration(
-                color: accentColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(7.5),
-                  bottomLeft: Radius.circular(7.5),
+                color: task.isCompleted ? const Color(0xFF4361EE) : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: task.isCompleted ? const Color(0xFF4361EE) : colors.tableBorder,
+                  width: 1.5,
                 ),
               ),
+              child: task.isCompleted
+                  ? const Icon(Icons.check, size: 10, color: Colors.white)
+                  : null,
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () async {
-                        await ref.read(taskServiceProvider).toggleComplete(task.id, !task.isCompleted);
-                        ref.invalidate(tasksProvider);
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        width: 16, height: 16,
-                        decoration: BoxDecoration(
-                          color: task.isCompleted ? primary : Colors.transparent,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: task.isCompleted ? primary : colors.tableBorder,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: task.isCompleted
-                            ? const Icon(Icons.check, size: 10, color: Colors.white)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(task.title,
-                        style: TextStyle(
-                          fontSize: 12,
-                          decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                        ),
-                      ),
-                    ),
-                    if (task.dueTime != null)
-                      Text(task.dueTime!.substring(0, 5),
-                        style: TextStyle(fontSize: 10, color: colors.badgeAmberText)),
-                  ],
-                ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(task.title,
+              style: TextStyle(
+                fontSize: 12,
+                decoration: task.isCompleted ? TextDecoration.lineThrough : null,
               ),
             ),
-          ],
-        ),
+          ),
+          if (task.dueTime != null)
+            Text(task.dueTime!.substring(0, 5),
+              style: TextStyle(fontSize: 10, color: colors.badgeAmberText)),
+        ],
       ),
     );
   }

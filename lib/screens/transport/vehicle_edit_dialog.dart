@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/vehicle.dart';
-import '../../models/department.dart';
 import '../../services/vehicle_service.dart';
-import '../../services/department_service.dart';
+import '../../utils/date_picker.dart';
 
 class VehicleEditDialog extends ConsumerStatefulWidget {
   final Vehicle? vehicle;
@@ -21,8 +20,6 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   late TextEditingController _year, _notes, _toMileage;
   late TextEditingController _equipmentType, _equipmentHours;
   DateTime? _inspectionDate, _insuranceDate, _specialPermitDate, _toDate, _equipmentToDate;
-  String? _departmentId;
-  String? _sectionId;
   bool _loading = false;
 
   @override
@@ -43,8 +40,6 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
     _specialPermitDate = v?.specialPermitDate;
     _toDate = v?.toDate;
     _equipmentToDate = v?.equipmentToDate;
-    _departmentId = v?.departmentId;
-    _sectionId = v?.sectionId;
   }
 
   @override
@@ -100,8 +95,6 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
         equipmentToDate: _equipmentToDate,
         equipmentHours: int.tryParse(_equipmentHours.text),
         notes: _notes.text.trim(),
-        departmentId: _departmentId,
-        sectionId: _sectionId,
       );
       if (widget.vehicle == null) {
         await service.create(vehicle);
@@ -121,8 +114,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   }
 
   Future<void> _pickDate(DateTime? current, ValueChanged<DateTime?> onPicked) async {
-    final date = await showDatePicker(
-      context: context,
+    final date = await showAppDatePicker(
+      context,
       initialDate: current ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2040),
@@ -133,9 +126,6 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   @override
   Widget build(BuildContext context) {
     final title = widget.vehicle == null ? 'Добавить транспорт' : 'Редактировать транспорт';
-    final departmentsAsync = ref.watch(departmentsProvider);
-    final sectionsAsync = ref.watch(sectionsProvider);
-
     return AlertDialog(
       backgroundColor: Theme.of(context).cardColor,
       surfaceTintColor: Colors.transparent,
@@ -149,6 +139,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Основная информация
                 _sectionLabel('Основная информация'),
                 Row(children: [
                   Expanded(child: _field(_invNumber, 'Инв. номер', required: true)),
@@ -165,76 +156,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 ]),
                 const SizedBox(height: 14),
 
-                _sectionLabel('Подразделение'),
-                departmentsAsync.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const SizedBox(),
-                  data: (departments) {
-                    final deptSections = (sectionsAsync.value ?? [])
-                        .where((s) => s.departmentId == _departmentId)
-                        .toList();
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String?>(
-                            value: _departmentId,
-                            isDense: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Подразделение',
-                              isDense: true,
-                              border: OutlineInputBorder(),
-                            ),
-                            items: [
-                              const DropdownMenuItem<String?>(
-                                value: null,
-                                child: Text('Не указано',
-                                    style: TextStyle(fontSize: 13)),
-                              ),
-                              ...departments.map((d) => DropdownMenuItem<String?>(
-                                    value: d.id,
-                                    child: Text(d.name,
-                                        style: const TextStyle(fontSize: 13)),
-                                  )),
-                            ],
-                            onChanged: (id) => setState(() {
-                              _departmentId = id;
-                              _sectionId = null;
-                            }),
-                          ),
-                        ),
-                        if (deptSections.isNotEmpty) ...[
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<String?>(
-                              value: _sectionId,
-                              isDense: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Участок',
-                                isDense: true,
-                                border: OutlineInputBorder(),
-                              ),
-                              items: [
-                                const DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text('Не указан',
-                                      style: TextStyle(fontSize: 13)),
-                                ),
-                                ...deptSections.map((s) => DropdownMenuItem<String?>(
-                                      value: s.id,
-                                      child: Text(s.name,
-                                          style: const TextStyle(fontSize: 13)),
-                                    )),
-                              ],
-                              onChanged: (id) => setState(() => _sectionId = id),
-                            ),
-                          ),
-                        ],
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 14),
-
+                // Сроки документов
                 _sectionLabel('Сроки документов'),
                 _datePicker('Техосмотр', _inspectionDate,
                   (d) => setState(() => _inspectionDate = d)),
@@ -246,6 +168,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   (d) => setState(() => _specialPermitDate = d)),
                 const SizedBox(height: 14),
 
+                // ТО автомобиля
                 _sectionLabel('ТО автомобиля'),
                 _datePicker('Дата последнего ТО', _toDate,
                   (d) => setState(() => _toDate = d)),
@@ -254,6 +177,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   keyboardType: TextInputType.number),
                 const SizedBox(height: 14),
 
+                // ТО оборудования
                 _sectionLabel('ТО оборудования'),
                 _field(_equipmentType, 'Тип оборудования',
                   hint: 'Гидроманипулятор, Кран, Погрузчик...'),
@@ -265,6 +189,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   keyboardType: TextInputType.number),
                 const SizedBox(height: 14),
 
+                // Заметки
                 _sectionLabel('Заметки'),
                 _field(_notes, 'Заметки', maxLines: 2),
               ],

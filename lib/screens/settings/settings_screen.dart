@@ -4,12 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
-import '../../utils/permissions.dart';
 import '../../services/profile_service.dart';
 import '../../services/autostart_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import 'import_dialog.dart';
-import 'department_editor.dart';
 
 // Провайдеры уведомлений с сохранением в SharedPreferences
 final notifyDay30Provider = StateNotifierProvider<_BoolPref, bool>(
@@ -57,7 +55,6 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final perms = ref.watch(permissionsProvider);
 
     return Column(
       children: [
@@ -94,12 +91,12 @@ class SettingsScreen extends ConsumerWidget {
                 const _SectionLabel('Внешний вид'),
                 _SelectSetting(
                   label: 'Тема оформления',
-                  value: ref.watch(themeVariantProvider).label,
-                  options: AppThemeVariant.values.map((v) => v.label).toList(),
+                  value: ref.watch(themeModeProvider) == ThemeMode.light ? 'Светлая'
+                      : ref.watch(themeModeProvider) == ThemeMode.dark ? 'Тёмная' : 'Системная',
+                  options: const ['Светлая', 'Тёмная', 'Системная'],
                   onChanged: (v) {
-                    final variant = AppThemeVariant.values
-                        .firstWhere((e) => e.label == v);
-                    ref.read(themeVariantProvider.notifier).set(variant);
+                    ref.read(themeModeProvider.notifier).set(v == 'Светлая'
+                        ? ThemeMode.light : v == 'Тёмная' ? ThemeMode.dark : ThemeMode.system);
                   },
                   colors: colors,
                 ),
@@ -132,11 +129,9 @@ class SettingsScreen extends ConsumerWidget {
                   const _SectionLabel('Система'),
                   _AutostartCard(colors: colors),
                 ],
-                const _SectionLabel('Импорт и экспорт'),
-                _ImportExportCard(colors: colors),
-                if (!isMobile(context) && perms.isAdmin) ...[
-                  const _SectionLabel('Администрирование'),
-                  _DeptStructureCard(colors: colors),
+                if (!isMobile(context)) ...[
+                  const _SectionLabel('Импорт и экспорт'),
+                  _ImportExportCard(colors: colors),
                 ],
               ],
             ),
@@ -164,30 +159,28 @@ class _TopBar extends StatelessWidget {
         children: [
           Text('Настройки', style: Theme.of(context).textTheme.titleMedium),
           const Spacer(),
-          if (isMobile(context)) ...[
-            const Icon(Icons.notifications_outlined, size: 20),
-            const SizedBox(width: 12),
-            Consumer(
-              builder: (context, ref, _) {
-                final profileAsync = ref.watch(profileProvider);
-                final initials = profileAsync.value?.initials ?? 'АИ';
-                final color = profileAsync.value?.avatarColor ?? '#4361EE';
-                final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
-                return GestureDetector(
-                  onTap: () => showDialog(
-                    context: context,
-                    builder: (_) => const ProfileDialog(),
-                  ),
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: avatarColor,
-                    child: Text(initials,
-                      style: const TextStyle(fontSize: 11, color: Colors.white)),
-                  ),
-                );
-              },
-            ),
-          ],
+          const Icon(Icons.notifications_outlined, size: 20),
+          const SizedBox(width: 12),
+          Consumer(
+            builder: (context, ref, _) {
+              final profileAsync = ref.watch(profileProvider);
+              final initials = profileAsync.value?.initials ?? 'АИ';
+              final color = profileAsync.value?.avatarColor ?? '#4361EE';
+              final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
+              return GestureDetector(
+                onTap: () => showDialog(
+                  context: context,
+                  builder: (_) => const ProfileDialog(),
+                ),
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: avatarColor,
+                  child: Text(initials,
+                    style: const TextStyle(fontSize: 11, color: Colors.white)),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -367,47 +360,6 @@ class _AutostartCard extends ConsumerWidget {
               value: enabled,
               onChanged: (v) => ref.read(autostartProvider.notifier).set(v),
               activeThumbColor: const Color(0xFF4361EE),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DeptStructureCard extends StatelessWidget {
-  final AppColors colors;
-  const _DeptStructureCard({required this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    return _SettingCard(
-      colors: colors,
-      child: Row(
-        children: [
-          const Icon(Icons.account_tree_outlined, size: 20, color: Color(0xFF4361EE)),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Структура предприятия', style: TextStyle(fontSize: 13)),
-                SizedBox(height: 2),
-                Text('Управление цехами, участками и секциями',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF888888))),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          OutlinedButton.icon(
-            onPressed: () => showDialog(
-              context: context,
-              builder: (_) => const DepartmentEditorDialog(),
-            ),
-            icon: const Icon(Icons.edit_outlined, size: 16),
-            label: const Text('Редактировать', style: TextStyle(fontSize: 12)),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             ),
           ),
         ],

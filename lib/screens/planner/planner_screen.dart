@@ -14,6 +14,8 @@ import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
+import '../../utils/date_picker.dart';
+import '../../widgets/main_layout.dart' show SplitHandle;
 
 final notesProvider = StateProvider<String>((ref) => '');
 
@@ -179,97 +181,103 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colors.tableBorder, width: 0.5),
-                    ),
-                    child: tasksAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Ошибка: $e')),
-                      data: (tasks) => _TaskList(tasks: tasks, colors: colors, ref: ref),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    children: [
-                      Container(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final split = ref.watch(plannerSplitProvider);
+                const gap = 16.0;
+                final availW = constraints.maxWidth - gap;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: availW * split,
+                      child: Container(
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: colors.tableBorder, width: 0.5),
                         ),
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                        child: tasksAsync.when(
+                          loading: () => const Center(child: CircularProgressIndicator()),
+                          error: (e, _) => Center(child: Text('Ошибка: $e')),
+                          data: (tasks) => _TaskList(tasks: tasks, colors: colors, ref: ref),
+                        ),
+                      ),
+                    ),
+                    SplitHandle(
+                      gap: gap,
+                      colors: colors,
+                      onDrag: (d) {
+                        final newSplit = (split + d.delta.dx / constraints.maxWidth).clamp(0.2, 0.8);
+                        ref.read(plannerSplitProvider.notifier).set(newSplit);
+                      },
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: colors.tableBorder, width: 0.5),
+                            ),
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Быстрые заметки',
-                                    style: Theme.of(context).textTheme.titleMedium),
-                                const Spacer(),
-                                if (_notesSaving)
-                                  const SizedBox(
-                                      width: 14, height: 14,
-                                      child: CircularProgressIndicator(strokeWidth: 2)),
+                                Row(
+                                  children: [
+                                    Text('Быстрые заметки',
+                                        style: Theme.of(context).textTheme.titleMedium),
+                                    const Spacer(),
+                                    if (_notesSaving)
+                                      const SizedBox(
+                                          width: 14, height: 14,
+                                          child: CircularProgressIndicator(strokeWidth: 2)),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _notesCtrl,
+                                  onChanged: _onNotesChanged,
+                                  maxLines: 6,
+                                  decoration: InputDecoration(
+                                    hintText: 'Введите заметку...',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: colors.tableBorder),
+                                    ),
+                                    contentPadding: const EdgeInsets.all(10),
+                                  ),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _notesCtrl,
-                              onChanged: _onNotesChanged,
-                              maxLines: 6,
-                              decoration: InputDecoration(
-                                hintText: 'Введите заметку...',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: colors.tableBorder),
-                                ),
-                                contentPadding: const EdgeInsets.all(10),
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: colors.tableBorder, width: 0.5),
+                            ),
+                            padding: const EdgeInsets.all(14),
+                            child: tasksAsync.when(
+                              loading: () => const SizedBox(),
+                              error: (_, __) => const SizedBox(),
+                              data: (tasks) => _MiniCalendar(
+                                month: _calendarMonth,
+                                tasks: tasks,
+                                colors: colors,
+                                onMonthChanged: (m) => setState(() => _calendarMonth = m),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: colors.tableBorder, width: 0.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 12,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(14),
-                        child: tasksAsync.when(
-                          loading: () => const SizedBox(),
-                          error: (_, __) => const SizedBox(),
-                          data: (tasks) => _MiniCalendar(
-                            month: _calendarMonth,
-                            tasks: tasks,
-                            colors: colors,
-                            onMonthChanged: (m) => setState(() => _calendarMonth = m),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -483,30 +491,28 @@ class _TopBar extends StatelessWidget {
                   ),
                 ),
               const Spacer(),
-              if (isMobile(context)) ...[
-                const Icon(Icons.notifications_outlined, size: 20),
-                const SizedBox(width: 12),
-                Consumer(
-                  builder: (context, ref, _) {
-                    final profileAsync = ref.watch(profileProvider);
-                    final initials = profileAsync.value?.initials ?? 'АИ';
-                    final color = profileAsync.value?.avatarColor ?? '#4361EE';
-                    final avatarColor =
-                        Color(int.parse(color.replaceFirst('#', '0xFF')));
-                    return GestureDetector(
-                      onTap: () => showDialog(
-                          context: context,
-                          builder: (_) => const ProfileDialog()),
-                      child: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: avatarColor,
-                          child: Text(initials,
-                              style: const TextStyle(
-                                  fontSize: 11, color: Colors.white))),
-                    );
-                  },
-                ),
-              ],
+              const Icon(Icons.notifications_outlined, size: 20),
+              const SizedBox(width: 12),
+              Consumer(
+                builder: (context, ref, _) {
+                  final profileAsync = ref.watch(profileProvider);
+                  final initials = profileAsync.value?.initials ?? 'АИ';
+                  final color = profileAsync.value?.avatarColor ?? '#4361EE';
+                  final avatarColor =
+                      Color(int.parse(color.replaceFirst('#', '0xFF')));
+                  return GestureDetector(
+                    onTap: () => showDialog(
+                        context: context,
+                        builder: (_) => const ProfileDialog()),
+                    child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: avatarColor,
+                        child: Text(initials,
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.white))),
+                  );
+                },
+              ),
             ],
           ),
         );
@@ -938,8 +944,8 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
               children: [
                 TextButton.icon(
                   onPressed: () async {
-                    final d = await showDatePicker(
-                      context: context,
+                    final d = await showAppDatePicker(
+                      context,
                       initialDate: _newDate ?? DateTime.now(),
                       firstDate: DateTime.now(),
                       lastDate: DateTime(2040),
@@ -973,7 +979,7 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
   }
 }
 
-class _MiniCalendar extends StatefulWidget {
+class _MiniCalendar extends StatelessWidget {
   final DateTime month;
   final List<Task> tasks;
   final AppColors colors;
@@ -987,85 +993,45 @@ class _MiniCalendar extends StatefulWidget {
   });
 
   @override
-  State<_MiniCalendar> createState() => _MiniCalendarState();
-}
-
-class _MiniCalendarState extends State<_MiniCalendar> {
-  int? _selectedDay;
-
-  @override
-  void didUpdateWidget(_MiniCalendar old) {
-    super.didUpdateWidget(old);
-    if (old.month.year != widget.month.year ||
-        old.month.month != widget.month.month) {
-      _selectedDay = null;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('MMMM yyyy', 'ru');
     final today = DateTime.now();
-    final month = widget.month;
-    final tasks = widget.tasks;
-    final colors = widget.colors;
-    final primary = Theme.of(context).colorScheme.primary;
-
     final firstDay = DateTime(month.year, month.month, 1);
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     final startWeekday = firstDay.weekday - 1;
 
-    final tasksByDay = <int, List<Task>>{};
+    final taskDays = <int>{};
     for (final t in tasks) {
       if (t.dueDate != null &&
           t.dueDate!.year == month.year &&
           t.dueDate!.month == month.month) {
-        tasksByDay.putIfAbsent(t.dueDate!.day, () => []).add(t);
+        taskDays.add(t.dueDate!.day);
       }
     }
 
-    final List<Task> displayTasks;
-    final String sectionLabel;
-    if (_selectedDay != null) {
-      displayTasks = tasksByDay[_selectedDay] ?? [];
-      const monthNames = ['января','февраля','марта','апреля','мая','июня',
-        'июля','августа','сентября','октября','ноября','декабря'];
-      sectionLabel = '$_selectedDay ${monthNames[month.month - 1]}';
-    } else {
-      final todayDate = DateTime(today.year, today.month, today.day);
-      final upcoming = tasks
-          .where((t) => t.dueDate != null && !t.isCompleted &&
-              !t.dueDate!.isBefore(todayDate))
-          .toList()
-        ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
-      displayTasks = upcoming.take(4).toList();
-      sectionLabel = 'Ближайшие задачи';
-    }
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             IconButton(
               icon: const Icon(Icons.chevron_left, size: 16),
               onPressed: () =>
-                  widget.onMonthChanged(DateTime(month.year, month.month - 1)),
+                  onMonthChanged(DateTime(month.year, month.month - 1)),
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
             ),
             Expanded(
               child: Text(fmt.format(month),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w700)),
+                      fontSize: 12, fontWeight: FontWeight.w500)),
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right, size: 16),
               onPressed: () =>
-                  widget.onMonthChanged(DateTime(month.year, month.month + 1)),
+                  onMonthChanged(DateTime(month.year, month.month + 1)),
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
             ),
           ],
         ),
@@ -1077,7 +1043,7 @@ class _MiniCalendarState extends State<_MiniCalendar> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontSize: 10,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w500,
                           color: Color(0xFF888888)))))
               .toList(),
         ),
@@ -1089,7 +1055,7 @@ class _MiniCalendarState extends State<_MiniCalendar> {
             crossAxisCount: 7,
             mainAxisSpacing: 2,
             crossAxisSpacing: 2,
-            childAspectRatio: 1.1,
+            childAspectRatio: 1.2,
           ),
           itemCount: startWeekday + daysInMonth,
           itemBuilder: (context, i) {
@@ -1098,135 +1064,38 @@ class _MiniCalendarState extends State<_MiniCalendar> {
             final isToday = today.year == month.year &&
                 today.month == month.month &&
                 today.day == day;
-            final isSelected = day == _selectedDay;
-            final dayTasks = tasksByDay[day] ?? [];
-            final hasActive = dayTasks.any((t) => !t.isCompleted);
-            final hasTasks = dayTasks.isNotEmpty;
-
-            final Color bgColor;
-            final Color textColor;
-            if (isToday) {
-              bgColor = primary;
-              textColor = Colors.white;
-            } else if (isSelected) {
-              bgColor = primary.withOpacity(0.12);
-              textColor = Theme.of(context).textTheme.bodyMedium!.color!;
-            } else {
-              bgColor = Colors.transparent;
-              textColor = Theme.of(context).textTheme.bodyMedium!.color!;
-            }
-
-            return GestureDetector(
-              onTap: () => setState(
-                  () => _selectedDay = day == _selectedDay ? null : day),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 28, height: 28,
-                    decoration: BoxDecoration(
-                      color: bgColor,
-                      borderRadius: BorderRadius.circular(8),
+            final hasTask = taskDays.contains(day);
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color:
+                        isToday ? const Color(0xFF4361EE) : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text('$day',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: isToday
+                              ? Colors.white
+                              : Theme.of(context).textTheme.bodyMedium!.color)),
+                ),
+                if (hasTask && !isToday)
+                  Positioned(
+                    bottom: 2,
+                    child: Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: colors.badgeRedText, shape: BoxShape.circle),
                     ),
-                    alignment: Alignment.center,
-                    child: Text('$day',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight:
-                                isToday ? FontWeight.w700 : FontWeight.w500,
-                            color: textColor)),
                   ),
-                  SizedBox(
-                    height: 6,
-                    child: hasTasks
-                        ? Center(
-                            child: Container(
-                              width: 4, height: 4,
-                              decoration: BoxDecoration(
-                                color: isToday
-                                    ? Colors.white.withOpacity(0.8)
-                                    : hasActive ? primary : colors.success,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          )
-                        : null,
-                  ),
-                ],
-              ),
+              ],
             );
           },
         ),
-        if (displayTasks.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          Text(
-            sectionLabel.toUpperCase(),
-            style: const TextStyle(
-                fontSize: 10, fontWeight: FontWeight.w700,
-                color: Color(0xFF888888), letterSpacing: 0.5),
-          ),
-          const SizedBox(height: 8),
-          ...displayTasks.map((t) {
-            final isExpiry = t.type == 'expiry';
-            final isHigh = t.priority == 'high';
-            final accentColor =
-                isExpiry ? colors.amber : isHigh ? colors.danger : primary;
-            final fmtShort = DateFormat('d MMM', 'ru');
-            return Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(vertical: 7),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: colors.tableBorder, width: 0.5),
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 10),
-                  Container(
-                    width: 3, height: 24,
-                    decoration: BoxDecoration(
-                      color: accentColor,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(t.title,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            decoration: t.isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                            color: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.color)),
-                  ),
-                  if (t.dueDate != null) ...[
-                    const SizedBox(width: 8),
-                    Text(fmtShort.format(t.dueDate!),
-                        style: const TextStyle(
-                            fontSize: 11, color: Color(0xFF888888))),
-                    const SizedBox(width: 10),
-                  ],
-                ],
-              ),
-            );
-          }),
-        ],
-        if (displayTasks.isEmpty && _selectedDay != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 14),
-            child: Center(
-              child: Text(
-                'Нет задач',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -1338,11 +1207,10 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
                 Expanded(
                   child: TextButton.icon(
                     onPressed: () async {
-                      final d = await showDatePicker(
-                        context: context,
+                      final d = await showAppDatePicker(
+                        context,
                         initialDate: _dueDate ?? DateTime.now(),
-                        firstDate:
-                            DateTime.now().subtract(const Duration(days: 365)),
+                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
                         lastDate: DateTime(2035),
                       );
                       if (d != null) setState(() => _dueDate = d);
@@ -1357,14 +1225,31 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
                   ),
                 ),
                 Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Время (ЧЧ:ММ)',
-                      border: OutlineInputBorder(),
-                      isDense: true,
+                  child: InkWell(
+                    onTap: () async {
+                      final parts = _dueTime.split(':');
+                      final initial = TimeOfDay(
+                        hour: int.tryParse(parts.elementAtOrNull(0) ?? '') ?? TimeOfDay.now().hour,
+                        minute: int.tryParse(parts.elementAtOrNull(1) ?? '') ?? 0,
+                      );
+                      final t = await showAppTimePicker(context, initialTime: initial);
+                      if (t != null) {
+                        setState(() => _dueTime =
+                            '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}');
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Время',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      child: Text(
+                        _dueTime.isEmpty ? '--:--' : _dueTime,
+                        style: const TextStyle(fontSize: 14),
+                      ),
                     ),
-                    controller: TextEditingController(text: _dueTime),
-                    onChanged: (v) => _dueTime = v,
                   ),
                 ),
               ],
