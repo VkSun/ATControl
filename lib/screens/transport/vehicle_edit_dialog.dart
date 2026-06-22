@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../models/vehicle.dart';
 import '../../services/vehicle_service.dart';
 import '../../utils/date_picker.dart';
@@ -17,8 +18,9 @@ class VehicleEditDialog extends ConsumerStatefulWidget {
 class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _invNumber, _brand, _model, _govNumber;
-  late TextEditingController _year, _notes, _toMileage;
+  late TextEditingController _year, _notes, _toMileage, _toPeriodKm, _toPeriodMonths;
   late TextEditingController _equipmentType, _equipmentHours;
+  late TextEditingController _equipmentToPeriodHours, _equipmentToPeriodMonths;
   DateTime? _inspectionDate, _insuranceDate, _specialPermitDate, _toDate, _equipmentToDate;
   bool _loading = false;
 
@@ -33,22 +35,61 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
     _year = TextEditingController(text: v?.year?.toString() ?? '');
     _notes = TextEditingController(text: v?.notes ?? '');
     _toMileage = TextEditingController(text: v?.toMileage?.toString() ?? '');
+    _toPeriodKm = TextEditingController(text: v?.toPeriodKm?.toString() ?? '');
+    _toPeriodMonths = TextEditingController(text: v?.toPeriodMonths?.toString() ?? '');
     _equipmentType = TextEditingController(text: v?.equipmentType ?? '');
     _equipmentHours = TextEditingController(text: v?.equipmentHours?.toString() ?? '');
+    _equipmentToPeriodHours = TextEditingController(text: v?.equipmentToPeriodHours?.toString() ?? '');
+    _equipmentToPeriodMonths = TextEditingController(text: v?.equipmentToPeriodMonths?.toString() ?? '');
     _inspectionDate = v?.inspectionDate;
     _insuranceDate = v?.insuranceDate;
     _specialPermitDate = v?.specialPermitDate;
     _toDate = v?.toDate;
     _equipmentToDate = v?.equipmentToDate;
+    // Rebuild when period fields change to update preview
+    for (final c in [_toMileage, _toPeriodKm, _toPeriodMonths,
+                     _equipmentHours, _equipmentToPeriodHours, _equipmentToPeriodMonths]) {
+      c.addListener(() => setState(() {}));
+    }
   }
 
   @override
   void dispose() {
-    for (final c in [_invNumber, _brand, _model, _govNumber, _year,
-      _notes, _toMileage, _equipmentType, _equipmentHours]) {
+    for (final c in [_invNumber, _brand, _model, _govNumber, _year, _notes,
+      _toMileage, _toPeriodKm, _toPeriodMonths,
+      _equipmentType, _equipmentHours, _equipmentToPeriodHours, _equipmentToPeriodMonths]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  // Вычисляемые "следующее ТО" для предпросмотра в форме
+  DateTime? get _nextToDate {
+    if (_toDate == null) return null;
+    final months = int.tryParse(_toPeriodMonths.text);
+    if (months == null || months == 0) return null;
+    return DateTime(_toDate!.year, _toDate!.month + months, _toDate!.day);
+  }
+
+  int? get _nextToMileage {
+    final base = int.tryParse(_toMileage.text);
+    final period = int.tryParse(_toPeriodKm.text);
+    if (base == null || period == null || period == 0) return null;
+    return base + period;
+  }
+
+  DateTime? get _nextEquipmentToDate {
+    if (_equipmentToDate == null) return null;
+    final months = int.tryParse(_equipmentToPeriodMonths.text);
+    if (months == null || months == 0) return null;
+    return DateTime(_equipmentToDate!.year, _equipmentToDate!.month + months, _equipmentToDate!.day);
+  }
+
+  int? get _nextEquipmentToHours {
+    final base = int.tryParse(_equipmentHours.text);
+    final period = int.tryParse(_equipmentToPeriodHours.text);
+    if (base == null || period == null || period == 0) return null;
+    return base + period;
   }
 
   Future<void> _save() async {
@@ -64,14 +105,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
             ? 'Данные транспортного средства будут обновлены.'
             : 'Транспортное средство будет добавлено в систему.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Отмена'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Сохранить'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Сохранить')),
         ],
       ),
     );
@@ -91,9 +126,13 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
         specialPermitDate: _specialPermitDate,
         toDate: _toDate,
         toMileage: int.tryParse(_toMileage.text),
+        toPeriodKm: int.tryParse(_toPeriodKm.text),
+        toPeriodMonths: int.tryParse(_toPeriodMonths.text),
         equipmentType: _equipmentType.text.trim().isEmpty ? null : _equipmentType.text.trim(),
         equipmentToDate: _equipmentToDate,
         equipmentHours: int.tryParse(_equipmentHours.text),
+        equipmentToPeriodHours: int.tryParse(_equipmentToPeriodHours.text),
+        equipmentToPeriodMonths: int.tryParse(_equipmentToPeriodMonths.text),
         notes: _notes.text.trim(),
       );
       if (widget.vehicle == null) {
@@ -105,8 +144,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -125,6 +163,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final fmt = DateFormat('dd.MM.yyyy');
     final title = widget.vehicle == null ? 'Добавить транспорт' : 'Редактировать транспорт';
     return AlertDialog(
       backgroundColor: Theme.of(context).cardColor,
@@ -173,8 +212,29 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 _datePicker('Дата последнего ТО', _toDate,
                   (d) => setState(() => _toDate = d)),
                 const SizedBox(height: 8),
-                _field(_toMileage, 'Пробег на момент ТО (км)',
-                  keyboardType: TextInputType.number),
+                Row(children: [
+                  Expanded(child: _field(_toMileage, 'Пробег на момент ТО (км)',
+                    keyboardType: TextInputType.number)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _periodField(_toPeriodKm, 'Периодичность, км',
+                    suffix: 'км')),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  const Expanded(child: SizedBox()),
+                  const SizedBox(width: 12),
+                  Expanded(child: _periodField(_toPeriodMonths, 'Периодичность, мес.',
+                    suffix: 'мес.')),
+                ]),
+                if (_nextToDate != null || _nextToMileage != null) ...[
+                  const SizedBox(height: 6),
+                  _nextToPreview(
+                    label: 'Следующее ТО:',
+                    date: _nextToDate,
+                    km: _nextToMileage,
+                    fmt: fmt,
+                  ),
+                ],
                 const SizedBox(height: 14),
 
                 // ТО оборудования
@@ -185,8 +245,29 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 _datePicker('Дата последнего ТО оборудования', _equipmentToDate,
                   (d) => setState(() => _equipmentToDate = d)),
                 const SizedBox(height: 8),
-                _field(_equipmentHours, 'Наработка моточасов',
-                  keyboardType: TextInputType.number),
+                Row(children: [
+                  Expanded(child: _field(_equipmentHours, 'Наработка моточасов',
+                    keyboardType: TextInputType.number)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _periodField(_equipmentToPeriodHours, 'Периодичность, м/ч',
+                    suffix: 'м/ч')),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  const Expanded(child: SizedBox()),
+                  const SizedBox(width: 12),
+                  Expanded(child: _periodField(_equipmentToPeriodMonths, 'Периодичность, мес.',
+                    suffix: 'мес.')),
+                ]),
+                if (_nextEquipmentToDate != null || _nextEquipmentToHours != null) ...[
+                  const SizedBox(height: 6),
+                  _nextToPreview(
+                    label: 'Следующее ТО оборудования:',
+                    date: _nextEquipmentToDate,
+                    hours: _nextEquipmentToHours,
+                    fmt: fmt,
+                  ),
+                ],
                 const SizedBox(height: 14),
 
                 // Заметки
@@ -216,8 +297,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   ),
                   FilledButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFE24B4A)),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE24B4A)),
                     child: const Text('Удалить'),
                   ),
                 ],
@@ -253,14 +333,12 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
     );
   }
 
-  Widget _sectionLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(text.toUpperCase(),
-        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500,
-            color: Color(0xFF888888), letterSpacing: 0.5)),
-    );
-  }
+  Widget _sectionLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(text.toUpperCase(),
+      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500,
+          color: Color(0xFF888888), letterSpacing: 0.5)),
+  );
 
   Widget _field(TextEditingController ctrl, String label,
       {bool required = false, int maxLines = 1,
@@ -278,6 +356,62 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
       validator: required
           ? (v) => v == null || v.isEmpty ? 'Обязательное поле' : null
           : null,
+    );
+  }
+
+  Widget _periodField(TextEditingController ctrl, String label, {String? suffix}) {
+    return TextFormField(
+      controller: ctrl,
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: suffix,
+        isDense: true,
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.replay_outlined, size: 16),
+      ),
+    );
+  }
+
+  Widget _nextToPreview({
+    required String label,
+    required DateFormat fmt,
+    DateTime? date,
+    int? km,
+    int? hours,
+  }) {
+    final now = DateTime.now();
+    final diff = date != null ? date.difference(now).inDays : null;
+    Color color = const Color(0xFF888888);
+    if (diff != null) {
+      if (diff < 0) color = const Color(0xFFE24B4A);
+      else if (diff <= 7) color = const Color(0xFFE24B4A);
+      else if (diff <= 30) color = const Color(0xFFEF9F27);
+      else color = const Color(0xFF639922);
+    }
+    final parts = <String>[];
+    if (date != null) parts.add(fmt.format(date));
+    if (km != null) parts.add('$km км');
+    if (hours != null) parts.add('$hours м/ч');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.event_repeat_outlined, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(label,
+            style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 6),
+          Text(parts.join(' / '),
+            style: TextStyle(fontSize: 12, color: color)),
+        ],
+      ),
     );
   }
 

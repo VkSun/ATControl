@@ -191,6 +191,8 @@ class VehicleService {
       check(v.inspectionDate, 'Техосмотр');
       check(v.insuranceDate, 'Страховка');
       check(v.specialPermitDate, 'Спец. разрешение');
+      check(v.nextToDate, 'ТО автомобиля');
+      check(v.nextEquipmentToDate, 'ТО оборудования');
     }
 
     result.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));

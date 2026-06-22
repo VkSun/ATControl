@@ -57,8 +57,8 @@ class TransportScreen extends ConsumerWidget {
           VehicleSort.inspectionDate  => (a.inspectionDate ?? DateTime(2099)).compareTo(b.inspectionDate ?? DateTime(2099)),
           VehicleSort.insuranceDate   => (a.insuranceDate ?? DateTime(2099)).compareTo(b.insuranceDate ?? DateTime(2099)),
           VehicleSort.specialPermitDate => (a.specialPermitDate ?? DateTime(2099)).compareTo(b.specialPermitDate ?? DateTime(2099)),
-          VehicleSort.toDate          => (a.toDate ?? DateTime(2099)).compareTo(b.toDate ?? DateTime(2099)),
-          VehicleSort.equipmentToDate => (a.equipmentToDate ?? DateTime(2099)).compareTo(b.equipmentToDate ?? DateTime(2099)),
+          VehicleSort.toDate          => (a.nextToDate ?? a.toDate ?? DateTime(2099)).compareTo(b.nextToDate ?? b.toDate ?? DateTime(2099)),
+          VehicleSort.equipmentToDate => (a.nextEquipmentToDate ?? a.equipmentToDate ?? DateTime(2099)).compareTo(b.nextEquipmentToDate ?? b.equipmentToDate ?? DateTime(2099)),
         };
         return asc ? r : -r;
       });
@@ -619,8 +619,16 @@ class _VehicleRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _DateCell(date: vehicle.toDate, fmt: fmt, colors: colors),
-                  if (vehicle.toMileage != null)
+                  _DateCell(
+                    date: vehicle.nextToDate ?? vehicle.toDate,
+                    fmt: fmt, colors: colors,
+                    isNext: vehicle.nextToDate != null,
+                  ),
+                  if (vehicle.nextToMileage != null)
+                    Text('${vehicle.nextToMileage} км',
+                      style: TextStyle(fontSize: 10,
+                          color: Theme.of(context).textTheme.bodySmall!.color))
+                  else if (vehicle.toMileage != null && vehicle.nextToDate == null)
                     Text('${vehicle.toMileage} км',
                       style: TextStyle(fontSize: 10,
                           color: Theme.of(context).textTheme.bodySmall!.color)),
@@ -631,8 +639,16 @@ class _VehicleRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _DateCell(date: vehicle.equipmentToDate, fmt: fmt, colors: colors),
-                  if (vehicle.equipmentHours != null)
+                  _DateCell(
+                    date: vehicle.nextEquipmentToDate ?? vehicle.equipmentToDate,
+                    fmt: fmt, colors: colors,
+                    isNext: vehicle.nextEquipmentToDate != null,
+                  ),
+                  if (vehicle.nextEquipmentToHours != null)
+                    Text('${vehicle.nextEquipmentToHours} м/ч',
+                      style: TextStyle(fontSize: 10,
+                          color: Theme.of(context).textTheme.bodySmall!.color))
+                  else if (vehicle.equipmentHours != null && vehicle.nextEquipmentToDate == null)
                     Text('${vehicle.equipmentHours} м/ч',
                       style: TextStyle(fontSize: 10,
                           color: Theme.of(context).textTheme.bodySmall!.color)),
@@ -658,8 +674,15 @@ class _DateCell extends StatelessWidget {
   final DateTime? date;
   final DateFormat fmt;
   final AppColors colors;
+  // true → дата является вычисленным "следующим ТО", показать иконку
+  final bool isNext;
 
-  const _DateCell({required this.date, required this.fmt, required this.colors});
+  const _DateCell({
+    required this.date,
+    required this.fmt,
+    required this.colors,
+    this.isNext = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -672,8 +695,23 @@ class _DateCell extends StatelessWidget {
       case 1: textColor = colors.badgeAmberText;
       default: textColor = Theme.of(context).textTheme.bodyMedium!.color!;
     }
-    return Text(fmt.format(date!),
-      style: TextStyle(fontSize: 12, fontWeight: status > 0 ? FontWeight.w500 : FontWeight.normal, color: textColor),
+    final label = fmt.format(date!);
+    if (!isNext) {
+      return Text(label,
+        style: TextStyle(fontSize: 12,
+            fontWeight: status > 0 ? FontWeight.w500 : FontWeight.normal,
+            color: textColor));
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.event_repeat_outlined, size: 11, color: textColor),
+        const SizedBox(width: 3),
+        Text(label,
+          style: TextStyle(fontSize: 12,
+              fontWeight: status > 0 ? FontWeight.w500 : FontWeight.normal,
+              color: textColor)),
+      ],
     );
   }
 }
