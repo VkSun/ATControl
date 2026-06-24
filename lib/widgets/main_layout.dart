@@ -45,42 +45,70 @@ class _MainLayoutState extends ConsumerState<MainLayout>
   }
 
   Future<void> _checkForUpdate() async {
-    final update = await UpdateService.checkForUpdate();
-    if (update == null || !mounted) return;
-    showDialog(
+    final updates = await UpdateService.checkForUpdates();
+    for (final update in updates) {
+      if (!mounted) return;
+      await _showUpdateDialog(update);
+    }
+  }
+
+  Future<void> _showUpdateDialog(UpdateInfo update) async {
+    if (!mounted) return;
+    await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Доступно обновление'),
+        title: Text(update.type == UpdateType.extension
+            ? 'Обновление расширения'
+            : 'Доступно обновление'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Версия ${update.version} готова к установке.'),
-            const SizedBox(height: 8),
-            if (Platform.isAndroid)
+            if (update.type == UpdateType.extension) ...[
+              Text(
+                  'Доступна новая версия браузерного расширения ATControl — ${update.version}.'),
+              const SizedBox(height: 8),
               const Text(
-                'Нажмите «Скачать» — откроется загрузка APK.\n'
-                'После загрузки установите поверх текущей версии.',
+                'Нажмите «Скачать» — откроется страница загрузки на GitHub.\n'
+                'Установите расширение вручную через chrome://extensions.',
                 style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
               ),
-            if (Platform.isWindows)
-              const Text(
-                'Нажмите «Скачать» — откроется страница с архивом.\n'
-                'Распакуйте и замените файлы приложения.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
-              ),
+            ] else ...[
+              Text('Версия ${update.version} готова к установке.'),
+              const SizedBox(height: 8),
+              if (Platform.isAndroid)
+                const Text(
+                  'Нажмите «Скачать» — откроется загрузка APK.\n'
+                  'После загрузки установите поверх текущей версии.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                ),
+              if (Platform.isWindows)
+                const Text(
+                  'Нажмите «Скачать» — откроется страница с архивом.\n'
+                  'Распакуйте и замените файлы приложения.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                ),
+            ],
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              if (update.type == UpdateType.extension) {
+                await UpdateService.dismissExtensionUpdate(update.version);
+              }
+            },
             child: const Text('Позже'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
+              if (update.type == UpdateType.extension) {
+                await UpdateService.dismissExtensionUpdate(update.version);
+              }
               UpdateService.openDownload(update.downloadUrl);
             },
             child: const Text('Скачать'),
