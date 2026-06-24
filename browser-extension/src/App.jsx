@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
 import LoginScreen from './components/LoginScreen'
 import ClockCard from './components/ClockCard'
@@ -37,6 +37,31 @@ function loadLocalSettings() {
   }
 }
 
+function PanelDragHandle({ onMouseDown, active, resizeMode }) {
+  const [hov, setHov] = useState(false)
+  const lit = hov || active || resizeMode
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title="Потянуть для изменения ширины"
+      style={{
+        width: 20, alignSelf: 'stretch', cursor: 'col-resize',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, userSelect: 'none', WebkitUserSelect: 'none',
+      }}
+    >
+      <div style={{
+        width: 4, height: 40, borderRadius: 2,
+        background: (hov || active) ? 'var(--primary)' : 'var(--line-2)',
+        opacity: lit ? ((hov || active) ? 1 : 0.7) : 0.25,
+        transition: 'background .15s, opacity .15s',
+      }} />
+    </div>
+  )
+}
+
 export default function App() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -47,6 +72,16 @@ export default function App() {
   })
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [resizeMode, setResizeMode] = useState(false)
+  const [activeHandle, setActiveHandle] = useState(null)
+
+  const settingsRef = useRef(settings)
+  const sessionRef = useRef(session)
+  const contentRef = useRef(null)
+  const dragInfo = useRef(null)
+
+  useEffect(() => { settingsRef.current = settings }, [settings])
+  useEffect(() => { sessionRef.current = session }, [session])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -97,6 +132,72 @@ export default function App() {
     }
   }, [session])
 
+  const startDrag = useCallback((handleIdx, e) => {
+    e.preventDefault()
+    if (!contentRef.current) return
+    const panels = [...contentRef.current.querySelectorAll('[data-panel]')]
+    const widths = panels.map(p => p.getBoundingClientRect().width)
+    const cols = settingsRef.current.cols || { shortcuts: 1.4, todo: 1, calendar: 1 }
+    const keys = ['shortcuts', 'todo', 'calendar']
+    dragInfo.current = {
+      handleIdx,
+      startX: e.clientX,
+      startWidths: [...widths],
+      totalWidth: widths.reduce((a, b) => a + b, 0),
+      totalFr: keys.reduce((sum, k) => sum + (cols[k] ?? 1), 0),
+    }
+    setActiveHandle(handleIdx)
+  }, [])
+
+  useEffect(() => {
+    if (activeHandle === null) return
+
+    const onMove = (e) => {
+      if (!dragInfo.current) return
+      const { handleIdx, startX, startWidths, totalWidth, totalFr } = dragInfo.current
+      const dx = e.clientX - startX
+      const keys = ['shortcuts', 'todo', 'calendar']
+
+      const newWidths = [...startWidths]
+      const minPx = 140
+      const rawDelta = dx
+      const maxDelta = startWidths[handleIdx + 1] - minPx
+      const minDelta = -(startWidths[handleIdx] - minPx)
+      const delta = Math.max(minDelta, Math.min(rawDelta, maxDelta))
+      newWidths[handleIdx] = startWidths[handleIdx] + delta
+      newWidths[handleIdx + 1] = startWidths[handleIdx + 1] - delta
+
+      const newCols = {}
+      keys.forEach((k, i) => { newCols[k] = (newWidths[i] / totalWidth) * totalFr })
+
+      const next = { ...settingsRef.current, cols: newCols }
+      settingsRef.current = next
+      setSettings(next)
+      localStorage.setItem('atc_settings', JSON.stringify(next))
+    }
+
+    const onUp = async () => {
+      setActiveHandle(null)
+      const s = settingsRef.current
+      const userId = sessionRef.current?.user?.id
+      if (userId) {
+        await supabase.from('newtab_settings').upsert({
+          user_id: userId,
+          accent: s.accent,
+          greeting: s.greeting,
+          updated_at: new Date().toISOString(),
+        })
+      }
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [activeHandle])
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
@@ -115,10 +216,21 @@ export default function App() {
         <WeatherCard />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: `${settings.cols?.shortcuts ?? 1.4}fr ${settings.cols?.todo ?? 1}fr ${settings.cols?.calendar ?? 1}fr`, gap: 20, alignItems: 'start' }}>
-        <ShortcutsCard userId={session.user.id} />
-        <TodoCard userId={session.user.id} />
-        <CalendarCard userId={session.user.id} />
+      <div
+        ref={contentRef}
+        style={{ display: 'flex', alignItems: 'start', userSelect: activeHandle !== null ? 'none' : undefined }}
+      >
+        <div data-panel style={{ flex: `${settings.cols?.shortcuts ?? 1.4} 1 0`, minWidth: 0 }}>
+          <ShortcutsCard userId={session.user.id} />
+        </div>
+        <PanelDragHandle onMouseDown={e => startDrag(0, e)} active={activeHandle === 0} resizeMode={resizeMode} />
+        <div data-panel style={{ flex: `${settings.cols?.todo ?? 1} 1 0`, minWidth: 0 }}>
+          <TodoCard userId={session.user.id} />
+        </div>
+        <PanelDragHandle onMouseDown={e => startDrag(1, e)} active={activeHandle === 1} resizeMode={resizeMode} />
+        <div data-panel style={{ flex: `${settings.cols?.calendar ?? 1} 1 0`, minWidth: 0 }}>
+          <CalendarCard userId={session.user.id} />
+        </div>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 12 }}>
@@ -138,7 +250,35 @@ export default function App() {
         </button>
       </div>
 
-      <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onSettingsChange={handleSettingsChange} />
+      <SettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onSettingsChange={handleSettingsChange}
+        onResizeMode={() => { setSettingsOpen(false); setResizeMode(true) }}
+      />
+
+      {resizeMode && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 500, background: 'var(--primary)', color: '#fff',
+          padding: '10px 20px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+          boxShadow: 'var(--shadow-lg)', display: 'flex', alignItems: 'center', gap: 14,
+          whiteSpace: 'nowrap',
+        }}>
+          <span>Потяните разделители между панелями</span>
+          <button
+            onClick={() => setResizeMode(false)}
+            style={{
+              background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff',
+              padding: '5px 14px', borderRadius: 99, cursor: 'pointer',
+              fontSize: 12, fontWeight: 700,
+            }}
+          >
+            Готово
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -9,7 +9,7 @@ const ACCENTS = [
   { key: 'rose',   primary: '#C73548', primary2: '#E74C5E', soft: '#FCE6EA' },
 ]
 
-export default function SettingsDrawer({ open, onClose, settings, onSettingsChange }) {
+export default function SettingsDrawer({ open, onClose, settings, onSettingsChange, onResizeMode }) {
   const update = (key, val) => {
     const next = { ...settings, [key]: val }
     if (key === 'accent') {
@@ -75,7 +75,19 @@ export default function SettingsDrawer({ open, onClose, settings, onSettingsChan
         </div>
 
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Ширина карточек</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Размер панелей</div>
+          <button
+            onClick={onResizeMode}
+            style={{
+              width: '100%', padding: '9px 12px', marginBottom: 14,
+              background: 'var(--primary-soft)', color: 'var(--primary)',
+              border: '1.5px dashed var(--primary)', borderRadius: 10,
+              cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            ↔ Настроить ширину панелей
+          </button>
           {[['shortcuts', 'Закладки'], ['todo', 'Задачи'], ['calendar', 'Календарь']].map(([key, label]) => (
             <div key={key} style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>

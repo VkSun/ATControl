@@ -26,7 +26,7 @@ function Tile({ item, hovered, onMouseEnter, onMouseLeave, onClick, onDelete, on
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={(e) => { if (e.target.closest('.del-btn') || e.target.closest('.edit-btn')) return; onClick() }}
-      style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+      style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', width: '100%' }}
     >
       <div style={{
         width: 44, height: 44, borderRadius: 12, background: item.color,
@@ -46,7 +46,7 @@ function Tile({ item, hovered, onMouseEnter, onMouseLeave, onClick, onDelete, on
           }}>{badge}</div>
         )}
       </div>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)', textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)', textAlign: 'center', width: '100%', maxWidth: 56, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {item.label}
       </div>
       {hovered && (
@@ -257,7 +257,7 @@ export default function ShortcutsCard({ userId }) {
           }}>{I.plus({ size: 14 })} Добавить</button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', columnGap: 8, rowGap: 14 }}>
           {items.map(s => (
             <Tile key={s.id} item={s}
               badge={folderCounts[s.id] || 0}
