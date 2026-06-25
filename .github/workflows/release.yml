@@ -33,7 +33,9 @@ jobs:
           $tag = "${{ github.event.inputs.version || github.ref_name }}"
           $version = $tag.TrimStart('v')
           $env:PATH = "C:\Program Files (x86)\Inno Setup 6;$env:PATH"
-          iscc /DMyAppVersion=$version windows\installer.iss
+          Push-Location windows
+          iscc /DMyAppVersion=$version installer.iss
+          Pop-Location
           Move-Item "installer_output\ATControl-$version-setup.exe" "ATControl-$tag-setup.exe"
 
       - uses: actions/upload-artifact@v4.6.2
