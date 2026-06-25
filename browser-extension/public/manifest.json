@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ATControl — Новая вкладка",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Новая вкладка с синхронизацией задач ATControl",
   "permissions": ["storage"],
   "host_permissions": [
