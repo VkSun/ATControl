@@ -32,6 +32,9 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
   DateTime _calendarMonth = DateTime.now();
   bool _notesSaving = false;
   bool _syncing = false;
+  double _dragStartX = 0;
+  double _splitAtDragStart = 0;
+  double _availWAtDragStart = 1;
 
   @override
   void initState() {
@@ -207,8 +210,14 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                     SplitHandle(
                       gap: gap,
                       colors: colors,
+                      onDragStart: (d) {
+                        _dragStartX = d.globalPosition.dx;
+                        _splitAtDragStart = split;
+                        _availWAtDragStart = availW;
+                      },
                       onDrag: (d) {
-                        final newSplit = (split + d.delta.dx / constraints.maxWidth).clamp(0.2, 0.8);
+                        final dx = d.globalPosition.dx - _dragStartX;
+                        final newSplit = (_splitAtDragStart + dx / _availWAtDragStart).clamp(0.2, 0.8);
                         ref.read(plannerSplitProvider.notifier).set(newSplit);
                       },
                     ),

@@ -10,7 +10,12 @@ import CalendarCard from './components/CalendarCard'
 import SettingsDrawer from './components/SettingsDrawer'
 import { I } from './components/Icons'
 
-const DEFAULT_SETTINGS = { accent: 'blue', greeting: true, cols: { shortcuts: 1.4, todo: 1, calendar: 1 } }
+const DEFAULT_SETTINGS = {
+  accent: 'blue',
+  greeting: true,
+  cols: { shortcuts: 1.4, todo: 1, calendar: 1 },
+  rowHeight: null,
+}
 
 const ACCENTS = {
   blue:   { primary: '#435EBE', primary2: '#5A75D9', soft: '#EDF0FB' },
@@ -31,7 +36,11 @@ function applyAccent(key) {
 function loadLocalSettings() {
   try {
     const s = JSON.parse(localStorage.getItem('atc_settings'))
-    return { ...DEFAULT_SETTINGS, ...s, cols: { ...DEFAULT_SETTINGS.cols, ...(s?.cols || {}) } }
+    return {
+      ...DEFAULT_SETTINGS,
+      ...s,
+      cols: { ...DEFAULT_SETTINGS.cols, ...(s?.cols || {}) },
+    }
   } catch {
     return DEFAULT_SETTINGS
   }
@@ -39,15 +48,15 @@ function loadLocalSettings() {
 
 function PanelDragHandle({ onMouseDown, active, resizeMode }) {
   const [hov, setHov] = useState(false)
-  const lit = hov || active || resizeMode
   return (
     <div
-      onMouseDown={onMouseDown}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      title="Потянуть для изменения ширины"
+      onMouseDown={resizeMode ? onMouseDown : undefined}
+      onMouseEnter={resizeMode ? () => setHov(true) : undefined}
+      onMouseLeave={resizeMode ? () => setHov(false) : undefined}
+      title={resizeMode ? 'Потянуть для изменения ширины' : undefined}
       style={{
-        width: 20, alignSelf: 'stretch', cursor: 'col-resize',
+        width: 20, alignSelf: 'stretch',
+        cursor: resizeMode ? 'col-resize' : 'default',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0, userSelect: 'none', WebkitUserSelect: 'none',
       }}
@@ -55,7 +64,31 @@ function PanelDragHandle({ onMouseDown, active, resizeMode }) {
       <div style={{
         width: 4, height: 40, borderRadius: 2,
         background: (hov || active) ? 'var(--primary)' : 'var(--line-2)',
-        opacity: lit ? ((hov || active) ? 1 : 0.7) : 0.25,
+        opacity: resizeMode ? ((hov || active) ? 1 : 0.5) : 0.1,
+        transition: 'background .15s, opacity .15s',
+      }} />
+    </div>
+  )
+}
+
+function HeightDragHandle({ onMouseDown, active }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title="Потянуть для изменения высоты"
+      style={{
+        height: 20, cursor: 'row-resize',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        userSelect: 'none', WebkitUserSelect: 'none', marginTop: -2,
+      }}
+    >
+      <div style={{
+        height: 4, width: 80, borderRadius: 2,
+        background: (hov || active) ? 'var(--primary)' : 'var(--line-2)',
+        opacity: (hov || active) ? 1 : 0.5,
         transition: 'background .15s, opacity .15s',
       }} />
     </div>
@@ -74,11 +107,13 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [resizeMode, setResizeMode] = useState(false)
   const [activeHandle, setActiveHandle] = useState(null)
+  const [heightDragActive, setHeightDragActive] = useState(false)
 
   const settingsRef = useRef(settings)
   const sessionRef = useRef(session)
   const contentRef = useRef(null)
   const dragInfo = useRef(null)
+  const heightDragInfo = useRef(null)
 
   useEffect(() => { settingsRef.current = settings }, [settings])
   useEffect(() => { sessionRef.current = session }, [session])
@@ -111,6 +146,7 @@ export default function App() {
         accent: settingsRes.data.accent || 'blue',
         greeting: settingsRes.data.greeting ?? true,
         cols: local.cols,
+        rowHeight: local.rowHeight,
       }
       setSettings(s)
       localStorage.setItem('atc_settings', JSON.stringify(s))
@@ -132,7 +168,21 @@ export default function App() {
     }
   }, [session])
 
+  const saveToSupabase = useCallback(async (s) => {
+    const userId = sessionRef.current?.user?.id
+    if (userId) {
+      await supabase.from('newtab_settings').upsert({
+        user_id: userId,
+        accent: s.accent,
+        greeting: s.greeting,
+        updated_at: new Date().toISOString(),
+      })
+    }
+  }, [])
+
+  // Width drag
   const startDrag = useCallback((handleIdx, e) => {
+    if (!resizeMode) return
     e.preventDefault()
     if (!contentRef.current) return
     const panels = [...contentRef.current.querySelectorAll('[data-panel]')]
@@ -147,7 +197,7 @@ export default function App() {
       totalFr: keys.reduce((sum, k) => sum + (cols[k] ?? 1), 0),
     }
     setActiveHandle(handleIdx)
-  }, [])
+  }, [resizeMode])
 
   useEffect(() => {
     if (activeHandle === null) return
@@ -157,19 +207,15 @@ export default function App() {
       const { handleIdx, startX, startWidths, totalWidth, totalFr } = dragInfo.current
       const dx = e.clientX - startX
       const keys = ['shortcuts', 'todo', 'calendar']
-
       const newWidths = [...startWidths]
       const minPx = 140
-      const rawDelta = dx
       const maxDelta = startWidths[handleIdx + 1] - minPx
       const minDelta = -(startWidths[handleIdx] - minPx)
-      const delta = Math.max(minDelta, Math.min(rawDelta, maxDelta))
+      const delta = Math.max(minDelta, Math.min(dx, maxDelta))
       newWidths[handleIdx] = startWidths[handleIdx] + delta
       newWidths[handleIdx + 1] = startWidths[handleIdx + 1] - delta
-
       const newCols = {}
       keys.forEach((k, i) => { newCols[k] = (newWidths[i] / totalWidth) * totalFr })
-
       const next = { ...settingsRef.current, cols: newCols }
       settingsRef.current = next
       setSettings(next)
@@ -178,16 +224,7 @@ export default function App() {
 
     const onUp = async () => {
       setActiveHandle(null)
-      const s = settingsRef.current
-      const userId = sessionRef.current?.user?.id
-      if (userId) {
-        await supabase.from('newtab_settings').upsert({
-          user_id: userId,
-          accent: s.accent,
-          greeting: s.greeting,
-          updated_at: new Date().toISOString(),
-        })
-      }
+      await saveToSupabase(settingsRef.current)
     }
 
     window.addEventListener('mousemove', onMove)
@@ -196,7 +233,45 @@ export default function App() {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
-  }, [activeHandle])
+  }, [activeHandle, saveToSupabase])
+
+  // Height drag
+  const startHeightDrag = useCallback((e) => {
+    e.preventDefault()
+    if (!contentRef.current) return
+    heightDragInfo.current = {
+      startY: e.clientY,
+      startHeight: contentRef.current.getBoundingClientRect().height,
+    }
+    setHeightDragActive(true)
+  }, [])
+
+  useEffect(() => {
+    if (!heightDragActive) return
+
+    const onMove = (e) => {
+      if (!heightDragInfo.current) return
+      const { startY, startHeight } = heightDragInfo.current
+      const dy = e.clientY - startY
+      const newHeight = Math.max(200, startHeight + dy)
+      const next = { ...settingsRef.current, rowHeight: newHeight }
+      settingsRef.current = next
+      setSettings(next)
+      localStorage.setItem('atc_settings', JSON.stringify(next))
+    }
+
+    const onUp = async () => {
+      setHeightDragActive(false)
+      await saveToSupabase(settingsRef.current)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [heightDragActive, saveToSupabase])
 
   if (loading) {
     return (
@@ -208,6 +283,9 @@ export default function App() {
 
   if (!session) return <LoginScreen />
 
+  const rowH = settings.rowHeight
+  const panelOverflow = rowH ? 'auto' : undefined
+
   return (
     <div style={{ minHeight: '100vh', padding: '32px 40px 40px', maxWidth: 1480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: 20, alignItems: 'center' }}>
@@ -218,20 +296,30 @@ export default function App() {
 
       <div
         ref={contentRef}
-        style={{ display: 'flex', alignItems: 'start', userSelect: activeHandle !== null ? 'none' : undefined }}
+        style={{
+          display: 'flex',
+          alignItems: rowH ? 'stretch' : 'start',
+          height: rowH ? rowH : undefined,
+          userSelect: (activeHandle !== null || heightDragActive) ? 'none' : undefined,
+          overflow: rowH ? 'hidden' : undefined,
+        }}
       >
-        <div data-panel style={{ flex: `${settings.cols?.shortcuts ?? 1.4} 1 0`, minWidth: 0 }}>
+        <div data-panel style={{ flex: `${settings.cols?.shortcuts ?? 1.4} 1 0`, minWidth: 0, overflow: panelOverflow, height: rowH ? '100%' : undefined }}>
           <ShortcutsCard userId={session.user.id} />
         </div>
         <PanelDragHandle onMouseDown={e => startDrag(0, e)} active={activeHandle === 0} resizeMode={resizeMode} />
-        <div data-panel style={{ flex: `${settings.cols?.todo ?? 1} 1 0`, minWidth: 0 }}>
+        <div data-panel style={{ flex: `${settings.cols?.todo ?? 1} 1 0`, minWidth: 0, overflow: panelOverflow, height: rowH ? '100%' : undefined }}>
           <TodoCard userId={session.user.id} />
         </div>
         <PanelDragHandle onMouseDown={e => startDrag(1, e)} active={activeHandle === 1} resizeMode={resizeMode} />
-        <div data-panel style={{ flex: `${settings.cols?.calendar ?? 1} 1 0`, minWidth: 0 }}>
+        <div data-panel style={{ flex: `${settings.cols?.calendar ?? 1} 1 0`, minWidth: 0, overflow: panelOverflow, height: rowH ? '100%' : undefined }}>
           <CalendarCard userId={session.user.id} />
         </div>
       </div>
+
+      {resizeMode && (
+        <HeightDragHandle onMouseDown={startHeightDrag} active={heightDragActive} />
+      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -266,7 +354,7 @@ export default function App() {
           boxShadow: 'var(--shadow-lg)', display: 'flex', alignItems: 'center', gap: 14,
           whiteSpace: 'nowrap',
         }}>
-          <span>Потяните разделители между панелями</span>
+          <span>Потяните разделители (ширина) или нижнюю полоску (высота)</span>
           <button
             onClick={() => setResizeMode(false)}
             style={{

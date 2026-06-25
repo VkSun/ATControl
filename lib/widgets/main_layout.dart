@@ -941,12 +941,14 @@ final pendingCountProvider = FutureProvider<int>((ref) async {
 class SplitHandle extends StatelessWidget {
   final double gap;
   final AppColors colors;
+  final void Function(DragStartDetails) onDragStart;
   final void Function(DragUpdateDetails) onDrag;
 
   const SplitHandle({
     super.key,
     required this.gap,
     required this.colors,
+    required this.onDragStart,
     required this.onDrag,
   });
 
@@ -955,6 +957,7 @@ class SplitHandle extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.resizeLeftRight,
       child: GestureDetector(
+        onPanStart: onDragStart,
         onPanUpdate: onDrag,
         child: SizedBox(
           width: gap,
