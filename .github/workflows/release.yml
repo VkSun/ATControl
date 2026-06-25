@@ -14,7 +14,7 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4.2.2
 
@@ -28,17 +28,18 @@ jobs:
       - name: Build Windows
         run: flutter build windows --release
 
-      - name: Package Windows ZIP
+      - name: Build Installer
         run: |
           $tag = "${{ github.event.inputs.version || github.ref_name }}"
-          $name = "ATControl-$tag-windows"
-          Copy-Item -Recurse "build\windows\x64\runner\Release" $name
-          Compress-Archive -Path $name -DestinationPath "$name.zip"
+          $version = $tag.TrimStart('v')
+          $env:PATH = "C:\Program Files (x86)\Inno Setup 6;$env:PATH"
+          iscc /DMyAppVersion=$version windows\installer.iss
+          Move-Item "installer_output\ATControl-$version-setup.exe" "ATControl-$tag-setup.exe"
 
       - uses: actions/upload-artifact@v4.6.2
         with:
           name: windows-build
-          path: ATControl-${{ github.event.inputs.version || github.ref_name }}-windows.zip
+          path: ATControl-${{ github.event.inputs.version || github.ref_name }}-setup.exe
 
   build-android:
     runs-on: ubuntu-latest
@@ -117,5 +118,5 @@ jobs:
           name: "ATControl ${{ github.event.inputs.version || github.ref_name }}"
           generate_release_notes: true
           files: |
-            ATControl-${{ github.event.inputs.version || github.ref_name }}-windows.zip
+            ATControl-${{ github.event.inputs.version || github.ref_name }}-setup.exe
             ATControl-${{ github.event.inputs.version || github.ref_name }}-android.apk
