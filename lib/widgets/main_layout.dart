@@ -71,8 +71,8 @@ class _MainLayoutState extends ConsumerState<MainLayout>
                   'Доступна новая версия браузерного расширения ATControl — ${update.version}.'),
               const SizedBox(height: 8),
               const Text(
-                'Нажмите «Скачать» — откроется страница загрузки на GitHub.\n'
-                'Установите расширение вручную через chrome://extensions.',
+                'Нажмите «Скачать» — новый установщик уже включает обновлённое расширение.\n'
+                'Запустите его — приложение и расширение обновятся автоматически.',
                 style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
               ),
             ] else ...[
@@ -86,8 +86,8 @@ class _MainLayoutState extends ConsumerState<MainLayout>
                 ),
               if (Platform.isWindows)
                 const Text(
-                  'Нажмите «Скачать» — откроется страница с архивом.\n'
-                  'Распакуйте и замените файлы приложения.',
+                  'Нажмите «Скачать» — откроется загрузка установщика (.exe).\n'
+                  'Запустите его — он заменит текущую версию автоматически.',
                   style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
                 ),
             ],

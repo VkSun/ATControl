@@ -1,6 +1,6 @@
 Add-Type -AssemblyName System.Windows.Forms
 
-$extPath = Join-Path $env:APPDATA "ATControl\extension"
+$extPath = Join-Path $env:LOCALAPPDATA "ATControl\extension"
 
 # Предупреждение о совместимости
 $result = [System.Windows.Forms.MessageBox]::Show(

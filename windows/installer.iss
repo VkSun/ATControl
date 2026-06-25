@@ -39,7 +39,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; Основное приложение
 Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Расширение Chrome
-Source: "..\browser-extension\dist\*"; DestDir: "{userappdata}\ATControl\extension"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\browser-extension\dist\*"; DestDir: "{app}\extension"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Скрипт установки расширения
 Source: "install_extension.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
