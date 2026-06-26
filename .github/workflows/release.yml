@@ -74,6 +74,7 @@ jobs:
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: '${{ secrets.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: 'ATCcontrol'
           signing-policy-slug: 'release-singing'
           artifact-configuration-slug: 'initial'
           github-artifact-id: '${{ needs.build-windows.outputs.artifact-id }}'
