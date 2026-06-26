@@ -1,0 +1,86 @@
+:root {
+  --bg: #F4F6FA;
+  --surface: #FFFFFF;
+  --surface-2: #F8F9FC;
+  --line: #E9ECF3;
+  --line-2: #DCE0EA;
+  --ink: #25396F;
+  --ink-2: #404E67;
+  --muted: #8896B3;
+  --primary: #435EBE;
+  --primary-2: #5A75D9;
+  --primary-soft: #EDF0FB;
+  --success: #20C997;
+  --warning: #F5A623;
+  --danger: #E74C5E;
+  --info: #3BAFDA;
+  --shadow: 0 4px 24px rgba(37,57,111,.06);
+  --shadow-lg: 0 12px 40px rgba(37,57,111,.10);
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  color: var(--ink-2);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, #CBD1E0 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.45;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+.mz-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 99px;
+}
+
+button {
+  font-family: 'Inter', sans-serif;
+}
+
+input, textarea {
+  font-family: 'Inter', sans-serif;
+}

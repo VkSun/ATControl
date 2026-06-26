@@ -10,8 +10,11 @@ import '../utils/responsive.dart';
 import '../services/weather_service.dart';
 import '../services/vehicle_service.dart';
 import '../services/driver_service.dart';
+import '../services/task_service.dart';
+import '../services/offline_state.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
+import '../services/update_service.dart';
 import '../screens/profile/profile_dialog.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
@@ -24,7 +27,8 @@ class MainLayout extends ConsumerStatefulWidget {
   ConsumerState<MainLayout> createState() => _MainLayoutState();
 }
 
-class _MainLayoutState extends ConsumerState<MainLayout> {
+class _MainLayoutState extends ConsumerState<MainLayout>
+    with WidgetsBindingObserver {
   late Timer _timer;
   late DateTime _now;
   double? _lastWidth;
@@ -32,10 +36,101 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _now = DateTime.now();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _now = DateTime.now());
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdate());
+  }
+
+  Future<void> _checkForUpdate() async {
+    final updates = await UpdateService.checkForUpdates();
+    for (final update in updates) {
+      if (!mounted) return;
+      await _showUpdateDialog(update);
+    }
+  }
+
+  Future<void> _showUpdateDialog(UpdateInfo update) async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: Text(update.type == UpdateType.extension
+            ? 'Обновление расширения'
+            : 'Доступно обновление'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (update.type == UpdateType.extension) ...[
+              Text(
+                  'Доступна новая версия браузерного расширения ATControl — ${update.version}.'),
+              const SizedBox(height: 8),
+              const Text(
+                'Нажмите «Скачать» — новый установщик уже включает обновлённое расширение.\n'
+                'Запустите его — приложение и расширение обновятся автоматически.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+              ),
+            ] else ...[
+              Text('Версия ${update.version} готова к установке.'),
+              const SizedBox(height: 8),
+              if (Platform.isAndroid)
+                const Text(
+                  'Нажмите «Скачать» — откроется загрузка APK.\n'
+                  'После загрузки установите поверх текущей версии.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                ),
+              if (Platform.isWindows)
+                const Text(
+                  'Нажмите «Скачать» — откроется загрузка установщика (.exe).\n'
+                  'Запустите его — он заменит текущую версию автоматически.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              if (update.type == UpdateType.extension) {
+                await UpdateService.dismissExtensionUpdate(update.version);
+              }
+            },
+            child: const Text('Позже'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              if (update.type == UpdateType.extension) {
+                await UpdateService.dismissExtensionUpdate(update.version);
+              }
+              UpdateService.openDownload(update.downloadUrl);
+            },
+            child: const Text('Скачать'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && isOfflineNotifier.value) {
+      _retryConnection();
+    }
+  }
+
+  void _retryConnection() {
+    ref.invalidate(vehiclesProvider);
+    ref.invalidate(driversProvider);
+    ref.invalidate(tasksProvider);
+    ref.invalidate(todayTasksProvider);
+    ref.invalidate(pendingCountProvider);
   }
 
   @override
@@ -62,6 +157,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer.cancel();
     super.dispose();
   }
@@ -79,28 +175,35 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     }
 
     return Scaffold(
-      body: Row(
+      body: Column(
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            width: collapsed ? 56 : 220,
-            child: _Sidebar(
-              colors: colors,
-              now: _now,
-              currentLocation: location,
-              themeMode: themeMode,
-              collapsed: collapsed,
-              onThemeToggle: () {
-                ref.read(themeModeProvider.notifier).set(
-                    themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light);
-              },
-              onToggleCollapse: () {
-                ref.read(sidebarCollapsedProvider.notifier).state = !collapsed;
-              },
+          _OfflineBanner(onRetry: _retryConnection),
+          Expanded(
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  width: collapsed ? 56 : 220,
+                  child: _Sidebar(
+                    colors: colors,
+                    now: _now,
+                    currentLocation: location,
+                    themeMode: themeMode,
+                    collapsed: collapsed,
+                    onThemeToggle: () {
+                      ref.read(themeModeProvider.notifier).set(
+                          themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light);
+                    },
+                    onToggleCollapse: () {
+                      ref.read(sidebarCollapsedProvider.notifier).state = !collapsed;
+                    },
+                  ),
+                ),
+                Expanded(child: widget.child),
+              ],
             ),
           ),
-          Expanded(child: widget.child),
         ],
       ),
     );
@@ -154,7 +257,20 @@ class _MobileLayout extends ConsumerWidget {
     final currentIdx = _locationToIndex(location);
 
     return Scaffold(
-      body: SafeArea(child: child),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _OfflineBanner(onRetry: () {
+              ref.invalidate(vehiclesProvider);
+              ref.invalidate(driversProvider);
+              ref.invalidate(tasksProvider);
+              ref.invalidate(todayTasksProvider);
+              ref.invalidate(pendingCountProvider);
+            }),
+            Expanded(child: child),
+          ],
+        ),
+      ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -630,7 +746,6 @@ class _SidebarBottomProfile extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const Icon(Icons.notifications_outlined, size: 16),
                 ],
               ),
             ),
@@ -753,6 +868,56 @@ class _SidebarBottomState extends State<_SidebarBottom> {
   }
 }
 
+// ─── Offline banner ───────────────────────────────────────────────────────────
+
+class _OfflineBanner extends ConsumerWidget {
+  final VoidCallback onRetry;
+  const _OfflineBanner({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isOffline = ref.watch(isOfflineProvider).value;
+    if (!isOffline) return const SizedBox.shrink();
+    final queueCount = ref.watch(offlineQueueCountProvider).value;
+    return Material(
+      color: const Color(0xFFF57C00),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(
+          children: [
+            const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 14),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                queueCount > 0
+                    ? 'Офлайн · $queueCount изм. ожидают синхронизации'
+                    : 'Нет подключения к интернету',
+                style: const TextStyle(
+                  color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Обновить',
+                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Expiring documents badge count ──────────────────────────────────────────
+
 final pendingCountProvider = FutureProvider<int>((ref) async {
   final now = DateTime.now();
   int count = 0;
@@ -772,3 +937,42 @@ final pendingCountProvider = FutureProvider<int>((ref) async {
   }
   return count;
 });
+
+class SplitHandle extends StatelessWidget {
+  final double gap;
+  final AppColors colors;
+  final void Function(DragStartDetails) onDragStart;
+  final void Function(DragUpdateDetails) onDrag;
+
+  const SplitHandle({
+    super.key,
+    required this.gap,
+    required this.colors,
+    required this.onDragStart,
+    required this.onDrag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeLeftRight,
+      child: GestureDetector(
+        onPanStart: onDragStart,
+        onPanUpdate: onDrag,
+        child: SizedBox(
+          width: gap,
+          child: Center(
+            child: Container(
+              width: 4,
+              height: 40,
+              decoration: BoxDecoration(
+                color: colors.tableBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

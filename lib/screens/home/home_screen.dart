@@ -13,6 +13,7 @@ import '../../utils/responsive.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../settings/settings_screen.dart' show notifyDay7Provider, notifyDay14Provider, notifyDay30Provider;
+import '../../widgets/main_layout.dart' show SplitHandle;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +23,10 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  double _dragStartX = 0;
+  double _splitAtDragStart = 0;
+  double _availWAtDragStart = 1;
+
   @override
   void initState() {
     super.initState();
@@ -51,13 +56,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _ExpiryCard(colors: colors, limit: null)),
-                const SizedBox(width: 16),
-                Expanded(child: _TasksCard(colors: colors)),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final split = ref.watch(homeSplitProvider);
+                const gap = 16.0;
+                final availW = constraints.maxWidth - gap;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: availW * split,
+                      child: _ExpiryCard(colors: colors, limit: null),
+                    ),
+                    SplitHandle(
+                      gap: gap,
+                      colors: colors,
+                      onDragStart: (d) {
+                        _dragStartX = d.globalPosition.dx;
+                        _splitAtDragStart = split;
+                        _availWAtDragStart = availW;
+                      },
+                      onDrag: (d) {
+                        final dx = d.globalPosition.dx - _dragStartX;
+                        final newSplit = (_splitAtDragStart + dx / _availWAtDragStart).clamp(0.2, 0.8);
+                        ref.read(homeSplitProvider.notifier).set(newSplit);
+                      },
+                    ),
+                    Expanded(child: _TasksCard(colors: colors)),
+                  ],
+                );
+              },
             ),
           ),
         ),

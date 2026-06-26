@@ -13,6 +13,8 @@ class Driver {
   final DateTime? medicalExpiry;
   final List<String> vehicleIds;
   final String? notes;
+  final String? departmentId;
+  final String? sectionId;
 
   Driver({
     required this.id,
@@ -29,6 +31,8 @@ class Driver {
     this.medicalExpiry,
     this.vehicleIds = const [],
     this.notes,
+    this.departmentId,
+    this.sectionId,
   });
 
   String? get vehicleId => vehicleIds.firstOrNull;
@@ -51,6 +55,8 @@ class Driver {
     medicalExpiry: json['medical_expiry'] != null ? DateTime.parse(json['medical_expiry']) : null,
     vehicleIds: (json['vehicle_ids'] as List?)?.map((e) => e.toString()).toList() ?? [],
     notes: json['notes'],
+    departmentId: json['department_id'],
+    sectionId: json['section_id'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -67,5 +73,7 @@ class Driver {
     'medical_expiry': medicalExpiry?.toIso8601String().split('T')[0],
     'vehicle_ids': vehicleIds,
     'notes': notes,
+    'department_id': departmentId,
+    'section_id': sectionId,
   };
 }

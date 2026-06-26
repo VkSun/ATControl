@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: browser-extension/package-lock.json
 
       - name: Install dependencies
         working-directory: browser-extension
@@ -63,7 +65,7 @@ jobs:
             - ✅ Синхронизация задач с ATControl в реальном времени
             - 🕐 Живые часы с датой
             - 🔍 Поиск (Google, Яндекс, DuckDuckGo, Bing)
-            - 🌤 Виджет погоды (Минск)
+            - 🌤 Виджет погоды
             - 🔖 Закладки с папками
             - 📅 Мини-календарь с задачами
             - ⚙️ Настройки темы (акцент, фон, приветствие)

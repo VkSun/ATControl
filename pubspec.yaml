@@ -1,7 +1,7 @@
 name: atcontrol
 description: Система управления автопарком ATControl
 publish_to: 'none'
-version: 0.2.3+5
+version: 0.3.7+18
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -38,8 +38,9 @@ dependencies:
   archive: ^3.6.1
   xml: ^6.6.1
   
-  # Погода
+  # Погода / обновления
   http: ^1.2.0
+  url_launcher: ^6.3.0
 
   package_info_plus: ^8.0.0
 

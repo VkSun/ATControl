@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/offline_state.dart';
 
 final themeModeProvider =
     StateNotifierProvider<_ThemePref, ThemeMode>((_) => _ThemePref());
@@ -29,6 +30,12 @@ final fontSizeProvider =
 
 final scaleProvider =
     StateNotifierProvider<_DoublePref, double>((_) => _DoublePref('ui_scale', 1.0));
+
+final homeSplitProvider =
+    StateNotifierProvider<_DoublePref, double>((_) => _DoublePref('home_split', 0.5));
+
+final plannerSplitProvider =
+    StateNotifierProvider<_DoublePref, double>((_) => _DoublePref('planner_split', 0.6));
 
 class _DoublePref extends StateNotifier<double> {
   final String _key;
@@ -202,3 +209,15 @@ class AppColors extends ThemeExtension<AppColors> {
   @override
   AppColors lerp(AppColors? other, double t) => this;
 }
+final resolvedThemeProvider = Provider<ThemeData>((ref) {
+  final mode = ref.watch(themeModeProvider);
+  if (mode == ThemeMode.dark) return AppTheme.darkTheme;
+  return AppTheme.lightTheme;
+});
+
+// ─── Offline state providers ──────────────────────────────────────────────────
+final isOfflineProvider =
+    ChangeNotifierProvider<ValueNotifier<bool>>((ref) => isOfflineNotifier);
+
+final offlineQueueCountProvider =
+    ChangeNotifierProvider<ValueNotifier<int>>((ref) => queueCountNotifier);

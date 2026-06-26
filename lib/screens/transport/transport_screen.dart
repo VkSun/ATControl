@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../../models/vehicle.dart';
 import '../../services/vehicle_service.dart';
+import '../../services/department_service.dart';
 import '../../utils/theme.dart';
 import 'vehicle_edit_dialog.dart';
 import '../../services/profile_service.dart';
@@ -11,9 +12,14 @@ import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
 
-enum VehicleSort { invNumber, brand, govNumber }
+enum VehicleSort {
+  invNumber, brand, govNumber,
+  inspectionDate, insuranceDate, specialPermitDate,
+  toDate, equipmentToDate,
+}
 
 final vehicleSortProvider = StateProvider<VehicleSort>((ref) => VehicleSort.invNumber);
+final vehicleSortAscProvider = StateProvider<bool>((ref) => true);
 final vehicleSearchProvider = StateProvider<String>((ref) => '');
 
 class TransportScreen extends ConsumerWidget {
@@ -23,6 +29,7 @@ class TransportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final sort = ref.watch(vehicleSortProvider);
+    final asc = ref.watch(vehicleSortAscProvider);
     final search = ref.watch(vehicleSearchProvider);
     final vehiclesAsync = ref.watch(vehiclesProvider);
     final mobile = isMobile(context);
@@ -31,21 +38,30 @@ class TransportScreen extends ConsumerWidget {
     List<Vehicle> buildList(List<Vehicle> vehicles) {
       var list = vehicles;
       if (search.isNotEmpty) {
-        final q = search.toLowerCase();
-        list = list.where((v) =>
-          v.invNumber.toLowerCase().contains(q) ||
-          v.brandModel.toLowerCase().contains(q) ||
-          v.govNumber.toLowerCase().contains(q)).toList();
+        final tokens = search.toLowerCase().split(RegExp(r'\s+'));
+        list = list.where((v) {
+          final fields = [
+            v.invNumber.toLowerCase(),
+            v.brandModel.toLowerCase(),
+            v.govNumber.toLowerCase(),
+          ];
+          return tokens.every((t) => fields.any((f) => f.contains(t)));
+        }).toList();
       }
       list = [...list];
-      switch (sort) {
-        case VehicleSort.brand:
-          list.sort((a, b) => a.brandModel.compareTo(b.brandModel));
-        case VehicleSort.govNumber:
-          list.sort((a, b) => a.govNumber.compareTo(b.govNumber));
-        case VehicleSort.invNumber:
-          list.sort((a, b) => a.invNumber.compareTo(b.invNumber));
-      }
+      list.sort((a, b) {
+        final r = switch (sort) {
+          VehicleSort.invNumber       => a.invNumber.compareTo(b.invNumber),
+          VehicleSort.brand           => a.brandModel.compareTo(b.brandModel),
+          VehicleSort.govNumber       => a.govNumber.compareTo(b.govNumber),
+          VehicleSort.inspectionDate  => (a.inspectionDate ?? DateTime(2099)).compareTo(b.inspectionDate ?? DateTime(2099)),
+          VehicleSort.insuranceDate   => (a.insuranceDate ?? DateTime(2099)).compareTo(b.insuranceDate ?? DateTime(2099)),
+          VehicleSort.specialPermitDate => (a.specialPermitDate ?? DateTime(2099)).compareTo(b.specialPermitDate ?? DateTime(2099)),
+          VehicleSort.toDate          => (a.nextToDate ?? a.toDate ?? DateTime(2099)).compareTo(b.nextToDate ?? b.toDate ?? DateTime(2099)),
+          VehicleSort.equipmentToDate => (a.nextEquipmentToDate ?? a.equipmentToDate ?? DateTime(2099)).compareTo(b.nextEquipmentToDate ?? b.equipmentToDate ?? DateTime(2099)),
+        };
+        return asc ? r : -r;
+      });
       return list;
     }
 
@@ -54,21 +70,9 @@ class TransportScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Column(
           children: [
-            Padding(
+            _SearchBar(
+              colors: colors,
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: TextField(
-                onChanged: (v) =>
-                    ref.read(vehicleSearchProvider.notifier).state = v,
-                decoration: InputDecoration(
-                  hintText: 'Поиск транспорта...',
-                  prefixIcon: const Icon(Icons.search, size: 18),
-                  isDense: true,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
-              ),
             ),
             Expanded(
               child: vehiclesAsync.when(
@@ -107,12 +111,19 @@ class TransportScreen extends ConsumerWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: colors.tableBorder, width: 0.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
-                  _SearchAndSort(colors: colors, sort: sort, ref: ref),
+                  _SearchBar(colors: colors),
                   Expanded(
                     child: vehiclesAsync.when(
                       loading: () =>
@@ -142,6 +153,16 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(permissionsProvider);
+    final showFilter = perms.isAdmin || perms.canFullAccess;
+    final departmentsAsync = showFilter ? ref.watch(departmentsProvider) : null;
+    final sectionsAsync = showFilter ? ref.watch(sectionsProvider) : null;
+    final selectedDept = showFilter ? ref.watch(selectedDepartmentProvider) : null;
+    final selectedSec = showFilter ? ref.watch(selectedSectionProvider) : null;
+
+    final departments = departmentsAsync?.value ?? [];
+    final deptSections = (sectionsAsync?.value ?? [])
+        .where((s) => s.departmentId == selectedDept)
+        .toList();
 
     return Container(
       height: 52,
@@ -170,114 +191,171 @@ class _TopBar extends StatelessWidget {
               ),
             ),
           const Spacer(),
-          const Icon(Icons.notifications_outlined, size: 20),
-          const SizedBox(width: 12),
-          Consumer(
-            builder: (context, ref, _) {
-              final profileAsync = ref.watch(profileProvider);
-              final initials = profileAsync.value?.initials ?? 'АИ';
-              final color = profileAsync.value?.avatarColor ?? '#4361EE';
-              final avatarColor = Color(int.parse(
-                  color.replaceFirst('#', '0xFF')));
-              return GestureDetector(
-                onTap: () => showDialog(
-                  context: context,
-                  builder: (_) => const ProfileDialog(),
-                ),
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: avatarColor,
-                  child: Text(initials,
-                    style: const TextStyle(fontSize: 11, color: Colors.white)),
-                ),
-              );
-            },
-          ),
+          // Фильтр по подразделению (только admin/full_access)
+          if (showFilter && departments.isNotEmpty) ...[
+            _DeptFilterDropdown(
+              label: 'Подразделение',
+              value: selectedDept,
+              items: departments.map((d) => (d.id, d.name)).toList(),
+              onChanged: (id) {
+                ref.read(selectedDepartmentProvider.notifier).state = id;
+                ref.read(selectedSectionProvider.notifier).state = null;
+              },
+              colors: colors,
+            ),
+            if (deptSections.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              _DeptFilterDropdown(
+                label: 'Участок',
+                value: selectedSec,
+                items: deptSections.map((s) => (s.id, s.name)).toList(),
+                onChanged: (id) =>
+                    ref.read(selectedSectionProvider.notifier).state = id,
+                colors: colors,
+              ),
+            ],
+            const SizedBox(width: 8),
+          ],
+          if (isMobile(context)) ...[
+            const Icon(Icons.notifications_outlined, size: 20),
+            const SizedBox(width: 12),
+            Consumer(
+              builder: (context, ref, _) {
+                final profileAsync = ref.watch(profileProvider);
+                final initials = profileAsync.value?.initials ?? 'АИ';
+                final color = profileAsync.value?.avatarColor ?? '#435EBE';
+                final avatarColor = Color(int.parse(
+                    color.replaceFirst('#', '0xFF')));
+                return GestureDetector(
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (_) => const ProfileDialog(),
+                  ),
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: avatarColor,
+                    child: Text(initials,
+                      style: const TextStyle(fontSize: 11, color: Colors.white)),
+                  ),
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _SearchAndSort extends StatelessWidget {
+class _DeptFilterDropdown extends StatelessWidget {
+  final String label;
+  final String? value;
+  final List<(String, String)> items;
+  final ValueChanged<String?> onChanged;
   final AppColors colors;
-  final VehicleSort sort;
-  final WidgetRef ref;
 
-  const _SearchAndSort({required this.colors, required this.sort, required this.ref});
+  const _DeptFilterDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.tableBorder),
+        borderRadius: BorderRadius.circular(8),
+        color: Theme.of(context).cardColor,
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: value,
+          isDense: true,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).textTheme.bodyMedium!.color,
+          ),
+          hint: Text(label,
+              style: TextStyle(fontSize: 12, color: colors.tableBorder)),
+          items: [
+            DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Все ($label)',
+                  style: const TextStyle(fontSize: 12)),
+            ),
+            ...items.map((e) => DropdownMenuItem<String?>(
+                  value: e.$1,
+                  child: Text(e.$2, style: const TextStyle(fontSize: 12)),
+                )),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchBar extends ConsumerStatefulWidget {
+  final AppColors colors;
+  final EdgeInsets padding;
+  const _SearchBar({
+    required this.colors,
+    this.padding = const EdgeInsets.fromLTRB(14, 14, 14, 8),
+  });
+
+  @override
+  ConsumerState<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends ConsumerState<_SearchBar> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: ref.read(vehicleSearchProvider));
+    _ctrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _clear() {
+    _ctrl.clear();
+    ref.read(vehicleSearchProvider.notifier).state = '';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Введите для поиска марку, модель, гос.номер или инвентарный номер',
-            style: Theme.of(context).textTheme.bodySmall,
+      padding: widget.padding,
+      child: TextField(
+        controller: _ctrl,
+        onChanged: (v) => ref.read(vehicleSearchProvider.notifier).state = v,
+        decoration: InputDecoration(
+          hintText: 'Поиск по марке, модели, гос. номеру или инв. номеру...',
+          isDense: true,
+          prefixIcon: const Icon(Icons.search, size: 16),
+          suffixIcon: _ctrl.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close, size: 16),
+                  onPressed: _clear,
+                  splashRadius: 14,
+                )
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: widget.colors.tableBorder),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  onChanged: (v) => ref.read(vehicleSearchProvider.notifier).state = v,
-                  decoration: InputDecoration(
-                    hintText: 'Поиск...',
-                    isDense: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: colors.tableBorder),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text('Сортировать по:', style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(width: 8),
-              _SortBtn('Инв. номер', VehicleSort.invNumber, sort, ref, colors),
-              const SizedBox(width: 4),
-              _SortBtn('Марка', VehicleSort.brand, sort, ref, colors),
-              const SizedBox(width: 4),
-              _SortBtn('Гос. номер', VehicleSort.govNumber, sort, ref, colors),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SortBtn extends StatelessWidget {
-  final String label;
-  final VehicleSort value;
-  final VehicleSort current;
-  final WidgetRef ref;
-  final AppColors colors;
-
-  const _SortBtn(this.label, this.value, this.current, this.ref, this.colors);
-
-  @override
-  Widget build(BuildContext context) {
-    final active = value == current;
-    return GestureDetector(
-      onTap: () => ref.read(vehicleSortProvider.notifier).state = value,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF4361EE) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: active ? const Color(0xFF4361EE) : colors.tableBorder,
-          ),
-        ),
-        child: Text(label,
-          style: TextStyle(
-            fontSize: 11,
-            color: active ? Colors.white : Theme.of(context).textTheme.bodySmall!.color,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
     );
@@ -299,6 +377,16 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
   static const _prefsKey = 'vehicle_col_widths';
   static const _labels = ['Инв. номер', 'Марка/модель', 'Гос. номер', 'Техосмотр', 'Страховка', 'Спец. разр.', 'ТО авто', 'ТО оборуд.'];
   static const _defaults = [90.0, 130.0, 100.0, 100.0, 100.0, 100.0, 140.0, 140.0];
+  static const _sortCols = <VehicleSort?>[
+    VehicleSort.invNumber,
+    VehicleSort.brand,
+    VehicleSort.govNumber,
+    VehicleSort.inspectionDate,
+    VehicleSort.insuranceDate,
+    VehicleSort.specialPermitDate,
+    VehicleSort.toDate,
+    VehicleSort.equipmentToDate,
+  ];
   late List<double> _widths;
 
   @override
@@ -321,15 +409,49 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
     await p.setStringList(_prefsKey, _widths.map((w) => w.toStringAsFixed(1)).toList());
   }
 
-  Widget _resizableHeader(int i) {
+  Widget _resizableHeader(int i, VehicleSort currentSort, bool currentAsc, Color primary) {
+    final sortCol = _sortCols[i];
+    final isActive = sortCol != null && sortCol == currentSort;
+
     return SizedBox(
       width: _widths[i],
       child: Row(
         children: [
           Expanded(
-            child: Text(_labels[i],
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF888888))),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () {
+                  if (currentSort == sortCol) {
+                    ref.read(vehicleSortAscProvider.notifier).state = !currentAsc;
+                  } else {
+                    ref.read(vehicleSortProvider.notifier).state = sortCol!;
+                    ref.read(vehicleSortAscProvider.notifier).state = true;
+                  }
+                },
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(_labels[i],
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                          color: isActive ? primary : const Color(0xFF888888),
+                        )),
+                    ),
+                    if (isActive) ...[
+                      const SizedBox(width: 2),
+                      Icon(
+                        currentAsc ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                        size: 11,
+                        color: primary,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
           MouseRegion(
             cursor: SystemMouseCursors.resizeColumn,
@@ -340,8 +462,7 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
               }),
               onHorizontalDragEnd: (_) => _save(),
               child: SizedBox(
-                width: 8,
-                height: 24,
+                width: 8, height: 24,
                 child: Center(
                   child: Container(width: 1, height: 16, color: widget.colors.tableBorder),
                 ),
@@ -357,6 +478,9 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd.MM.yyyy');
     final perms = ref.watch(permissionsProvider);
+    final currentSort = ref.watch(vehicleSortProvider);
+    final currentAsc = ref.watch(vehicleSortAscProvider);
+    final primary = Theme.of(context).colorScheme.primary;
 
     if (widget.mobile) {
       return ListView.builder(
@@ -383,7 +507,8 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
           ),
           child: Row(
             children: [
-              for (int i = 0; i < _labels.length; i++) _resizableHeader(i),
+              for (int i = 0; i < _labels.length; i++)
+                _resizableHeader(i, currentSort, currentAsc, primary),
               const Spacer(),
             ],
           ),
@@ -494,8 +619,16 @@ class _VehicleRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _DateCell(date: vehicle.toDate, fmt: fmt, colors: colors),
-                  if (vehicle.toMileage != null)
+                  _DateCell(
+                    date: vehicle.nextToDate ?? vehicle.toDate,
+                    fmt: fmt, colors: colors,
+                    isNext: vehicle.nextToDate != null,
+                  ),
+                  if (vehicle.nextToMileage != null)
+                    Text('${vehicle.nextToMileage} км',
+                      style: TextStyle(fontSize: 10,
+                          color: Theme.of(context).textTheme.bodySmall!.color))
+                  else if (vehicle.toMileage != null && vehicle.nextToDate == null)
                     Text('${vehicle.toMileage} км',
                       style: TextStyle(fontSize: 10,
                           color: Theme.of(context).textTheme.bodySmall!.color)),
@@ -506,8 +639,16 @@ class _VehicleRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _DateCell(date: vehicle.equipmentToDate, fmt: fmt, colors: colors),
-                  if (vehicle.equipmentHours != null)
+                  _DateCell(
+                    date: vehicle.nextEquipmentToDate ?? vehicle.equipmentToDate,
+                    fmt: fmt, colors: colors,
+                    isNext: vehicle.nextEquipmentToDate != null,
+                  ),
+                  if (vehicle.nextEquipmentToHours != null)
+                    Text('${vehicle.nextEquipmentToHours} м/ч',
+                      style: TextStyle(fontSize: 10,
+                          color: Theme.of(context).textTheme.bodySmall!.color))
+                  else if (vehicle.equipmentHours != null && vehicle.nextEquipmentToDate == null)
                     Text('${vehicle.equipmentHours} м/ч',
                       style: TextStyle(fontSize: 10,
                           color: Theme.of(context).textTheme.bodySmall!.color)),
@@ -533,8 +674,15 @@ class _DateCell extends StatelessWidget {
   final DateTime? date;
   final DateFormat fmt;
   final AppColors colors;
+  // true → дата является вычисленным "следующим ТО", показать иконку
+  final bool isNext;
 
-  const _DateCell({required this.date, required this.fmt, required this.colors});
+  const _DateCell({
+    required this.date,
+    required this.fmt,
+    required this.colors,
+    this.isNext = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -547,8 +695,23 @@ class _DateCell extends StatelessWidget {
       case 1: textColor = colors.badgeAmberText;
       default: textColor = Theme.of(context).textTheme.bodyMedium!.color!;
     }
-    return Text(fmt.format(date!),
-      style: TextStyle(fontSize: 12, fontWeight: status > 0 ? FontWeight.w500 : FontWeight.normal, color: textColor),
+    final label = fmt.format(date!);
+    if (!isNext) {
+      return Text(label,
+        style: TextStyle(fontSize: 12,
+            fontWeight: status > 0 ? FontWeight.w500 : FontWeight.normal,
+            color: textColor));
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.event_repeat_outlined, size: 11, color: textColor),
+        const SizedBox(width: 3),
+        Text(label,
+          style: TextStyle(fontSize: 12,
+              fontWeight: status > 0 ? FontWeight.w500 : FontWeight.normal,
+              color: textColor)),
+      ],
     );
   }
 }
