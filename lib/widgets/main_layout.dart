@@ -889,7 +889,7 @@ class _OfflineBanner extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                queueCount != null && queueCount > 0
+                queueCount > 0
                     ? 'Офлайн · $queueCount изм. ожидают синхронизации'
                     : 'Нет подключения к интернету',
                 style: const TextStyle(
