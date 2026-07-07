@@ -602,7 +602,7 @@ class _DriverSelectorField extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              isEmpty ? '— не закреплён —' : selected!.fullName,
+              isEmpty ? '— не закреплён —' : selected.fullName,
               style: TextStyle(
                 fontSize: 13,
                 color: isEmpty ? const Color(0xFF888888) : null,
