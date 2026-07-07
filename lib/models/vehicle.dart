@@ -137,9 +137,10 @@ class Vehicle {
     if (date == null) return 0;
     final now = DateTime.now();
     final diff = date.difference(now).inDays;
-    if (diff < 0) return 3;
-    if (diff <= 7) return 2;
-    if (diff <= 30) return 1;
+    if (diff < 0) return 4;   // expired → red
+    if (diff <= 7) return 3;  // 1-7 days → red
+    if (diff <= 14) return 2; // 7-14 days → amber
+    if (diff <= 30) return 1; // 14-30 days → green
     return 0;
   }
 }

@@ -267,7 +267,7 @@ class _MainLayoutState extends ConsumerState<MainLayout>
             child: Row(
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
+                  duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
                   width: collapsed ? 56 : 220,
                   child: _Sidebar(
@@ -460,7 +460,7 @@ class _MobileLayout extends ConsumerWidget {
 
 // ─── DESKTOP SIDEBAR ────────────────────────────────────────────────────────
 
-class _Sidebar extends StatelessWidget {
+class _Sidebar extends StatefulWidget {
   final AppColors colors;
   final DateTime now;
   final String currentLocation;
@@ -480,29 +480,90 @@ class _Sidebar extends StatelessWidget {
   });
 
   @override
+  State<_Sidebar> createState() => _SidebarState();
+}
+
+class _SidebarState extends State<_Sidebar> {
+  bool _textVisible = true;
+  double _textOpacity = 1.0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _textVisible = !widget.collapsed;
+    _textOpacity = widget.collapsed ? 0.0 : 1.0;
+  }
+
+  @override
+  void didUpdateWidget(_Sidebar old) {
+    super.didUpdateWidget(old);
+    if (old.collapsed != widget.collapsed) {
+      _timer?.cancel();
+      if (widget.collapsed) {
+        // Fade text out, then remove from tree after fade completes
+        setState(() => _textOpacity = 0.0);
+        _timer = Timer(const Duration(milliseconds: 200), () {
+          if (mounted) setState(() => _textVisible = false);
+        });
+      } else {
+        // Add text to tree (invisible), then fade in after width expands
+        setState(() { _textVisible = true; _textOpacity = 0.0; });
+        _timer = Timer(const Duration(milliseconds: 300), () {
+          if (mounted) setState(() => _textOpacity = 1.0);
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
-      color: colors.sidebarBg,
+      color: widget.colors.sidebarBg,
       child: Column(
         children: [
           _SidebarTop(
-            colors: colors,
-            now: now,
-            themeMode: themeMode,
-            collapsed: collapsed,
-            onThemeToggle: onThemeToggle,
-            onToggleCollapse: onToggleCollapse,
+            colors: widget.colors,
+            now: widget.now,
+            themeMode: widget.themeMode,
+            collapsed: widget.collapsed,
+            textVisible: _textVisible,
+            textOpacity: _textOpacity,
+            onThemeToggle: widget.onThemeToggle,
+            onToggleCollapse: widget.onToggleCollapse,
           ),
           Expanded(
             child: _SidebarNav(
-              colors: colors,
-              currentLocation: currentLocation,
-              collapsed: collapsed,
+              colors: widget.colors,
+              currentLocation: widget.currentLocation,
+              collapsed: widget.collapsed,
+              textVisible: _textVisible,
+              textOpacity: _textOpacity,
             ),
           ),
-          _SidebarBottomProfile(collapsed: collapsed, colors: colors),
-          _SidebarNetworkStatus(collapsed: collapsed, colors: colors),
-          _SidebarBottom(collapsed: collapsed),
+          _SidebarBottomProfile(
+            collapsed: widget.collapsed,
+            colors: widget.colors,
+            textVisible: _textVisible,
+            textOpacity: _textOpacity,
+          ),
+          _SidebarNetworkStatus(
+            collapsed: widget.collapsed,
+            colors: widget.colors,
+            textVisible: _textVisible,
+            textOpacity: _textOpacity,
+          ),
+          _SidebarBottom(
+            collapsed: widget.collapsed,
+            textVisible: _textVisible,
+            textOpacity: _textOpacity,
+          ),
         ],
       ),
     );
@@ -514,6 +575,8 @@ class _SidebarTop extends StatelessWidget {
   final DateTime now;
   final ThemeMode themeMode;
   final bool collapsed;
+  final bool textVisible;
+  final double textOpacity;
   final VoidCallback onThemeToggle;
   final VoidCallback onToggleCollapse;
 
@@ -522,6 +585,8 @@ class _SidebarTop extends StatelessWidget {
     required this.now,
     required this.themeMode,
     required this.collapsed,
+    required this.textVisible,
+    required this.textOpacity,
     required this.onThemeToggle,
     required this.onToggleCollapse,
   });
@@ -552,96 +617,112 @@ class _SidebarTop extends StatelessWidget {
                   child: const Icon(Icons.directions_car, color: Colors.white, size: 18),
                 ),
               ),
-              if (!collapsed) ...[
+              if (textVisible) ...[
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('ATControl',
-                    style: Theme.of(context).textTheme.titleMedium),
+                  child: AnimatedOpacity(
+                    opacity: textOpacity,
+                    duration: const Duration(milliseconds: 200),
+                    child: Text('ATControl',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  ),
                 ),
-                IconButton(
-                  onPressed: onToggleCollapse,
-                  icon: const Icon(Icons.chevron_left, size: 18),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                  color: Theme.of(context).textTheme.bodySmall!.color,
+                AnimatedOpacity(
+                  opacity: textOpacity,
+                  duration: const Duration(milliseconds: 200),
+                  child: IconButton(
+                    onPressed: onToggleCollapse,
+                    icon: const Icon(Icons.chevron_left, size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    color: Theme.of(context).textTheme.bodySmall!.color,
+                  ),
                 ),
               ],
             ],
           ),
-          if (!collapsed) ...[
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FittedBox(
-                fit: BoxFit.fitWidth,
-                alignment: Alignment.centerLeft,
-                child: Text(timeStr,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500)),
-              ),
-            ),
-            const SizedBox(height: 2),
-            SizedBox(
-              width: double.infinity,
-              child: Text(dateStr,
-                style: Theme.of(context).textTheme.bodySmall,
-                overflow: TextOverflow.ellipsis),
-            ),
-            const SizedBox(height: 4),
-            Consumer(
-              builder: (context, ref, _) {
-                final weatherAsync = ref.watch(weatherProvider);
-                return weatherAsync.when(
-                  loading: () => Text('загрузка...',
-                    style: Theme.of(context).textTheme.bodySmall),
-                  error: (_, __) => Text('погода недоступна',
-                    style: Theme.of(context).textTheme.bodySmall),
-                  data: (w) => Row(
+          if (textVisible)
+            AnimatedOpacity(
+              opacity: textOpacity,
+              duration: const Duration(milliseconds: 200),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FittedBox(
+                      fit: BoxFit.fitWidth,
+                      alignment: Alignment.centerLeft,
+                      child: Text(timeStr,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500)),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Text(dateStr,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(height: 4),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final weatherAsync = ref.watch(weatherProvider);
+                      return weatherAsync.when(
+                        loading: () => Text('загрузка...',
+                          style: Theme.of(context).textTheme.bodySmall),
+                        error: (_, __) => Text('погода недоступна',
+                          style: Theme.of(context).textTheme.bodySmall),
+                        data: (w) => Row(
+                          children: [
+                            Text(w.icon, style: const TextStyle(fontSize: 13)),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text('${w.temp.round()}°C • ${w.description}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                                overflow: TextOverflow.ellipsis),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
-                      Text(w.icon, style: const TextStyle(fontSize: 13)),
+                      const Icon(Icons.wb_sunny_outlined, size: 13),
                       const SizedBox(width: 4),
-                      Expanded(
-                        child: Text('${w.temp.round()}°C • ${w.description}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                          overflow: TextOverflow.ellipsis),
+                      GestureDetector(
+                        onTap: onThemeToggle,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 36, height: 20,
+                          decoration: BoxDecoration(
+                            color: themeMode == ThemeMode.dark
+                                ? colors.sidebarActive : colors.tableBorder,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: AnimatedAlign(
+                            duration: const Duration(milliseconds: 200),
+                            alignment: themeMode == ThemeMode.dark
+                                ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.all(2),
+                              width: 16, height: 16,
+                              decoration: const BoxDecoration(
+                                  color: Colors.white, shape: BoxShape.circle),
+                            ),
+                          ),
+                        ),
                       ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.nightlight_round, size: 13),
                     ],
                   ),
-                );
-              },
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.wb_sunny_outlined, size: 13),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: onThemeToggle,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 36, height: 20,
-                    decoration: BoxDecoration(
-                      color: themeMode == ThemeMode.dark
-                          ? colors.sidebarActive : colors.tableBorder,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: AnimatedAlign(
-                      duration: const Duration(milliseconds: 200),
-                      alignment: themeMode == ThemeMode.dark
-                          ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.all(2),
-                        width: 16, height: 16,
-                        decoration: const BoxDecoration(
-                            color: Colors.white, shape: BoxShape.circle),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(Icons.nightlight_round, size: 13),
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -659,11 +740,15 @@ class _SidebarNav extends ConsumerWidget {
   final AppColors colors;
   final String currentLocation;
   final bool collapsed;
+  final bool textVisible;
+  final double textOpacity;
 
   const _SidebarNav({
     required this.colors,
     required this.currentLocation,
     required this.collapsed,
+    required this.textVisible,
+    required this.textOpacity,
   });
 
   @override
@@ -700,7 +785,7 @@ class _SidebarNav extends ConsumerWidget {
                 color: isActive ? colors.sidebarActive : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: collapsed
+              child: !textVisible
                   ? Stack(
                       alignment: Alignment.center,
                       children: [
@@ -726,37 +811,41 @@ class _SidebarNav extends ConsumerWidget {
                           ),
                       ],
                     )
-                  : Row(
-                      children: [
-                        Icon(item.icon, size: 16,
-                          color: isActive ? Colors.white
-                              : Theme.of(context).textTheme.bodySmall!.color),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(item.label,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isActive ? Colors.white
-                                  : Theme.of(context).textTheme.bodyMedium!.color,
-                            ),
-                          ),
-                        ),
-                        if (item.badge > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: isActive ? Colors.white24 : colors.badgeRed,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text('${item.badge}',
+                  : AnimatedOpacity(
+                      opacity: textOpacity,
+                      duration: const Duration(milliseconds: 200),
+                      child: Row(
+                        children: [
+                          Icon(item.icon, size: 16,
+                            color: isActive ? Colors.white
+                                : Theme.of(context).textTheme.bodySmall!.color),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(item.label,
                               style: TextStyle(
-                                fontSize: 10, fontWeight: FontWeight.w500,
-                                color: isActive ? Colors.white : colors.badgeRedText,
+                                fontSize: 13,
+                                color: isActive ? Colors.white
+                                    : Theme.of(context).textTheme.bodyMedium!.color,
                               ),
                             ),
                           ),
-                      ],
+                          if (item.badge > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isActive ? Colors.white24 : colors.badgeRed,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text('${item.badge}',
+                                style: TextStyle(
+                                  fontSize: 10, fontWeight: FontWeight.w500,
+                                  color: isActive ? Colors.white : colors.badgeRedText,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
             ),
           ),
@@ -770,8 +859,15 @@ class _SidebarNav extends ConsumerWidget {
 class _SidebarBottomProfile extends ConsumerWidget {
   final bool collapsed;
   final AppColors colors;
+  final bool textVisible;
+  final double textOpacity;
 
-  const _SidebarBottomProfile({required this.collapsed, required this.colors});
+  const _SidebarBottomProfile({
+    required this.collapsed,
+    required this.colors,
+    required this.textVisible,
+    required this.textOpacity,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -786,54 +882,43 @@ class _SidebarBottomProfile extends ConsumerWidget {
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: colors.tableBorder, width: 0.5)),
       ),
-      child: collapsed
-          ? Column(
-              children: [
-                GestureDetector(
-                  onTap: () => showDialog(
-                    context: context,
-                    builder: (_) => const ProfileDialog(),
-                  ),
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: avatarColor,
-                    child: Text(initials,
-                        style: const TextStyle(fontSize: 10, color: Colors.white)),
+      child: GestureDetector(
+        onTap: () => showDialog(
+          context: context,
+          builder: (_) => const ProfileDialog(),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: avatarColor,
+              child: Text(initials,
+                  style: const TextStyle(fontSize: 10, color: Colors.white)),
+            ),
+            if (textVisible) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                child: AnimatedOpacity(
+                  opacity: textOpacity,
+                  duration: const Duration(milliseconds: 200),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(profileAsync.value?.fullName ?? '',
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis),
+                      Text(profileAsync.value?.position ?? '',
+                          style: const TextStyle(
+                              fontSize: 10, color: Color(0xFF888888)),
+                          overflow: TextOverflow.ellipsis),
+                    ],
                   ),
                 ),
-              ],
-            )
-          : GestureDetector(
-              onTap: () => showDialog(
-                context: context,
-                builder: (_) => const ProfileDialog(),
               ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: avatarColor,
-                    child: Text(initials,
-                        style: const TextStyle(fontSize: 10, color: Colors.white)),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(profileAsync.value?.fullName ?? '',
-                            style: const TextStyle(fontSize: 12),
-                            overflow: TextOverflow.ellipsis),
-                        Text(profileAsync.value?.position ?? '',
-                            style: const TextStyle(
-                                fontSize: 10, color: Color(0xFF888888)),
-                            overflow: TextOverflow.ellipsis),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -841,7 +926,14 @@ class _SidebarBottomProfile extends ConsumerWidget {
 class _SidebarNetworkStatus extends StatefulWidget {
   final bool collapsed;
   final AppColors colors;
-  const _SidebarNetworkStatus({required this.collapsed, required this.colors});
+  final bool textVisible;
+  final double textOpacity;
+  const _SidebarNetworkStatus({
+    required this.collapsed,
+    required this.colors,
+    required this.textVisible,
+    required this.textOpacity,
+  });
 
   @override
   State<_SidebarNetworkStatus> createState() => _SidebarNetworkStatusState();
@@ -890,7 +982,7 @@ class _SidebarNetworkStatusState extends State<_SidebarNetworkStatus> {
             ? 'Подключено'
             : 'Нет подключения';
 
-    if (widget.collapsed) {
+    if (!widget.textVisible) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Tooltip(
@@ -915,8 +1007,12 @@ class _SidebarNetworkStatusState extends State<_SidebarNetworkStatus> {
             decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
-          Text(label,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
+          AnimatedOpacity(
+            opacity: widget.textOpacity,
+            duration: const Duration(milliseconds: 200),
+            child: Text(label,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
+          ),
         ],
       ),
     );
@@ -925,7 +1021,13 @@ class _SidebarNetworkStatusState extends State<_SidebarNetworkStatus> {
 
 class _SidebarBottom extends StatefulWidget {
   final bool collapsed;
-  const _SidebarBottom({required this.collapsed});
+  final bool textVisible;
+  final double textOpacity;
+  const _SidebarBottom({
+    required this.collapsed,
+    required this.textVisible,
+    required this.textOpacity,
+  });
 
   @override
   State<_SidebarBottom> createState() => _SidebarBottomState();
@@ -944,11 +1046,15 @@ class _SidebarBottomState extends State<_SidebarBottom> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.collapsed) return const SizedBox(height: 14);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      child: Text('Версия $_version',
-        style: Theme.of(context).textTheme.bodySmall),
+    if (!widget.textVisible) return const SizedBox(height: 14);
+    return AnimatedOpacity(
+      opacity: widget.textOpacity,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        child: Text('Версия $_version',
+          style: Theme.of(context).textTheme.bodySmall),
+      ),
     );
   }
 }

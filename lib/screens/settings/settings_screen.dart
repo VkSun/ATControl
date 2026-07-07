@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
-import '../../services/profile_service.dart';
 import '../../services/autostart_service.dart';
-import '../../screens/profile/profile_dialog.dart';
 import 'import_dialog.dart';
 
 // Провайдеры уведомлений с сохранением в SharedPreferences
@@ -164,31 +162,6 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           Text('Настройки', style: Theme.of(context).textTheme.titleMedium),
-          const Spacer(),
-          if (!isMobile(context)) ...[
-            const Icon(Icons.notifications_outlined, size: 20),
-            const SizedBox(width: 12),
-            Consumer(
-              builder: (context, ref, _) {
-                final profileAsync = ref.watch(profileProvider);
-                final initials = profileAsync.value?.initials ?? 'АИ';
-                final color = profileAsync.value?.avatarColor ?? '#4361EE';
-                final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
-                return GestureDetector(
-                  onTap: () => showDialog(
-                    context: context,
-                    builder: (_) => const ProfileDialog(),
-                  ),
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: avatarColor,
-                    child: Text(initials,
-                      style: const TextStyle(fontSize: 11, color: Colors.white)),
-                  ),
-                );
-              },
-            ),
-          ],
         ],
       ),
     );

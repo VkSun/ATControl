@@ -577,8 +577,10 @@ class _DateCell extends StatelessWidget {
     Color textColor;
     if (diff < 0 || diff <= 7) {
       textColor = colors.badgeRedText;
-    } else if (diff <= 30) {
+    } else if (diff <= 14) {
       textColor = colors.badgeAmberText;
+    } else if (diff <= 30) {
+      textColor = colors.badgeGreenText;
     } else {
       textColor = Theme.of(context).textTheme.bodyMedium!.color!;
     }

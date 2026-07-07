@@ -10,8 +10,6 @@ import '../../services/task_service.dart';
 import '../../services/notification_service.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
-import '../../services/profile_service.dart';
-import '../../screens/profile/profile_dialog.dart';
 import '../settings/settings_screen.dart' show notifyDay7Provider, notifyDay14Provider, notifyDay30Provider;
 import '../../widgets/main_layout.dart' show SplitHandle;
 
@@ -131,29 +129,6 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           Text('Главная', style: Theme.of(context).textTheme.titleMedium),
-          const Spacer(),
-          const Icon(Icons.notifications_outlined, size: 20),
-          const SizedBox(width: 12),
-          Consumer(
-            builder: (context, ref, _) {
-              final profileAsync = ref.watch(profileProvider);
-              final initials = profileAsync.value?.initials ?? 'АИ';
-              final color = profileAsync.value?.avatarColor ?? '#4361EE';
-              final avatarColor = Color(int.parse(color.replaceFirst('#', '0xFF')));
-              return GestureDetector(
-                onTap: () => showDialog(
-                  context: context,
-                  builder: (_) => const ProfileDialog(),
-                ),
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: avatarColor,
-                  child: Text(initials,
-                    style: const TextStyle(fontSize: 11, color: Colors.white)),
-                ),
-              );
-            },
-          ),
         ],
       ),
     );

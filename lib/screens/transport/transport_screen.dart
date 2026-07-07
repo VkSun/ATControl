@@ -690,9 +690,10 @@ class _DateCell extends StatelessWidget {
     final status = Vehicle.dateStatus(date);
     Color textColor;
     switch (status) {
-      case 2: textColor = colors.badgeRedText;
       case 3: textColor = colors.badgeRedText;
-      case 1: textColor = colors.badgeAmberText;
+      case 4: textColor = colors.badgeRedText;
+      case 2: textColor = colors.badgeAmberText;
+      case 1: textColor = colors.badgeGreenText;
       default: textColor = Theme.of(context).textTheme.bodyMedium!.color!;
     }
     final label = fmt.format(date!);
