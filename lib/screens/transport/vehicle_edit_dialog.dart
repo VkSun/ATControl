@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/vehicle.dart';
+import '../../models/driver.dart';
 import '../../services/department_service.dart';
 import '../../services/vehicle_service.dart';
+import '../../services/driver_service.dart';
 import '../../utils/date_picker.dart';
 
 class VehicleEditDialog extends ConsumerStatefulWidget {
@@ -24,6 +26,9 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   late TextEditingController _equipmentToPeriodHours, _equipmentToPeriodMonths;
   DateTime? _inspectionDate, _insuranceDate, _specialPermitDate, _toDate, _equipmentToDate;
   String? _departmentId, _sectionId;
+  String? _assignedDriverId;
+  String? _originalDriverId;
+  List<Driver> _allDrivers = [];
   bool _loading = false;
 
   @override
@@ -54,6 +59,26 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
     for (final c in [_toMileage, _toPeriodKm, _toPeriodMonths,
                      _equipmentHours, _equipmentToPeriodHours, _equipmentToPeriodMonths]) {
       c.addListener(() => setState(() {}));
+    }
+
+    // Load all drivers and find which one is assigned to this vehicle
+    if (widget.vehicle != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final drivers = await ref.read(driverServiceProvider).getAll();
+        if (!mounted) return;
+        Driver? assigned;
+        for (final d in drivers) {
+          if (d.vehicleIds.contains(widget.vehicle!.id)) {
+            assigned = d;
+            break;
+          }
+        }
+        setState(() {
+          _allDrivers = drivers;
+          _assignedDriverId = assigned?.id;
+          _originalDriverId = assigned?.id;
+        });
+      });
     }
   }
 
@@ -145,6 +170,32 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
         await service.create(vehicle);
       } else {
         await service.update(widget.vehicle!.id, vehicle);
+
+        // Update driver assignment if changed
+        if (_assignedDriverId != _originalDriverId) {
+          final driverService = ref.read(driverServiceProvider);
+          final vehicleId = widget.vehicle!.id;
+
+          if (_originalDriverId != null) {
+            final orig = _allDrivers.firstWhere(
+                (d) => d.id == _originalDriverId,
+                orElse: () => throw Exception('Driver not found'));
+            final updatedIds =
+                orig.vehicleIds.where((id) => id != vehicleId).toList();
+            await driverService.update(
+                _originalDriverId!, orig.copyWith(vehicleIds: updatedIds));
+          }
+
+          if (_assignedDriverId != null) {
+            final next = _allDrivers
+                .firstWhere((d) => d.id == _assignedDriverId);
+            if (!next.vehicleIds.contains(vehicleId)) {
+              final updatedIds = [...next.vehicleIds, vehicleId];
+              await driverService.update(
+                  _assignedDriverId!, next.copyWith(vehicleIds: updatedIds));
+            }
+          }
+        }
       }
       widget.onSaved();
       if (mounted) Navigator.pop(context);
@@ -324,6 +375,18 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 ]),
                 const SizedBox(height: 14),
 
+                // Закреплённый водитель (только при редактировании)
+                if (widget.vehicle != null) ...[
+                  _sectionLabel('Водитель'),
+                  _DriverSelectorField(
+                    drivers: _allDrivers,
+                    selectedId: _assignedDriverId,
+                    onChanged: (id) =>
+                        setState(() => _assignedDriverId = id),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
                 // Заметки
                 _sectionLabel('Заметки'),
                 _field(_notes, 'Заметки', maxLines: 2),
@@ -488,6 +551,213 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
           ),
+      ],
+    );
+  }
+}
+
+class _DriverSelectorField extends StatelessWidget {
+  final List<Driver> drivers;
+  final String? selectedId;
+  final ValueChanged<String?> onChanged;
+
+  const _DriverSelectorField({
+    required this.drivers,
+    required this.selectedId,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = drivers.cast<Driver?>().firstWhere(
+          (d) => d?.id == selectedId,
+          orElse: () => null,
+        );
+    final isEmpty = selected == null;
+
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.edit_outlined, size: 18),
+          tooltip: 'Выбрать водителя',
+          padding: const EdgeInsets.all(4),
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          onPressed: () async {
+            final result = await showDialog<String?>(
+              context: context,
+              builder: (_) => _DriverPickerDialog(
+                drivers: drivers,
+                selectedId: selectedId,
+              ),
+            );
+            if (result != null) onChanged(result == '' ? null : result);
+          },
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFBBBBBB)),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              isEmpty ? '— не закреплён —' : selected!.fullName,
+              style: TextStyle(
+                fontSize: 13,
+                color: isEmpty ? const Color(0xFF888888) : null,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DriverPickerDialog extends StatefulWidget {
+  final List<Driver> drivers;
+  final String? selectedId;
+
+  const _DriverPickerDialog({
+    required this.drivers,
+    required this.selectedId,
+  });
+
+  @override
+  State<_DriverPickerDialog> createState() => _DriverPickerDialogState();
+}
+
+class _DriverPickerDialogState extends State<_DriverPickerDialog> {
+  late String? _selected;
+  late TextEditingController _searchCtrl;
+  String _search = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.selectedId;
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.drivers.where((d) {
+      if (_search.isEmpty) return true;
+      return d.fullName.toLowerCase().contains(_search.toLowerCase()) ||
+          d.tabNumber.toLowerCase().contains(_search.toLowerCase());
+    }).toList();
+
+    return AlertDialog(
+      backgroundColor: Theme.of(context).cardColor,
+      surfaceTintColor: Colors.transparent,
+      title: const Text('Закреплённый водитель'),
+      content: SizedBox(
+        width: 400,
+        height: 400,
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _search = v),
+              decoration: const InputDecoration(
+                hintText: 'Поиск по ФИО, таб. номеру...',
+                prefixIcon: Icon(Icons.search, size: 18),
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                children: [
+                  // Пункт "не закреплён"
+                  InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () => setState(() => _selected = null),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 7),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _selected == null
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            size: 18,
+                            color: _selected == null
+                                ? const Color(0xFF4361EE)
+                                : const Color(0xFF888888),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text('— не закреплён —',
+                              style: TextStyle(
+                                  fontSize: 13, color: Color(0xFF888888))),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  ...filtered.map((d) {
+                    final isSelected = _selected == d.id;
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () => setState(() => _selected = d.id),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 7),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_unchecked,
+                              size: 18,
+                              color: isSelected
+                                  ? const Color(0xFF4361EE)
+                                  : const Color(0xFF888888),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(d.fullName,
+                                      style: const TextStyle(fontSize: 13)),
+                                  if (d.tabNumber.isNotEmpty)
+                                    Text('Таб. ${d.tabNumber}',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF888888))),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _selected ?? ''),
+          child: const Text('Применить'),
+        ),
       ],
     );
   }

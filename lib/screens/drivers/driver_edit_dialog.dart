@@ -225,13 +225,13 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
                 ]),
                 const SizedBox(height: 10),
 
-                // Выбор закреплённых ТС (мультиселект)
+                // Закреплённые ТС
                 vehiclesAsync.when(
                   loading: () => const LinearProgressIndicator(),
                   error: (_, __) => const SizedBox(),
-                  data: (vehicles) => _VehicleMultiSelect(
+                  data: (vehicles) => _VehicleSelectorField(
                     vehicles: vehicles,
-                    selected: _selectedVehicleIds,
+                    selectedIds: _selectedVehicleIds,
                     onChanged: (ids) => setState(() => _selectedVehicleIds = ids),
                   ),
                 ),
@@ -339,88 +339,209 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
   }
 }
 
-class _VehicleMultiSelect extends StatelessWidget {
+class _VehicleSelectorField extends StatelessWidget {
   final List<dynamic> vehicles;
-  final List<String> selected;
+  final List<String> selectedIds;
   final ValueChanged<List<String>> onChanged;
 
-  const _VehicleMultiSelect({
+  const _VehicleSelectorField({
     required this.vehicles,
-    required this.selected,
+    required this.selectedIds,
     required this.onChanged,
   });
 
+  String _displayText() {
+    if (selectedIds.isEmpty) return '— не выбраны —';
+    final matched = vehicles
+        .where((v) => selectedIds.contains(v.id as String))
+        .map((v) => v.invNumber as String)
+        .toList();
+    return matched.isEmpty ? '— не выбраны —' : matched.join('; ');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isEmpty = selectedIds.isEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Закреплённые ТС',
             style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
         const SizedBox(height: 6),
-        Container(
-          constraints: const BoxConstraints(maxHeight: 160),
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFBBBBBB)),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: vehicles.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Text('Нет ТС в системе',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
-                )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: vehicles.length,
-                  itemBuilder: (context, i) {
-                    final v = vehicles[i];
-                    final isSelected = selected.contains(v.id as String);
-                    return InkWell(
-                      onTap: () {
-                        final updated = List<String>.from(selected);
-                        if (isSelected) {
-                          updated.remove(v.id);
-                        } else {
-                          updated.add(v.id as String);
-                        }
-                        onChanged(updated);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isSelected
-                                  ? Icons.check_box
-                                  : Icons.check_box_outline_blank,
-                              size: 16,
-                              color: isSelected
-                                  ? const Color(0xFF4361EE)
-                                  : const Color(0xFF888888),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '${v.invNumber} — ${v.brandModel} (${v.govNumber})',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              tooltip: 'Выбрать ТС',
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              onPressed: () async {
+                final result = await showDialog<List<String>>(
+                  context: context,
+                  builder: (_) => _VehiclePickerDialog(
+                    vehicles: vehicles,
+                    initialSelected: selectedIds,
+                  ),
+                );
+                if (result != null) onChanged(result);
+              },
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFFBBBBBB)),
+                  borderRadius: BorderRadius.circular(4),
                 ),
+                child: Text(
+                  _displayText(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isEmpty ? const Color(0xFF888888) : null,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        if (selected.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text('Выбрано: ${selected.length}',
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF4361EE))),
-          ),
+      ],
+    );
+  }
+}
+
+class _VehiclePickerDialog extends StatefulWidget {
+  final List<dynamic> vehicles;
+  final List<String> initialSelected;
+
+  const _VehiclePickerDialog({
+    required this.vehicles,
+    required this.initialSelected,
+  });
+
+  @override
+  State<_VehiclePickerDialog> createState() => _VehiclePickerDialogState();
+}
+
+class _VehiclePickerDialogState extends State<_VehiclePickerDialog> {
+  late List<String> _selected;
+  late TextEditingController _searchCtrl;
+  String _search = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List.from(widget.initialSelected);
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.vehicles.where((v) {
+      if (_search.isEmpty) return true;
+      final q = _search.toLowerCase();
+      return '${v.invNumber} ${v.brandModel} ${v.govNumber}'
+          .toLowerCase()
+          .contains(q);
+    }).toList();
+
+    return AlertDialog(
+      backgroundColor: Theme.of(context).cardColor,
+      surfaceTintColor: Colors.transparent,
+      title: const Text('Закреплённые ТС'),
+      content: SizedBox(
+        width: 420,
+        height: 420,
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _search = v),
+              decoration: const InputDecoration(
+                hintText: 'Поиск по номеру, марке...',
+                prefixIcon: Icon(Icons.search, size: 18),
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(
+                      child: Text('Ничего не найдено',
+                          style: TextStyle(color: Color(0xFF888888))))
+                  : ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, i) {
+                        final v = filtered[i];
+                        final isSelected =
+                            _selected.contains(v.id as String);
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: () => setState(() {
+                            if (isSelected) {
+                              _selected.remove(v.id);
+                            } else {
+                              _selected.add(v.id as String);
+                            }
+                          }),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 7),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.check_box
+                                      : Icons.check_box_outline_blank,
+                                  size: 18,
+                                  color: isSelected
+                                      ? const Color(0xFF4361EE)
+                                      : const Color(0xFF888888),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '${v.invNumber} — ${v.brandModel} (${v.govNumber})',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            if (_selected.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Выбрано: ${_selected.length}',
+                      style: const TextStyle(
+                          fontSize: 11, color: Color(0xFF4361EE))),
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _selected),
+          child: const Text('Применить'),
+        ),
       ],
     );
   }

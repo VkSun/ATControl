@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:window_manager/window_manager.dart';
+import 'package:tray_manager/tray_manager.dart';
 import 'dart:async';
 import 'dart:io';
 import '../utils/theme.dart';
@@ -16,6 +18,7 @@ import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/update_service.dart';
 import '../screens/profile/profile_dialog.dart';
+import '../screens/settings/settings_screen.dart' show closeToTrayProvider;
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
 
@@ -28,7 +31,7 @@ class MainLayout extends ConsumerStatefulWidget {
 }
 
 class _MainLayoutState extends ConsumerState<MainLayout>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, WindowListener, TrayListener {
   late Timer _timer;
   late DateTime _now;
   double? _lastWidth;
@@ -41,7 +44,85 @@ class _MainLayoutState extends ConsumerState<MainLayout>
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _now = DateTime.now());
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdate());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdate();
+      if (Platform.isWindows) _setupTray();
+    });
+    if (Platform.isWindows) {
+      windowManager.addListener(this);
+      trayManager.addListener(this);
+    }
+  }
+
+  Future<void> _setupTray() async {
+    await trayManager.setIcon('assets/icons/app_icon.ico');
+    await trayManager.setToolTip('ATControl');
+    await trayManager.setContextMenu(Menu(items: [
+      MenuItem(key: 'show', label: 'Развернуть ATControl'),
+      MenuItem.separator(),
+      MenuItem(key: 'quit', label: 'Закрыть ATControl'),
+    ]));
+  }
+
+  // WindowListener
+  @override
+  void onWindowClose() async {
+    if (!mounted) return;
+    final closeToTray = ref.read(closeToTrayProvider);
+    if (closeToTray) {
+      await windowManager.hide();
+    } else {
+      await _showCloseConfirmation();
+    }
+  }
+
+  // TrayListener
+  @override
+  void onTrayIconMouseDown() {
+    windowManager.show();
+    windowManager.focus();
+  }
+
+  @override
+  void onTrayMenuItemClick(MenuItem menuItem) {
+    if (menuItem.key == 'show') {
+      windowManager.show();
+      windowManager.focus();
+    } else if (menuItem.key == 'quit') {
+      _showCloseConfirmation();
+    }
+  }
+
+  Future<void> _showCloseConfirmation() async {
+    if (!mounted) return;
+    final isOffline = isOfflineNotifier.value;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Завершить ATControl?'),
+        content: isOffline
+            ? const Text(
+                'Есть несинхронизированные изменения.\n'
+                'При закрытии они могут быть потеряны.',
+              )
+            : null,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Завершить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await windowManager.destroy();
+    }
   }
 
   Future<void> _checkForUpdate() async {
@@ -158,6 +239,10 @@ class _MainLayoutState extends ConsumerState<MainLayout>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (Platform.isWindows) {
+      windowManager.removeListener(this);
+      trayManager.removeListener(this);
+    }
     _timer.cancel();
     super.dispose();
   }

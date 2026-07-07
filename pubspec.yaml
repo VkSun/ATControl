@@ -50,6 +50,10 @@ dependencies:
   # Автозагрузка (Windows/macOS)
   launch_at_startup: ^0.5.1
 
+  # Управление окном и системный трей (Windows)
+  window_manager: ^0.4.3
+  tray_manager: ^0.2.3
+
   # Постоянное хранение настроек
   shared_preferences: ^2.3.0
   local_notifier: ^0.1.6
@@ -61,3 +65,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/app_icon.ico

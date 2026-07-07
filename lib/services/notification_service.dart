@@ -7,6 +7,7 @@ class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
   static bool _checked = false;
+  static LocalNotification? _lastNotification;
 
   static Future<void> init() async {
     if (_initialized) return;
@@ -103,8 +104,9 @@ class NotificationService {
         );
         await _plugin.show(0, title, body, details);
       } else if (Platform.isWindows) {
-        final notification = LocalNotification(title: title, body: body);
-        await notification.show();
+        await _lastNotification?.close();
+        _lastNotification = LocalNotification(title: title, body: body);
+        await _lastNotification!.show();
       }
     } catch (_) {}
   }

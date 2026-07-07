@@ -31,6 +31,10 @@ class _BoolPref extends StateNotifier<bool> {
   }
 }
 
+// Провайдер поведения при закрытии окна (только Windows)
+final closeToTrayProvider = StateNotifierProvider<_BoolPref, bool>(
+    (_) => _BoolPref('close_to_tray', false));
+
 // Провайдер автозагрузки (только Windows)
 final autostartProvider = StateNotifierProvider<_AutostartNotifier, AsyncValue<bool>>(
     (_) => _AutostartNotifier());
@@ -128,6 +132,8 @@ class SettingsScreen extends ConsumerWidget {
                 if (Platform.isWindows) ...[
                   const _SectionLabel('Система'),
                   _AutostartCard(colors: colors),
+                  const SizedBox(height: 8),
+                  _CloseToTrayCard(colors: colors),
                 ],
                 if (!isMobile(context)) ...[
                   const _SectionLabel('Импорт и экспорт'),
@@ -366,6 +372,23 @@ class _AutostartCard extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CloseToTrayCard extends ConsumerWidget {
+  final AppColors colors;
+  const _CloseToTrayCard({required this.colors});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(closeToTrayProvider);
+    return _ToggleSetting(
+      label: 'Сворачивать в трей при закрытии',
+      desc: 'Нажатие × скрывает окно в трей; для выхода — меню трея',
+      value: enabled,
+      onChanged: (v) => ref.read(closeToTrayProvider.notifier).set(v),
+      colors: colors,
     );
   }
 }

@@ -37,6 +37,25 @@ class Driver {
 
   String? get vehicleId => vehicleIds.firstOrNull;
 
+  Driver copyWith({List<String>? vehicleIds}) => Driver(
+    id: id,
+    tabNumber: tabNumber,
+    lastName: lastName,
+    firstName: firstName,
+    middleName: middleName,
+    birthDate: birthDate,
+    phone: phone,
+    address: address,
+    licenseNumber: licenseNumber,
+    licenseExpiry: licenseExpiry,
+    licenseCategories: licenseCategories,
+    medicalExpiry: medicalExpiry,
+    vehicleIds: vehicleIds ?? this.vehicleIds,
+    notes: notes,
+    departmentId: departmentId,
+    sectionId: sectionId,
+  );
+
   String get fullName => '$lastName $firstName${middleName != null ? ' $middleName' : ''}';
   String get shortName => '$lastName ${firstName[0]}.${middleName != null ? '${middleName![0]}.' : ''}';
 
