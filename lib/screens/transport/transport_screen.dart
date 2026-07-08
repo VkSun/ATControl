@@ -11,6 +11,7 @@ import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
+import '../../widgets/async_value_view.dart';
 
 enum VehicleSort {
   invNumber, brand, govNumber,
@@ -75,11 +76,10 @@ class TransportScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             ),
             Expanded(
-              child: vehiclesAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Ошибка: $e')),
-                data: (vehicles) => _VehicleTable(
+              child: AsyncValueView(
+                value: vehiclesAsync,
+                onRetry: vehiclesProvider,
+                builder: (vehicles) => _VehicleTable(
                   vehicles: buildList(vehicles),
                   colors: colors,
                   mobile: true,
@@ -88,9 +88,9 @@ class TransportScreen extends ConsumerWidget {
             ),
           ],
         ),
-        floatingActionButton: perms.canAddVehicle
+        floatingActionButton: (perms.canAddVehicle || perms.isLoading)
             ? FloatingActionButton(
-                onPressed: () => showDialog(
+                onPressed: perms.isLoading ? null : () => showDialog(
                   context: context,
                   builder: (_) => VehicleEditDialog(
                     onSaved: () => ref.invalidate(vehiclesProvider),
@@ -125,11 +125,10 @@ class TransportScreen extends ConsumerWidget {
                 children: [
                   _SearchBar(colors: colors),
                   Expanded(
-                    child: vehiclesAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Ошибка: $e')),
-                      data: (vehicles) => _VehicleTable(
+                    child: AsyncValueView(
+                      value: vehiclesAsync,
+                      onRetry: vehiclesProvider,
+                      builder: (vehicles) => _VehicleTable(
                         vehicles: buildList(vehicles),
                         colors: colors,
                       ),
@@ -175,9 +174,9 @@ class _TopBar extends StatelessWidget {
         children: [
           Text('Транспорт', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(width: 12),
-          if (perms.canAddVehicle)
+          if (perms.canAddVehicle || perms.isLoading)
             FilledButton.icon(
-              onPressed: () => showDialog(
+              onPressed: perms.isLoading ? null : () => showDialog(
                 context: context,
                 builder: (_) => VehicleEditDialog(
                   onSaved: () => ref.invalidate(vehiclesProvider),

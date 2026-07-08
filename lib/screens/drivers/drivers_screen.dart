@@ -13,6 +13,7 @@ import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
+import '../../widgets/async_value_view.dart';
 
 enum DriverSort { fullName, tabNumber, licenseExpiry, medicalExpiry, birthDate }
 
@@ -66,10 +67,10 @@ class DriversScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             ),
             Expanded(
-              child: driversAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Ошибка: $e')),
-                data: (drivers) => _DriverTable(
+              child: AsyncValueView(
+                value: driversAsync,
+                onRetry: driversProvider,
+                builder: (drivers) => _DriverTable(
                   drivers: _buildList(drivers, search, sort, asc),
                   colors: colors,
                   mobile: true,
@@ -78,9 +79,9 @@ class DriversScreen extends ConsumerWidget {
             ),
           ],
         ),
-        floatingActionButton: perms.canAddDriver
+        floatingActionButton: (perms.canAddDriver || perms.isLoading)
             ? FloatingActionButton(
-                onPressed: () => showDialog(
+                onPressed: perms.isLoading ? null : () => showDialog(
                   context: context,
                   builder: (_) => DriverEditDialog(
                     onSaved: () => ref.invalidate(driversProvider),
@@ -115,10 +116,10 @@ class DriversScreen extends ConsumerWidget {
                 children: [
                   _SearchBar(colors: colors),
                   Expanded(
-                    child: driversAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Ошибка: $e')),
-                      data: (drivers) => _DriverTable(
+                    child: AsyncValueView(
+                      value: driversAsync,
+                      onRetry: driversProvider,
+                      builder: (drivers) => _DriverTable(
                         drivers: _buildList(drivers, search, sort, asc),
                         colors: colors,
                       ),
@@ -164,9 +165,9 @@ class _TopBar extends StatelessWidget {
         children: [
           Text('Водители', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(width: 12),
-          if (perms.canAddDriver)
+          if (perms.canAddDriver || perms.isLoading)
             FilledButton.icon(
-              onPressed: () => showDialog(
+              onPressed: perms.isLoading ? null : () => showDialog(
                 context: context,
                 builder: (_) => DriverEditDialog(
                   onSaved: () => ref.invalidate(driversProvider),

@@ -15,6 +15,7 @@ import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
 import '../../utils/date_picker.dart';
 import '../../widgets/main_layout.dart' show SplitHandle;
+import '../../widgets/async_value_view.dart';
 
 final notesProvider = StateProvider<String>((ref) => '');
 
@@ -155,10 +156,10 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: colors.tableBorder, width: 0.5),
                         ),
-                        child: tasksAsync.when(
-                          loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (e, _) => Center(child: Text('Ошибка: $e')),
-                          data: (tasks) => _TaskList(tasks: tasks, colors: colors, ref: ref),
+                        child: AsyncValueView(
+                          value: tasksAsync,
+                          onRetry: tasksProvider,
+                          builder: (tasks) => _TaskList(tasks: tasks, colors: colors, ref: ref),
                         ),
                       ),
                     ),
@@ -285,10 +286,10 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
               child: TabBarView(
                 children: [
                   // Вкладка Задачи
-                  tasksAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('Ошибка: $e')),
-                    data: (tasks) {
+                  AsyncValueView(
+                    value: tasksAsync,
+                    onRetry: tasksProvider,
+                    builder: (tasks) {
                       final fmt = DateFormat('dd MMMM', 'ru');
                       final todayStr = toDateString(DateTime.now());
                       final Map<String, List<Task>> grouped = {};
@@ -373,9 +374,9 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
             ),
           ],
         ),
-        floatingActionButton: perms.canAddTask
+        floatingActionButton: (perms.canAddTask || perms.isLoading)
             ? FloatingActionButton(
-                onPressed: () => _openAddTask(context),
+                onPressed: perms.isLoading ? null : () => _openAddTask(context),
                 child: const Icon(Icons.add),
               )
             : null,
@@ -423,9 +424,9 @@ class _TopBar extends StatelessWidget {
               Text('Планировщик',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(width: 12),
-              if (perms.canAddTask)
+              if (perms.canAddTask || perms.isLoading)
                 FilledButton.icon(
-                  onPressed: onAddTask,
+                  onPressed: perms.isLoading ? null : onAddTask,
                   icon: const Icon(Icons.add, size: 14),
                   label: const Text('Добавить задачу',
                       style: TextStyle(fontSize: 12)),
@@ -436,9 +437,9 @@ class _TopBar extends StatelessWidget {
                   ),
                 ),
               const SizedBox(width: 8),
-              if (perms.isAdmin)
+              if (perms.isAdmin || perms.isLoading)
                 OutlinedButton.icon(
-                  onPressed: syncing ? null : onSync,
+                  onPressed: (syncing || perms.isLoading) ? null : onSync,
                   icon: syncing
                       ? const SizedBox(
                           width: 12,

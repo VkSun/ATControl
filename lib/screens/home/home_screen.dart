@@ -13,6 +13,7 @@ import '../../utils/responsive.dart';
 import '../../utils/date_utils.dart';
 import '../settings/settings_screen.dart' show notifyDay7Provider, notifyDay14Provider, notifyDay30Provider;
 import '../../widgets/main_layout.dart' show SplitHandle;
+import '../../widgets/async_value_view.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -305,79 +306,74 @@ class _TasksCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.tableBorder, width: 0.5),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: mobile ? MainAxisSize.min : MainAxisSize.max,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Text('Задачи на сегодня и завтра',
-                style: Theme.of(context).textTheme.titleSmall),
-          ),
-          tasksAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (e, _) => Padding(
-              padding: const EdgeInsets.all(14),
-              child: Text('Ошибка: $e'),
-            ),
-            data: (allTasks) {
-              var todayTasks = allTasks.where((t) =>
-                t.dueDate != null &&
-                t.dueDate!.year == today.year &&
-                t.dueDate!.month == today.month &&
-                t.dueDate!.day == today.day).toList();
+      child: Builder(builder: (context) {
+        final asyncView = AsyncValueView<List<Task>>(
+          value: tasksAsync,
+          onRetry: tasksProvider,
+          builder: (allTasks) {
+            var todayTasks = allTasks.where((t) =>
+              t.dueDate != null &&
+              t.dueDate!.year == today.year &&
+              t.dueDate!.month == today.month &&
+              t.dueDate!.day == today.day).toList();
 
-              var tomorrowTasks = allTasks.where((t) =>
-                t.dueDate != null &&
-                t.dueDate!.year == tomorrow.year &&
-                t.dueDate!.month == tomorrow.month &&
-                t.dueDate!.day == tomorrow.day).toList();
+            var tomorrowTasks = allTasks.where((t) =>
+              t.dueDate != null &&
+              t.dueDate!.year == tomorrow.year &&
+              t.dueDate!.month == tomorrow.month &&
+              t.dueDate!.day == tomorrow.day).toList();
 
-              if (limit != null) {
-                final remaining = limit!;
-                if (todayTasks.length > remaining) {
-                  todayTasks = todayTasks.take(remaining).toList();
-                  tomorrowTasks = [];
-                } else {
-                  tomorrowTasks = tomorrowTasks
-                      .take(remaining - todayTasks.length)
-                      .toList();
-                }
+            if (limit != null) {
+              final remaining = limit!;
+              if (todayTasks.length > remaining) {
+                todayTasks = todayTasks.take(remaining).toList();
+                tomorrowTasks = [];
+              } else {
+                tomorrowTasks = tomorrowTasks
+                    .take(remaining - todayTasks.length)
+                    .toList();
               }
+            }
 
-              if (todayTasks.isEmpty && tomorrowTasks.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(child: Text('Задач на сегодня и завтра нет')),
-                );
-              }
-
-              final content = ListView(
-                shrinkWrap: mobile,
-                physics: mobile
-                    ? const NeverScrollableScrollPhysics()
-                    : const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                children: [
-                  if (todayTasks.isNotEmpty) ...[
-                    _dayLabel('Сегодня, ${fmt.format(today)}', colors, context),
-                    ...todayTasks.map((t) => _TaskRow(task: t, colors: colors)),
-                  ],
-                  if (tomorrowTasks.isNotEmpty) ...[
-                    _dayLabel('Завтра, ${fmt.format(tomorrow)}', colors, context),
-                    ...tomorrowTasks.map((t) => _TaskRow(task: t, colors: colors)),
-                  ],
-                ],
+            if (todayTasks.isEmpty && tomorrowTasks.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: Text('Задач на сегодня и завтра нет')),
               );
+            }
 
-              return mobile ? content : Expanded(child: content);
-            },
-          ),
-        ],
-      ),
+            return ListView(
+              shrinkWrap: mobile,
+              physics: mobile
+                  ? const NeverScrollableScrollPhysics()
+                  : const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              children: [
+                if (todayTasks.isNotEmpty) ...[
+                  _dayLabel('Сегодня, ${fmt.format(today)}', colors, context),
+                  ...todayTasks.map((t) => _TaskRow(task: t, colors: colors)),
+                ],
+                if (tomorrowTasks.isNotEmpty) ...[
+                  _dayLabel('Завтра, ${fmt.format(tomorrow)}', colors, context),
+                  ...tomorrowTasks.map((t) => _TaskRow(task: t, colors: colors)),
+                ],
+              ],
+            );
+          },
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: mobile ? MainAxisSize.min : MainAxisSize.max,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+              child: Text('Задачи на сегодня и завтра',
+                  style: Theme.of(context).textTheme.titleSmall),
+            ),
+            mobile ? asyncView : Expanded(child: asyncView),
+          ],
+        );
+      }),
     );
   }
 

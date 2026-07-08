@@ -12,8 +12,9 @@ import '../../services/department_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
+import '../../widgets/async_value_view.dart';
 
-final invitationsProvider = FutureProvider<List<InvitationCode>>((ref) async {
+final invitationsProvider = FutureProvider.autoDispose<List<InvitationCode>>((ref) async {
   final data = await supabase
       .from('invitation_codes')
       .select()
@@ -21,7 +22,7 @@ final invitationsProvider = FutureProvider<List<InvitationCode>>((ref) async {
   return (data as List).map((e) => InvitationCode.fromJson(e)).toList();
 });
 
-final usersProvider = FutureProvider<List<UserRole>>((ref) async {
+final usersProvider = FutureProvider.autoDispose<List<UserRole>>((ref) async {
   final data = await supabase.from('user_roles').select().order('created_at');
   return (data as List).map((e) => UserRole.fromJson(e)).toList();
 });
@@ -242,10 +243,10 @@ class _UsersTab extends ConsumerWidget {
     final mobile = isMobile(context);
 
     if (mobile) {
-      return usersAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Ошибка: $e')),
-        data: (users) {
+      return AsyncValueView(
+        value: usersAsync,
+        onRetry: usersProvider,
+        builder: (users) {
           if (users.isEmpty) return const Center(child: Text('Нет пользователей'));
           return ListView.builder(
             padding: const EdgeInsets.only(top: 8, bottom: 80),
@@ -347,10 +348,10 @@ class _UsersTab extends ConsumerWidget {
             ),
           ),
           Expanded(
-            child: usersAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Ошибка: $e')),
-              data: (users) {
+            child: AsyncValueView(
+              value: usersAsync,
+              onRetry: usersProvider,
+              builder: (users) {
                 if (users.isEmpty) return const Center(child: Text('Нет пользователей'));
                 return ListView.builder(
                   itemCount: users.length,
@@ -513,10 +514,10 @@ class _InvitationsTab extends ConsumerWidget {
             ),
           ),
           Expanded(
-            child: invitationsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Ошибка: $e')),
-              data: (invitations) {
+            child: AsyncValueView(
+              value: invitationsAsync,
+              onRetry: invitationsProvider,
+              builder: (invitations) {
                 if (invitations.isEmpty) {
                   return const Center(child: Text('Нет кодов приглашений'));
                 }
@@ -1275,11 +1276,10 @@ class _DepartmentsTabState extends ConsumerState<_DepartmentsTab> {
                   ),
                 ),
                 Expanded(
-                  child: departmentsAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('Ошибка: $e')),
-                    data: (depts) {
+                  child: AsyncValueView(
+                    value: departmentsAsync,
+                    onRetry: departmentsProvider,
+                    builder: (depts) {
                       if (depts.isEmpty) {
                         return const Center(
                             child: Text('Нет подразделений',
@@ -1407,11 +1407,10 @@ class _DepartmentsTabState extends ConsumerState<_DepartmentsTab> {
                           child: Text('Выберите подразделение слева',
                               style: TextStyle(
                                   fontSize: 12, color: Color(0xFF888888))))
-                      : sectionsAsync.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (e, _) => Center(child: Text('Ошибка: $e')),
-                          data: (_) {
+                      : AsyncValueView(
+                          value: sectionsAsync,
+                          onRetry: sectionsProvider,
+                          builder: (_) {
                             if (deptSections.isEmpty) {
                               return const Center(
                                   child: Text('Нет участков',

@@ -15,6 +15,7 @@ final selectedSectionProvider = StateProvider<String?>((ref) => null);
 
 final vehicleServiceProvider = Provider((ref) => VehicleService());
 
+// Global (no autoDispose): shared across home, transport, and drivers screens simultaneously.
 final vehiclesProvider = FutureProvider<List<Vehicle>>((ref) async {
   final role = await ref.watch(currentUserRoleProvider.future);
 

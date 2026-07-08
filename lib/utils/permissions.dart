@@ -4,8 +4,9 @@ import '../services/auth_service.dart';
 
 class Permissions {
   final UserRole? role;
+  final bool isLoading;
 
-  Permissions(this.role);
+  const Permissions(this.role, {this.isLoading = false});
 
   bool get isAdmin => role?.isAdmin ?? false;
   bool get canFullAccess => isAdmin || (role?.permFullAccess ?? false);
@@ -33,6 +34,7 @@ class Permissions {
 }
 
 final permissionsProvider = Provider<Permissions>((ref) {
-  final role = ref.watch(currentUserRoleProvider).value;
-  return Permissions(role);
+  final roleAsync = ref.watch(currentUserRoleProvider);
+  if (roleAsync.isLoading) return const Permissions(null, isLoading: true);
+  return Permissions(roleAsync.value);
 });

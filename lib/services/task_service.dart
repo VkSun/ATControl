@@ -12,6 +12,7 @@ final _log = Logger('TaskService');
 
 final taskServiceProvider = Provider((ref) => TaskService());
 
+// Global (no autoDispose): shared across home and planner screens simultaneously.
 final tasksProvider = FutureProvider<List<Task>>((ref) async {
   return ref.read(taskServiceProvider).getAll();
 });
