@@ -256,7 +256,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   const SizedBox(width: 12),
                   Expanded(child: _field(_model, 'Модель', required: true)),
                   const SizedBox(width: 12),
-                  Expanded(child: _field(_year, 'Год выпуска')),
+                  Expanded(child: _field(_year, 'Год')),
                 ]),
                 const SizedBox(height: 14),
 
@@ -278,17 +278,17 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   (d) => setState(() => _toDate = d)),
                 const SizedBox(height: 8),
                 Row(children: [
-                  Expanded(child: _field(_toMileage, 'Пробег на момент ТО (км)',
+                  Expanded(child: _field(_toMileage, 'Пробег при ТО',
                     keyboardType: TextInputType.number)),
                   const SizedBox(width: 12),
-                  Expanded(child: _periodField(_toPeriodKm, 'Периодичность, км',
+                  Expanded(child: _periodField(_toPeriodKm, 'Интервал, км',
                     suffix: 'км')),
                 ]),
                 const SizedBox(height: 8),
                 Row(children: [
                   const Expanded(child: SizedBox()),
                   const SizedBox(width: 12),
-                  Expanded(child: _periodField(_toPeriodMonths, 'Периодичность, мес.',
+                  Expanded(child: _periodField(_toPeriodMonths, 'Интервал, мес.',
                     suffix: 'мес.')),
                 ]),
                 if (_nextToDate != null || _nextToMileage != null) ...[
@@ -311,17 +311,17 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   (d) => setState(() => _equipmentToDate = d)),
                 const SizedBox(height: 8),
                 Row(children: [
-                  Expanded(child: _field(_equipmentHours, 'Наработка моточасов',
+                  Expanded(child: _field(_equipmentHours, 'Моточасы',
                     keyboardType: TextInputType.number)),
                   const SizedBox(width: 12),
-                  Expanded(child: _periodField(_equipmentToPeriodHours, 'Периодичность, м/ч',
+                  Expanded(child: _periodField(_equipmentToPeriodHours, 'Интервал, м/ч',
                     suffix: 'м/ч')),
                 ]),
                 const SizedBox(height: 8),
                 Row(children: [
                   const Expanded(child: SizedBox()),
                   const SizedBox(width: 12),
-                  Expanded(child: _periodField(_equipmentToPeriodMonths, 'Периодичность, мес.',
+                  Expanded(child: _periodField(_equipmentToPeriodMonths, 'Интервал, мес.',
                     suffix: 'мес.')),
                 ]),
                 if (_nextEquipmentToDate != null || _nextEquipmentToHours != null) ...[
