@@ -244,21 +244,8 @@ class TaskService {
     }
   }
 
-  Future<void> syncExpiryTasks(List<Map<String, dynamic>> expiringItems) async {
-    await supabase.from(_table).delete().eq('type', 'expiry');
-    if (expiringItems.isEmpty) return;
-    final rows = expiringItems
-        .map((item) => {
-              'title': item['title'],
-              'due_date': toDateString(item['date'] as DateTime),
-              'is_completed': false,
-              'priority': (item['diff'] as int) <= 7 ? 'high' : 'normal',
-              'type': 'expiry',
-              'vehicle_id': item['vehicle_id'],
-              'driver_id': item['driver_id'],
-            })
-        .toList();
-    await supabase.from(_table).insert(rows);
+  Future<void> syncExpiryTasks() async {
+    await supabase.rpc('sync_expiry_tasks');
   }
 
   Future<void> _patchCache(

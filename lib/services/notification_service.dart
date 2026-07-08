@@ -45,9 +45,12 @@ class NotificationService {
 
       final vehicles = await supabase
           .from('vehicles')
-          .select('inspection_date, insurance_date, special_permit_date')
+          .select(
+              'inspection_date, insurance_date, special_permit_date, '
+              'to_date, to_period_months, equipment_to_date, equipment_to_period_months')
           .or(
-              'inspection_date.lte.$cutoff,insurance_date.lte.$cutoff,special_permit_date.lte.$cutoff');
+              'inspection_date.lte.$cutoff,insurance_date.lte.$cutoff,'
+              'special_permit_date.lte.$cutoff,to_date.not.is.null,equipment_to_date.not.is.null');
 
       final drivers = await supabase
           .from('drivers')
@@ -74,6 +77,16 @@ class NotificationService {
         check(v['inspection_date']);
         check(v['insurance_date']);
         check(v['special_permit_date']);
+        if (v['to_date'] != null && v['to_period_months'] != null) {
+          final d = DateTime.parse(v['to_date'] as String);
+          final months = v['to_period_months'] as int;
+          check(toDateString(DateTime(d.year, d.month + months, d.day)));
+        }
+        if (v['equipment_to_date'] != null && v['equipment_to_period_months'] != null) {
+          final d = DateTime.parse(v['equipment_to_date'] as String);
+          final months = v['equipment_to_period_months'] as int;
+          check(toDateString(DateTime(d.year, d.month + months, d.day)));
+        }
       }
       for (final d in drivers as List) {
         check(d['license_expiry']);

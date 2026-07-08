@@ -181,18 +181,13 @@ class VehicleService {
     final result = <Map<String, dynamic>>[];
 
     for (final v in all) {
-      void check(DateTime? date, String type) {
-        if (date == null) return;
-        final diff = daysUntil(date);
+      for (final entry in v.expiryDates()) {
+        if (entry.date == null) continue;
+        final diff = daysUntil(entry.date!);
         if (diff <= 30) {
-          result.add({'vehicle': v, 'type': type, 'date': date, 'diff': diff});
+          result.add({'vehicle': v, 'type': entry.type, 'date': entry.date, 'diff': diff});
         }
       }
-      check(v.inspectionDate, 'Техосмотр');
-      check(v.insuranceDate, 'Страховка');
-      check(v.specialPermitDate, 'Спец. разрешение');
-      check(v.nextToDate, 'ТО автомобиля');
-      check(v.nextEquipmentToDate, 'ТО оборудования');
     }
 
     result.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));

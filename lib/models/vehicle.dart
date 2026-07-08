@@ -53,6 +53,15 @@ class Vehicle {
 
   String get brandModel => '$brand $model';
 
+  // Все пять типов дат истечения для единого обхода
+  List<({String type, DateTime? date})> expiryDates() => [
+    (type: 'Техосмотр', date: inspectionDate),
+    (type: 'Страховка', date: insuranceDate),
+    (type: 'Спец. разрешение', date: specialPermitDate),
+    (type: 'ТО автомобиля', date: nextToDate),
+    (type: 'ТО оборудования', date: nextEquipmentToDate),
+  ];
+
   // Вычисляемая дата следующего ТО автомобиля
   DateTime? get nextToDate {
     if (toDate == null || toPeriodMonths == null) return null;

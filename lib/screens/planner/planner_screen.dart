@@ -96,50 +96,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
   Future<void> _syncExpiryTasks() async {
     setState(() => _syncing = true);
     try {
-      final items = <Map<String, dynamic>>[];
-
-      final vehicles = await ref.read(vehicleServiceProvider).getAll();
-      for (final v in vehicles) {
-        void check(DateTime? date, String type) {
-          if (date == null) return;
-          final diff = daysUntil(date);
-          if (diff <= 30) {
-            items.add({
-              'title': '$type — ${v.brandModel} (${v.govNumber})',
-              'date': date,
-              'diff': diff,
-              'vehicle_id': v.id,
-              'driver_id': null,
-            });
-          }
-        }
-
-        check(v.inspectionDate, 'Техосмотр');
-        check(v.insuranceDate, 'Страховка');
-        check(v.specialPermitDate, 'Спец. разрешение');
-      }
-
-      final drivers = await ref.read(driverServiceProvider).getAll();
-      for (final d in drivers) {
-        void check(DateTime? date, String type) {
-          if (date == null) return;
-          final diff = daysUntil(date);
-          if (diff <= 30) {
-            items.add({
-              'title': '$type — ${d.fullName}',
-              'date': date,
-              'diff': diff,
-              'vehicle_id': null,
-              'driver_id': d.id,
-            });
-          }
-        }
-
-        check(d.licenseExpiry, 'Вод. удостоверение');
-        check(d.medicalExpiry, 'Мед. справка');
-      }
-
-      await ref.read(taskServiceProvider).syncExpiryTasks(items);
+      await ref.read(taskServiceProvider).syncExpiryTasks();
       ref.invalidate(tasksProvider);
     } finally {
       if (mounted) setState(() => _syncing = false);
