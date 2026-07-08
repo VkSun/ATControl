@@ -466,7 +466,8 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
 
     if (widget.mobile) {
       return ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 80),
+        // bottom: 96 — FAB не перекрывает последнюю строку списка
+        padding: const EdgeInsets.only(top: 8, bottom: 96),
         itemCount: widget.drivers.length,
         itemBuilder: (context, i) {
           final d = widget.drivers[i];

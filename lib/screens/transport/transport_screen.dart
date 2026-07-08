@@ -484,7 +484,8 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
 
     if (widget.mobile) {
       return ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 80),
+        // bottom: 96 — FAB не перекрывает последнюю строку списка
+        padding: const EdgeInsets.only(top: 8, bottom: 96),
         itemCount: widget.vehicles.length,
         itemBuilder: (context, i) => _VehicleRow(
           vehicle: widget.vehicles[i],
