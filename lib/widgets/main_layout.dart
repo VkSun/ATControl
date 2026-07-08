@@ -20,6 +20,7 @@ import '../services/profile_service.dart';
 import '../services/update_service.dart';
 import '../screens/profile/profile_dialog.dart';
 import '../screens/settings/settings_screen.dart' show closeToTrayProvider;
+import 'dialog_scroll_content.dart';
 
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
 
@@ -104,9 +105,11 @@ class _MainLayoutState extends ConsumerState<MainLayout>
         surfaceTintColor: Colors.transparent,
         title: const Text('Завершить ATControl?'),
         content: isOffline
-            ? const Text(
-                'Есть несинхронизированные изменения.\n'
-                'При закрытии они могут быть потеряны.',
+            ? const DialogScrollContent(
+                child: Text(
+                  'Есть несинхронизированные изменения.\n'
+                  'При закрытии они могут быть потеряны.',
+                ),
               )
             : null,
         actions: [
@@ -144,11 +147,12 @@ class _MainLayoutState extends ConsumerState<MainLayout>
         title: Text(update.type == UpdateType.extension
             ? 'Обновление расширения'
             : 'Доступно обновление'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (update.type == UpdateType.extension) ...[
+        content: DialogScrollContent(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (update.type == UpdateType.extension) ...[
               Text(
                   'Доступна новая версия браузерного расширения ATControl — ${update.version}.'),
               const SizedBox(height: 8),
@@ -172,8 +176,9 @@ class _MainLayoutState extends ConsumerState<MainLayout>
                   'Запустите его — он заменит текущую версию автоматически.',
                   style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
                 ),
+              ],
             ],
-          ],
+          ),
         ),
         actions: [
           TextButton(

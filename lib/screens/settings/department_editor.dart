@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/department.dart';
 import '../../services/department_service.dart';
 import '../../utils/theme.dart';
+import '../../widgets/dialog_scroll_content.dart';
 
 class DepartmentEditorDialog extends ConsumerStatefulWidget {
   const DepartmentEditorDialog({super.key});
@@ -44,16 +47,18 @@ class _DepartmentEditorDialogState extends ConsumerState<DepartmentEditorDialog>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: InputDecoration(
-            isDense: true,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        content: DialogScrollContent(
+          child: TextField(
+            controller: ctrl,
+            autofocus: true,
+            decoration: InputDecoration(
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+            style: const TextStyle(fontSize: 13),
+            onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
           ),
-          style: const TextStyle(fontSize: 13),
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
@@ -71,9 +76,11 @@ class _DepartmentEditorDialogState extends ConsumerState<DepartmentEditorDialog>
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Удалить?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            content: Text(
-              '«$name» будет удалён.\nЕсли к нему привязаны водители или транспорт — удаление не выполнится.',
-              style: const TextStyle(fontSize: 13),
+            content: DialogScrollContent(
+              child: Text(
+                '«$name» будет удалён.\nЕсли к нему привязаны водители или транспорт — удаление не выполнится.',
+                style: const TextStyle(fontSize: 13),
+              ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
@@ -93,7 +100,8 @@ class _DepartmentEditorDialogState extends ConsumerState<DepartmentEditorDialog>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Ошибка', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-        content: Text(e.toString(), style: const TextStyle(fontSize: 12)),
+        content: DialogScrollContent(
+            child: Text(e.toString(), style: const TextStyle(fontSize: 12))),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
       ),
     );
@@ -183,7 +191,8 @@ class _DepartmentEditorDialogState extends ConsumerState<DepartmentEditorDialog>
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: SizedBox(
         width: 660,
-        height: 700,
+        // Список прокручивается внутри; высота лишь ограничивается экраном.
+        height: math.min(700, dialogMaxHeight(context)),
         child: Column(
           children: [
             _Header(colors: colors, onAdd: _addTopDept),

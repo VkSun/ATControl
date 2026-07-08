@@ -16,6 +16,7 @@ import '../../utils/responsive.dart';
 import '../../utils/date_picker.dart';
 import '../../widgets/main_layout.dart' show SplitHandle;
 import '../../widgets/async_value_view.dart';
+import '../../widgets/dialog_scroll_content.dart';
 
 final notesProvider = StateProvider<String>((ref) => '');
 
@@ -570,7 +571,8 @@ class _TaskRow extends StatelessWidget {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Удалить задачу?'),
-        content: Text('«${task.title}»\n\nЭто действие нельзя отменить.'),
+        content: DialogScrollContent(
+            child: Text('«${task.title}»\n\nЭто действие нельзя отменить.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -739,7 +741,8 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Обновить срок?'),
-        content: const Text('Дата окончания срока будет обновлена.'),
+        content: const DialogScrollContent(
+            child: Text('Дата окончания срока будет обновлена.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -889,11 +892,9 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
 
     return AlertDialog(
       title: const Text('Обновить срок'),
-      content: SizedBox(
+      content: DialogScrollContent(
         width: 360,
-        // Прокрутка на случай малой высоты экрана (телефон в альбомной ориентации)
-        child: SingleChildScrollView(
-          child: Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -922,7 +923,6 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
               ],
             ),
           ],
-          ),
         ),
       ),
       actions: [
@@ -1106,7 +1106,10 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: Text(isEdit ? 'Сохранить изменения?' : 'Добавить задачу?'),
-        content: Text(isEdit ? 'Задача будет обновлена.' : 'Задача будет добавлена в планировщик.'),
+        content: DialogScrollContent(
+            child: Text(isEdit
+                ? 'Задача будет обновлена.'
+                : 'Задача будет добавлена в планировщик.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -1152,11 +1155,9 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
     final isEdit = widget.task != null;
     return AlertDialog(
       title: Text(isEdit ? 'Редактировать задачу' : 'Новая задача'),
-      content: SizedBox(
+      content: DialogScrollContent(
         width: 380,
-        // Прокрутка на случай малой высоты экрана (телефон в альбомной ориентации)
-        child: SingleChildScrollView(
-          child: Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
@@ -1248,7 +1249,6 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
               ],
             ),
           ],
-          ),
         ),
       ),
       actions: [

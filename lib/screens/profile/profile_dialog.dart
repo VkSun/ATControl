@@ -4,6 +4,7 @@ import '../../models/profile.dart';
 import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
 import '../../utils/logger.dart';
+import '../../widgets/dialog_scroll_content.dart';
 
 const _log = Logger('ProfileDialog');
 
@@ -68,7 +69,8 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Сохранить профиль?'),
-        content: const Text('Данные профиля будут обновлены.'),
+        content: const DialogScrollContent(
+            child: Text('Данные профиля будут обновлены.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -110,11 +112,9 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
       backgroundColor: Theme.of(context).cardColor,
       surfaceTintColor: Colors.transparent,
       title: const Text('Профиль'),
-      content: SizedBox(
+      content: DialogScrollContent(
         width: 380,
-        // Прокрутка на случай малой высоты экрана (телефон в альбомной ориентации)
-        child: SingleChildScrollView(
-          child: Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Center(
@@ -182,7 +182,6 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
               onChanged: (_) => setState(() {}),
             ),
           ],
-          ),
         ),
       ),
       actions: [

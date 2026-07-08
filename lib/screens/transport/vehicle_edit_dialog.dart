@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +10,7 @@ import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../utils/date_picker.dart';
 import '../../utils/date_utils.dart';
+import '../../widgets/dialog_scroll_content.dart';
 
 class VehicleEditDialog extends ConsumerStatefulWidget {
   final Vehicle? vehicle;
@@ -131,9 +134,10 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: Text(isEdit ? 'Сохранить изменения?' : 'Добавить транспорт?'),
-        content: Text(isEdit
-            ? 'Данные транспортного средства будут обновлены.'
-            : 'Транспортное средство будет добавлено в систему.'),
+        content: DialogScrollContent(
+            child: Text(isEdit
+                ? 'Данные транспортного средства будут обновлены.'
+                : 'Транспортное средство будет добавлено в систему.')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Сохранить')),
@@ -231,12 +235,11 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
       backgroundColor: Theme.of(context).cardColor,
       surfaceTintColor: Colors.transparent,
       title: Text(title),
-      content: SizedBox(
+      content: DialogScrollContent(
         width: 560,
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
+          child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -391,8 +394,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 // Заметки
                 _sectionLabel('Заметки'),
                 _field(_notes, 'Заметки', maxLines: 2),
-              ],
-            ),
+            ],
           ),
         ),
       ),
@@ -406,8 +408,9 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 backgroundColor: Theme.of(ctx).cardColor,
                 surfaceTintColor: Colors.transparent,
                 title: const Text('Удалить транспорт?'),
-                content: Text(
-                  '${widget.vehicle!.brandModel} (${widget.vehicle!.govNumber})\n\nЭто действие нельзя отменить.'),
+                content: DialogScrollContent(
+                    child: Text(
+                        '${widget.vehicle!.brandModel} (${widget.vehicle!.govNumber})\n\nЭто действие нельзя отменить.')),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
@@ -660,7 +663,8 @@ class _DriverPickerDialogState extends State<_DriverPickerDialog> {
       title: const Text('Закреплённый водитель'),
       content: SizedBox(
         width: 400,
-        height: 400,
+        // Список прокручивается внутри; высота лишь ограничивается экраном.
+        height: math.min(400, dialogMaxHeight(context)),
         child: Column(
           children: [
             TextField(

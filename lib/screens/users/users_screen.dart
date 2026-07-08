@@ -13,6 +13,7 @@ import '../../screens/profile/profile_dialog.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/async_value_view.dart';
+import '../../widgets/dialog_scroll_content.dart';
 
 final invitationsProvider = FutureProvider.autoDispose<List<InvitationCode>>((ref) async {
   final data = await supabase
@@ -449,7 +450,7 @@ class _UsersTab extends ConsumerWidget {
         title: Text(user.isActive
             ? 'Заблокировать пользователя?'
             : 'Разблокировать пользователя?'),
-        content: Text(user.fullName),
+        content: DialogScrollContent(child: Text(user.fullName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -689,7 +690,8 @@ class _InvitationRow extends StatelessWidget {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
                     title: const Text('Удалить код?'),
-                    content: Text('Код ${invitation.code} будет удалён.'),
+                    content: DialogScrollContent(
+                        child: Text('Код ${invitation.code} будет удалён.')),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
@@ -792,10 +794,9 @@ class _CreateInvitationDialogState
 
     return AlertDialog(
       title: const Text('Создать приглашение'),
-      content: SizedBox(
+      content: DialogScrollContent(
         width: 440,
-        child: SingleChildScrollView(
-          child: Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
@@ -906,7 +907,6 @@ class _CreateInvitationDialogState
                 (v) => setState(() => _permOwnOnly = v)),
           ],
         ),
-        ),
       ),
       actions: [
         TextButton(
@@ -944,10 +944,9 @@ class _ShowCodeDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Код приглашения создан'),
-      // Прокрутка на случай малой высоты экрана (телефон в альбомной ориентации)
-      content: SingleChildScrollView(
+      content: DialogScrollContent(
         child: Column(
-        mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.min,
         children: [
           const Text('Передайте этот код пользователю:',
               style: TextStyle(fontSize: 13)),
@@ -970,7 +969,7 @@ class _ShowCodeDialog extends StatelessWidget {
               'Код действителен 7 дней и может быть использован только один раз.',
               style: TextStyle(fontSize: 11, color: Color(0xFF888888)),
               textAlign: TextAlign.center),
-        ],
+          ],
         ),
       ),
       actions: [
@@ -1037,7 +1036,9 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Сохранить права?'),
-        content: Text('Права доступа пользователя «${widget.user.fullName}» будут обновлены.'),
+        content: DialogScrollContent(
+            child: Text(
+                'Права доступа пользователя «${widget.user.fullName}» будут обновлены.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -1086,10 +1087,9 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
 
     return AlertDialog(
       title: Text('Права: ${widget.user.fullName}'),
-      content: SizedBox(
+      content: DialogScrollContent(
         width: 400,
-        child: SingleChildScrollView(
-          child: Column(
+        child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1185,8 +1185,7 @@ class _EditUserDialogState extends ConsumerState<_EditUserDialog> {
                   'Запись', _permWrite, (v) => setState(() => _permWrite = v)),
               _PermRow('Только свой транспорт и водители', _permOwnOnly,
                   (v) => setState(() => _permOwnOnly = v)),
-            ],
-          ),
+          ],
         ),
       ),
       actions: [
@@ -1483,13 +1482,15 @@ class _DepartmentsTabState extends ConsumerState<_DepartmentsTab> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Добавить подразделение'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Название',
-            border: OutlineInputBorder(),
-            isDense: true,
+        content: DialogScrollContent(
+          child: TextField(
+              controller: ctrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Название',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
           ),
         ),
         actions: [
@@ -1517,13 +1518,15 @@ class _DepartmentsTabState extends ConsumerState<_DepartmentsTab> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Переименовать подразделение'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Название',
-            border: OutlineInputBorder(),
-            isDense: true,
+        content: DialogScrollContent(
+          child: TextField(
+              controller: ctrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Название',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
           ),
         ),
         actions: [
@@ -1550,8 +1553,9 @@ class _DepartmentsTabState extends ConsumerState<_DepartmentsTab> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Удалить подразделение?'),
-        content: Text(
-            '«${dept.name}» и все его участки будут удалены.\n\nЭто действие нельзя отменить.'),
+        content: DialogScrollContent(
+            child: Text(
+                '«${dept.name}» и все его участки будут удалены.\n\nЭто действие нельзя отменить.')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -1580,13 +1584,15 @@ class _DepartmentsTabState extends ConsumerState<_DepartmentsTab> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Добавить участок'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Название участка',
-            border: OutlineInputBorder(),
-            isDense: true,
+        content: DialogScrollContent(
+          child: TextField(
+              controller: ctrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Название участка',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
           ),
         ),
         actions: [
@@ -1616,13 +1622,15 @@ class _DepartmentsTabState extends ConsumerState<_DepartmentsTab> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Переименовать участок'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Название',
-            border: OutlineInputBorder(),
-            isDense: true,
+        content: DialogScrollContent(
+          child: TextField(
+              controller: ctrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Название',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
           ),
         ),
         actions: [
@@ -1651,8 +1659,9 @@ class _DepartmentsTabState extends ConsumerState<_DepartmentsTab> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Удалить участок?'),
-        content: Text(
-            '«${section.name}» будет удалён.\n\nЭто действие нельзя отменить.'),
+        content: DialogScrollContent(
+            child: Text(
+                '«${section.name}» будет удалён.\n\nЭто действие нельзя отменить.')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
