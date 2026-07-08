@@ -108,10 +108,23 @@ class AuthService {
     );
     if (response.user == null) throw Exception('Ошибка регистрации');
 
-    // Permissions are set server-side from the invitation code — client cannot escalate.
-    await supabase.rpc('register_with_invitation', params: {
-      'p_code': invitation.code,
-    });
+    try {
+      // Все три операции (user_roles + profiles + mark used) выполняются
+      // атомарно в одной транзакции с FOR UPDATE на строке приглашения.
+      await supabase.rpc('redeem_invitation', params: {'p_code': invitation.code});
+    } on PostgrestException catch (e) {
+      // RPC провалилась — откатываем сессию, чтобы не оставлять auth-пользователя без роли.
+      await supabase.auth.signOut();
+      throw Exception(_translateRedeemError(e.message));
+    }
+  }
+
+  static String _translateRedeemError(String? msg) {
+    if (msg == null) return 'Ошибка активации кода приглашения';
+    if (msg.contains('invitation_not_found')) return 'Код приглашения не найден';
+    if (msg.contains('invitation_used'))      return 'Код приглашения уже использован';
+    if (msg.contains('invitation_expired'))   return 'Срок действия кода истёк';
+    return 'Ошибка активации кода приглашения';
   }
 
   // Выход
