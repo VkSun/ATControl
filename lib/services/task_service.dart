@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/task.dart';
+import '../utils/logger.dart';
 import 'cache_service.dart';
 import 'offline_queue.dart';
 import 'offline_state.dart';
 import 'vehicle_service.dart';
 import '../utils/date_utils.dart';
+
+final _log = Logger('TaskService');
 
 final taskServiceProvider = Provider((ref) => TaskService());
 
@@ -231,7 +234,8 @@ class TaskService {
               .eq('is_completed', false)
               .lte('due_date', today);
       return data.length;
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('overdueCount: offline fallback', e, s);
       // Offline: estimate from full cache
       final cached = await CacheService.instance.load(_cacheKey);
       if (cached == null) return 0;

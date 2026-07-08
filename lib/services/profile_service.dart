@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/profile.dart';
+import '../utils/logger.dart';
 import 'vehicle_service.dart';
+
+final _log = Logger('ProfileService');
 
 final profileProvider = FutureProvider<Profile?>((ref) async {
   return ref.read(profileServiceProvider).get();
@@ -35,7 +38,8 @@ class ProfileService {
         initials: role['initials'] ?? '',
         avatarColor: role['avatar_color'] ?? '#4361EE',
       );
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('get: user_roles fallback failed', e, s);
       return null;
     }
   }

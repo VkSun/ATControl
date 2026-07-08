@@ -1,9 +1,13 @@
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/auth_exceptions.dart';
 import '../models/user_role.dart';
 import '../models/invitation_code.dart';
+import '../utils/logger.dart';
 import 'supabase_client.dart';
+
+final _log = Logger('AuthService');
 
 final authServiceProvider = Provider((ref) => AuthService());
 
@@ -23,8 +27,13 @@ final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
         .eq('user_id', user.id)
         .single();
     return UserRole.fromJson(data);
-  } catch (_) {
-    return null;
+  } on PostgrestException catch (e) {
+    if (e.code == 'PGRST116') return null;
+    _log.warning('currentUserRoleProvider failed', e);
+    rethrow;
+  } catch (e, s) {
+    _log.warning('currentUserRoleProvider: unexpected error', e, s);
+    rethrow;
   }
 });
 
@@ -69,11 +78,20 @@ class AuthService {
       final role = UserRole.fromJson(data);
       if (!role.isActive) {
         await supabase.auth.signOut();
-        throw Exception('Ваш аккаунт заблокирован. Обратитесь к администратору.');
+        throw AccountBlockedException();
       }
       return role;
-    } catch (e) {
-      if (e.toString().contains('заблокирован')) rethrow;
+    } on AccountBlockedException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      if (e.code == 'PGRST116') {
+        await supabase.auth.signOut();
+        throw RoleNotFoundException();
+      }
+      _log.warning('signIn: role fetch failed', e);
+      return null;
+    } catch (e, s) {
+      _log.warning('signIn: unexpected error', e, s);
       return null;
     }
   }
@@ -87,7 +105,8 @@ class AuthService {
           .select()
           .eq('code', code.toUpperCase())
           .eq('is_used', false);
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('validateInvitationCode failed', e, s);
       throw Exception('Код приглашения недействителен');
     }
     if (data.isEmpty) throw Exception('Код приглашения недействителен');

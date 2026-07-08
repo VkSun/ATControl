@@ -1,8 +1,11 @@
 import 'dart:io';
 import '../utils/date_utils.dart';
+import '../utils/logger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+const _log = Logger('NotificationService');
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
@@ -120,7 +123,9 @@ class NotificationService {
         _lastNotification = LocalNotification(title: title, body: body);
         await _lastNotification!.show();
       }
-    } catch (_) {}
+    } catch (e, s) {
+      _log.warning('checkAndNotify failed', e, s);
+    }
   }
 
   static void resetCheckFlag() => _checked = false;

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/profile.dart';
 import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
+import '../../utils/logger.dart';
+
+const _log = Logger('ProfileDialog');
 
 class ProfileDialog extends ConsumerStatefulWidget {
   const ProfileDialog({super.key});
@@ -41,7 +44,9 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
           _avatarColor = p?.avatarColor ?? '#4361EE';
         });
       }
-    } catch (_) {}
+    } catch (e, s) {
+      _log.warning('_loadProfile failed', e, s);
+    }
   }
 
   @override

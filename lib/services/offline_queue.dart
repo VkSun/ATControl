@@ -1,10 +1,15 @@
-import 'dart:async';
+import 'dart:async' show Future, TimeoutException;
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:gotrue/gotrue.dart' show AuthRetryableFetchException;
+import 'package:http/http.dart' show ClientException;
 import 'package:path_provider/path_provider.dart';
+import '../utils/logger.dart';
 import 'offline_state.dart';
 import 'supabase_client.dart';
+
+final _log = Logger('OfflineQueue');
 
 /// Maximum consecutive non-network failures before an op is dead-lettered.
 const int maxQueueAttempts = 5;
@@ -118,7 +123,8 @@ class _FileQueueStore implements QueueStore {
       return list
           .map((e) => PendingOp.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('getAll: failed to read pending queue', e, s);
       return [];
     }
   }
@@ -131,7 +137,9 @@ class _FileQueueStore implements QueueStore {
         jsonEncode(ops.map((e) => e.toJson()).toList()),
         flush: true,
       );
-    } catch (_) {}
+    } catch (e, s) {
+      _log.error('persist: failed to write pending queue', e, s);
+    }
   }
 
   @override
@@ -142,7 +150,9 @@ class _FileQueueStore implements QueueStore {
       if (await f.exists()) {
         try {
           existing = jsonDecode(await f.readAsString()) as List;
-        } catch (_) {}
+        } catch (e, s) {
+          _log.warning('appendDeadLetter: failed to parse existing dead-letter file', e, s);
+        }
       }
       existing.add({
         'op': op.toJson(),
@@ -150,7 +160,9 @@ class _FileQueueStore implements QueueStore {
         'killed_at': DateTime.now().toIso8601String(),
       });
       await f.writeAsString(jsonEncode(existing), flush: true);
-    } catch (_) {}
+    } catch (e, s) {
+      _log.error('appendDeadLetter: failed to write dead-letter file', e, s);
+    }
   }
 }
 
@@ -329,6 +341,9 @@ class OfflineQueue {
 
 bool isNetworkError(Object e) {
   if (e is SocketException) return true;
+  if (e is TimeoutException) return true;
+  if (e is ClientException) return true;
+  if (e is AuthRetryableFetchException) return true;
   final s = e.toString().toLowerCase();
   return s.contains('failed host lookup') ||
       s.contains('network is unreachable') ||
