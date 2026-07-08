@@ -52,13 +52,13 @@ class ProfileService {
         .select()
         .single();
 
-    // Синхронизируем имя/должность/инициалы/цвет в user_roles
-    await supabase.from('user_roles').update({
-      'full_name': p.fullName,
-      'position': p.position,
-      'initials': p.initials,
-      'avatar_color': p.avatarColor,
-    }).eq('user_id', userId);
+    // Синхронизируем имя/должность/инициалы/цвет в user_roles (через RPC — только display-поля)
+    await supabase.rpc('sync_profile_display', params: {
+      'p_full_name': p.fullName,
+      'p_position': p.position,
+      'p_initials': p.initials,
+      'p_avatar_color': p.avatarColor,
+    });
 
     return Profile.fromJson(data);
   }

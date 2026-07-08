@@ -42,34 +42,11 @@ class AuthService {
     );
     if (response.user == null) throw Exception('Ошибка регистрации');
 
-    final initials = _getInitials(fullName);
-    final userId = response.user!.id;
-
-    final role = await supabase.from('user_roles').insert({
-      'user_id': userId,
-      'full_name': fullName,
-      'position': position,
-      'initials': initials,
-      'avatar_color': '#4361EE',
-      'is_admin': true,
-      'perm_full_access': true,
-      'perm_edit': true,
-      'perm_execute': true,
-      'perm_read': true,
-      'perm_write': true,
-      'perm_own_only': false,
-      'is_active': true,
-    }).select().single();
-
-    await supabase.from('profiles').insert({
-      'id': userId,
-      'full_name': fullName,
-      'position': position,
-      'initials': initials,
-      'avatar_color': '#4361EE',
+    final data = await supabase.rpc('register_first_admin', params: {
+      'p_full_name': fullName,
+      'p_position': position,
     });
-
-    return UserRole.fromJson(role);
+    return UserRole.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   // Вход по email/пароль
@@ -131,43 +108,10 @@ class AuthService {
     );
     if (response.user == null) throw Exception('Ошибка регистрации');
 
-    final initials = _getInitials(invitation.fullName ?? '');
-    final userId = response.user!.id;
-    final fullName = invitation.fullName ?? '';
-
-    await supabase.from('user_roles').insert({
-      'user_id': userId,
-      'full_name': fullName,
-      'position': invitation.position,
-      'initials': initials,
-      'avatar_color': '#4361EE',
-      'is_admin': false,
-      'perm_full_access': invitation.permFullAccess,
-      'perm_edit': invitation.permEdit,
-      'perm_execute': invitation.permExecute,
-      'perm_read': invitation.permRead,
-      'perm_write': invitation.permWrite,
-      'perm_own_only': invitation.permOwnOnly,
-      'is_active': true,
-      'department_id': invitation.departmentId,
-      'section_id': invitation.sectionId,
+    // Permissions are set server-side from the invitation code — client cannot escalate.
+    await supabase.rpc('register_with_invitation', params: {
+      'p_code': invitation.code,
     });
-
-    await supabase.from('profiles').insert({
-      'id': userId,
-      'full_name': fullName,
-      'position': invitation.position,
-      'initials': initials,
-      'avatar_color': '#4361EE',
-    });
-
-    await supabase
-        .from('invitation_codes')
-        .update({
-          'is_used': true,
-          'used_by': response.user!.id,
-        })
-        .eq('id', invitation.id);
   }
 
   // Выход
@@ -213,20 +157,9 @@ class AuthService {
     return '${random.substring(0, 4)}-${random.substring(4, 8)}-${random.substring(8, 12)}';
   }
 
-  String _getInitials(String fullName) {
-    final parts = fullName.trim().split(' ');
-    if (parts.isEmpty) return 'ПП';
-    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-  }
-
   // Проверка существует ли уже админ
   Future<bool> hasAdmin() async {
-    final data = await supabase
-        .from('user_roles')
-        .select()
-        .eq('is_admin', true)
-        .limit(1);
-    return (data as List).isNotEmpty;
+    final result = await supabase.rpc('has_admin');
+    return result as bool;
   }
 }
