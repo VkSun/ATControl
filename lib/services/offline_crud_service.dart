@@ -20,6 +20,10 @@ abstract class OfflineCrudService<T> {
   /// [item] == null — операция без данных строки (delete, патч поля).
   List<String> cacheKeysFor(T? item);
 
+  /// Человекочитаемая подпись сущности для шторки синхронизации
+  /// («Автомобиль 100011»). [item] == null — без данных строки (delete).
+  String describe(T? item);
+
   /// JSON для вставки (TaskService добавляет user_id).
   Map<String, dynamic> insertJson(T item) => toJson(item);
 
@@ -67,7 +71,7 @@ abstract class OfflineCrudService<T> {
         final json = {...insertJson(item), 'id': tempId};
         await OfflineQueue.instance.enqueue(PendingOp(
           id: tempId, table: table, op: 'insert', data: insertJson(item),
-          createdAt: DateTime.now(),
+          createdAt: DateTime.now(), label: describe(item),
         ));
         await patchCaches(id: tempId, json: json, op: 'insert', item: item);
         return fromJson(json);
@@ -95,7 +99,7 @@ abstract class OfflineCrudService<T> {
         await OfflineQueue.instance.enqueue(PendingOp(
           id: 'upd_${id}_${DateTime.now().millisecondsSinceEpoch}',
           table: table, op: 'update', data: toJson(item), rowId: id,
-          createdAt: DateTime.now(),
+          createdAt: DateTime.now(), label: describe(item),
         ));
         await patchCaches(id: id, json: json, op: 'update', item: item);
         return fromJson(json);
@@ -112,6 +116,7 @@ abstract class OfflineCrudService<T> {
     required Map<String, dynamic> data,
     required Future<void> Function() remote,
     required Future<void> Function() patch,
+    String? label,
   }) async {
     try {
       await remote();
@@ -124,7 +129,7 @@ abstract class OfflineCrudService<T> {
         await OfflineQueue.instance.enqueue(PendingOp(
           id: '${opPrefix}_${id}_${DateTime.now().millisecondsSinceEpoch}',
           table: table, op: 'update', data: data, rowId: id,
-          createdAt: DateTime.now(),
+          createdAt: DateTime.now(), label: label ?? describe(null),
         ));
         await patch();
       } else {
@@ -149,7 +154,7 @@ abstract class OfflineCrudService<T> {
         await OfflineQueue.instance.enqueue(PendingOp(
           id: 'del_${id}_${DateTime.now().millisecondsSinceEpoch}',
           table: table, op: 'delete', data: {}, rowId: id,
-          createdAt: DateTime.now(),
+          createdAt: DateTime.now(), label: describe(null),
         ));
         await patchCaches(id: id, json: const {}, op: 'delete');
       } else {

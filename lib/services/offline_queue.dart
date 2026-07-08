@@ -25,6 +25,11 @@ class PendingOp {
   final DateTime createdAt;
   final int attempts;
 
+  /// Человекочитаемая подпись для шторки синхронизации
+  /// («Автомобиль 100011», «Задача «Заменить масло»»). Заполняется
+  /// сервисами при enqueue; в старом JSON поля нет — читается как null.
+  final String? label;
+
   PendingOp({
     required this.id,
     required this.table,
@@ -33,6 +38,7 @@ class PendingOp {
     this.rowId,
     required this.createdAt,
     this.attempts = 0,
+    this.label,
   });
 
   PendingOp copyWith({int? attempts}) => PendingOp(
@@ -43,6 +49,7 @@ class PendingOp {
         rowId: rowId,
         createdAt: createdAt,
         attempts: attempts ?? this.attempts,
+        label: label,
       );
 
   factory PendingOp.fromJson(Map<String, dynamic> j) => PendingOp(
@@ -53,6 +60,7 @@ class PendingOp {
         rowId: j['row_id'] as String?,
         createdAt: DateTime.parse(j['created_at'] as String),
         attempts: (j['attempts'] as int?) ?? 0,
+        label: j['label'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -63,6 +71,29 @@ class PendingOp {
         'row_id': rowId,
         'created_at': createdAt.toIso8601String(),
         'attempts': attempts,
+        if (label != null) 'label': label,
+      };
+}
+
+/// Операция, окончательно не прошедшая синхронизацию (dead-letter).
+class DeadLetterEntry {
+  final PendingOp op;
+  final String reason;
+  final DateTime killedAt;
+
+  DeadLetterEntry({required this.op, required this.reason, required this.killedAt});
+
+  factory DeadLetterEntry.fromJson(Map<String, dynamic> j) => DeadLetterEntry(
+        op: PendingOp.fromJson(Map<String, dynamic>.from(j['op'] as Map)),
+        reason: (j['reason'] as String?) ?? '',
+        killedAt: DateTime.tryParse(j['killed_at'] as String? ?? '') ??
+            DateTime.now(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'op': op.toJson(),
+        'reason': reason,
+        'killed_at': killedAt.toIso8601String(),
       };
 }
 
@@ -83,6 +114,8 @@ abstract class QueueStore {
   Future<List<PendingOp>> getAll();
   Future<void> persist(List<PendingOp> ops);
   Future<void> appendDeadLetter(PendingOp op, String reason);
+  Future<List<DeadLetterEntry>> getDeadLetters();
+  Future<void> persistDeadLetters(List<DeadLetterEntry> entries);
 }
 
 // ─── Production implementations ──────────────────────────────────────────────
@@ -143,6 +176,35 @@ class _FileQueueStore implements QueueStore {
   }
 
   @override
+  Future<List<DeadLetterEntry>> getDeadLetters() async {
+    try {
+      final f = await _deadLetterFile;
+      if (!await f.exists()) return [];
+      final list = jsonDecode(await f.readAsString()) as List;
+      return list
+          .map((e) =>
+              DeadLetterEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } catch (e, s) {
+      _log.warning('getDeadLetters: failed to read dead-letter file', e, s);
+      return [];
+    }
+  }
+
+  @override
+  Future<void> persistDeadLetters(List<DeadLetterEntry> entries) async {
+    try {
+      final f = await _deadLetterFile;
+      await f.writeAsString(
+        jsonEncode(entries.map((e) => e.toJson()).toList()),
+        flush: true,
+      );
+    } catch (e, s) {
+      _log.error('persistDeadLetters: failed to write dead-letter file', e, s);
+    }
+  }
+
+  @override
   Future<void> appendDeadLetter(PendingOp op, String reason) async {
     try {
       final f = await _deadLetterFile;
@@ -194,6 +256,31 @@ class OfflineQueue {
   Future<List<PendingOp>> getAll() => _store.getAll();
 
   Future<int> get count async => (await getAll()).length;
+
+  /// Актуализирует queueCountNotifier (например, при холодном старте,
+  /// когда очередь уже лежит на диске).
+  Future<void> refreshCount() async {
+    queueCountNotifier.value = await count;
+  }
+
+  Future<List<DeadLetterEntry>> deadLetters() => _store.getDeadLetters();
+
+  /// Возвращает операцию из dead-letter в очередь, сбросив attempts.
+  Future<void> retryDeadLetter(String opId) async {
+    final entries = await _store.getDeadLetters();
+    final entry = entries.where((e) => e.op.id == opId).firstOrNull;
+    if (entry == null) return;
+    await _store
+        .persistDeadLetters(entries.where((e) => e.op.id != opId).toList());
+    await enqueue(entry.op.copyWith(attempts: 0));
+  }
+
+  /// Окончательно удаляет операцию из dead-letter.
+  Future<void> deleteDeadLetter(String opId) async {
+    final entries = await _store.getDeadLetters();
+    await _store
+        .persistDeadLetters(entries.where((e) => e.op.id != opId).toList());
+  }
 
   Future<void> enqueue(PendingOp op) async {
     final all = await getAll();

@@ -49,6 +49,10 @@ class VehicleService extends OfflineCrudService<Vehicle> {
         if (item?.sectionId != null) 'vehicles_sec_${item!.sectionId}',
       ];
 
+  @override
+  String describe(Vehicle? item) =>
+      item == null ? 'Автомобиль' : 'Автомобиль ${item.invNumber}';
+
   // Числовой порядок инвентарных номеров — и для сети, и для кэша/офлайна.
   @override
   List<Vehicle> processList(List<Vehicle> list) =>

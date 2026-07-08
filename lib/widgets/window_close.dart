@@ -17,18 +17,18 @@ Future<void> handleWindowCloseRequest(BuildContext context, WidgetRef ref) async
 }
 
 Future<void> showCloseConfirmation(BuildContext context) async {
-if (!context.mounted) return;
-  final isOffline = isOfflineNotifier.value;
+  if (!context.mounted) return;
+  final pendingCount = queueCountNotifier.value;
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: Theme.of(ctx).cardColor,
       surfaceTintColor: Colors.transparent,
       title: const Text('Завершить ATControl?'),
-      content: isOffline
-          ? const DialogScrollContent(
+      content: pendingCount > 0
+          ? DialogScrollContent(
               child: Text(
-                'Есть несинхронизированные изменения.\n'
+                'Несинхронизированных изменений: $pendingCount.\n'
                 'При закрытии они могут быть потеряны.',
               ),
             )

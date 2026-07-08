@@ -42,6 +42,10 @@ class TaskService extends OfflineCrudService<Task> {
   Map<String, dynamic> insertJson(Task item) =>
       {...item.toJson(), 'user_id': _userId};
 
+  @override
+  String describe(Task? item) =>
+      item == null ? 'Задача' : 'Задача «${item.title}»';
+
   // Видимость задач (expiry + собственные) — общая для приложения и
   // расширения логика, живёт в БД: get_my_tasks(p_from, p_to).
 
@@ -77,6 +81,7 @@ class TaskService extends OfflineCrudService<Task> {
         id: id,
         opPrefix: 'tog',
         data: {'is_completed': value},
+        label: value ? 'Задача: выполнена' : 'Задача: снята отметка',
         remote: () =>
             supabase.from(table).update({'is_completed': value}).eq('id', id),
         patch: () => patchCacheField(id, 'is_completed', value),
@@ -86,6 +91,7 @@ class TaskService extends OfflineCrudService<Task> {
         id: id,
         opPrefix: 'upd',
         data: t.toJson(),
+        label: describe(t),
         remote: () => supabase.from(table).update(t.toJson()).eq('id', id),
         patch: () => patchCaches(
             id: id, json: {...t.toJson(), 'id': id}, op: 'update', item: t),

@@ -7,8 +7,11 @@ import 'config.dart';
 import 'utils/router.dart';
 import 'utils/theme.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'dart:async';
+
 import 'platform/app_platform.dart';
 import 'services/notification_service.dart';
+import 'services/offline_queue.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +22,9 @@ void main() async {
   await initializeDateFormatting('ru', null);
   await NotificationService.init();
   await AppPlatform.autostart.init();
+
+  // Очередь могла остаться с прошлого запуска — показываем её в бейдже сразу
+  unawaited(OfflineQueue.instance.refreshCount());
 
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,

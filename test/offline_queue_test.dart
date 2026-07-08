@@ -23,6 +23,21 @@ class MemoryQueueStore implements QueueStore {
   Future<void> appendDeadLetter(PendingOp op, String reason) async {
     deadLetter.add({'op': op.toJson(), 'reason': reason});
   }
+
+  @override
+  Future<List<DeadLetterEntry>> getDeadLetters() async => deadLetter
+      .map((e) => DeadLetterEntry.fromJson({
+            ...e,
+            'killed_at': DateTime.now().toIso8601String(),
+          }))
+      .toList();
+
+  @override
+  Future<void> persistDeadLetters(List<DeadLetterEntry> entries) async {
+    deadLetter
+      ..clear()
+      ..addAll(entries.map((e) => e.toJson()));
+  }
 }
 
 class RecordingExecutor implements QueueExecutor {
@@ -351,6 +366,60 @@ void main() {
       expect(ex.updates, hasLength(1));
       expect(ex.updates.first.$2, 'real-server-id');
       expect(await store.getAll(), isEmpty);
+    });
+  });
+
+  group('dead-letter управление', () {
+    PendingOp op(String id) => PendingOp(
+          id: id,
+          table: 'tasks',
+          op: 'update',
+          data: {'title': 'x'},
+          rowId: 'row1',
+          createdAt: DateTime(2026, 7, 8),
+          attempts: maxQueueAttempts,
+          label: 'Задача «x»',
+        );
+
+    test('retryDeadLetter возвращает операцию в очередь со сброшенными attempts',
+        () async {
+      final store = MemoryQueueStore();
+      final queue = OfflineQueue.forTesting(
+          executor: RecordingExecutor(), store: store);
+      await store.appendDeadLetter(op('dead1'), 'constraint violation');
+
+      await queue.retryDeadLetter('dead1');
+
+      expect(await store.getDeadLetters(), isEmpty);
+      final pending = await store.getAll();
+      expect(pending.length, 1);
+      expect(pending.first.id, 'dead1');
+      expect(pending.first.attempts, 0);
+      expect(pending.first.label, 'Задача «x»');
+    });
+
+    test('deleteDeadLetter удаляет запись безвозвратно', () async {
+      final store = MemoryQueueStore();
+      final queue = OfflineQueue.forTesting(
+          executor: RecordingExecutor(), store: store);
+      await store.appendDeadLetter(op('dead1'), 'boom');
+      await store.appendDeadLetter(op('dead2'), 'boom');
+
+      await queue.deleteDeadLetter('dead1');
+
+      final left = await store.getDeadLetters();
+      expect(left.length, 1);
+      expect(left.first.op.id, 'dead2');
+      expect(await store.getAll(), isEmpty);
+    });
+
+    test('label переживает JSON-сериализацию, старый JSON без label читается',
+        () async {
+      final json = op('x').toJson();
+      expect(PendingOp.fromJson(json).label, 'Задача «x»');
+
+      final legacy = Map<String, dynamic>.from(json)..remove('label');
+      expect(PendingOp.fromJson(legacy).label, null);
     });
   });
 }

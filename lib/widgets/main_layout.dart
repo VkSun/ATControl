@@ -12,6 +12,7 @@ import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../screens/profile/profile_dialog.dart';
 import 'sidebar.dart';
+import 'sync_sheet.dart';
 import 'update_dialog.dart';
 import 'window_close.dart';
 
@@ -305,11 +306,15 @@ class _OfflineBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isOffline = ref.watch(isOfflineProvider).value;
-    if (!isOffline) return const SizedBox.shrink();
     final queueCount = ref.watch(offlineQueueCountProvider).value;
+    // Баннер виден и после восстановления сети, пока очередь не пуста.
+    if (!isOffline && queueCount == 0) return const SizedBox.shrink();
     return Material(
       color: const Color(0xFFF57C00),
-      child: Padding(
+      child: InkWell(
+        // Тап по индикатору — шторка «Синхронизация»
+        onTap: () => showSyncSheet(context),
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Row(
           children: [
@@ -317,14 +322,33 @@ class _OfflineBanner extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                queueCount > 0
-                    ? 'Офлайн · $queueCount изм. ожидают синхронизации'
-                    : 'Нет подключения к интернету',
+                isOffline
+                    ? (queueCount > 0
+                        ? 'Офлайн · изменения ожидают синхронизации'
+                        : 'Нет подключения к интернету')
+                    : 'Изменения ожидают синхронизации',
                 style: const TextStyle(
                   color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600,
                 ),
               ),
             ),
+            if (queueCount > 0) ...[
+              // Бейдж с числом несинхронизированных операций
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('$queueCount',
+                    style: const TextStyle(
+                        color: Color(0xFFF57C00),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700)),
+              ),
+              const SizedBox(width: 8),
+            ],
             TextButton(
               onPressed: onRetry,
               style: TextButton.styleFrom(
@@ -338,6 +362,7 @@ class _OfflineBanner extends ConsumerWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

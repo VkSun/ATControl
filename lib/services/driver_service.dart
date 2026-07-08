@@ -42,6 +42,10 @@ class DriverService extends OfflineCrudService<Driver> {
         if (item?.sectionId != null) 'drivers_sec_${item!.sectionId}',
       ];
 
+  @override
+  String describe(Driver? item) =>
+      item == null ? 'Водитель' : 'Водитель ${item.shortName}';
+
   String _cacheKey({String? departmentId, String? sectionId}) => sectionId != null
       ? 'drivers_sec_$sectionId'
       : departmentId != null
