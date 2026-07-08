@@ -1,10 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
-import '../../services/autostart_service.dart';
+import '../../platform/app_platform.dart';
 import 'import_dialog.dart';
 
 // Провайдеры уведомлений с сохранением в SharedPreferences
@@ -42,11 +41,11 @@ class _AutostartNotifier extends StateNotifier<AsyncValue<bool>> {
     _load();
   }
   Future<void> _load() async {
-    final v = await AutostartService.isEnabled();
+    final v = await AppPlatform.autostart.isEnabled();
     state = AsyncValue.data(v);
   }
   Future<void> set(bool v) async {
-    await AutostartService.setEnabled(v);
+    await AppPlatform.autostart.setEnabled(v);
     state = AsyncValue.data(v);
   }
 }
@@ -127,7 +126,7 @@ class SettingsScreen extends ConsumerWidget {
                   },
                   colors: colors,
                 ),
-                if (Platform.isWindows) ...[
+                if (AppPlatform.isWindows) ...[
                   const _SectionLabel('Система'),
                   _AutostartCard(colors: colors),
                   const SizedBox(height: 8),

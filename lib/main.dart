@@ -1,28 +1,23 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:window_manager/window_manager.dart';
 import 'utils/router.dart';
 import 'utils/theme.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'platform/app_platform.dart';
 import 'services/notification_service.dart';
-import 'services/autostart_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (Platform.isWindows) {
-    await windowManager.ensureInitialized();
-    await windowManager.setPreventClose(true);
-  }
+  await AppPlatform.window.init(); // prevent-close и трей (no-op вне Windows)
 
   await SharedPreferences.getInstance(); // кэшируем, чтобы провайдеры читали синхронно
   await initializeDateFormatting('ru', null);
   await NotificationService.init();
-  await AutostartService.init();
+  await AppPlatform.autostart.init();
 
   await Supabase.initialize(
     url: 'https://gmekcuwebewdhupywyal.supabase.co',

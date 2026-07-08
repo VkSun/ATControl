@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../platform/app_platform.dart';
 import '../utils/logger.dart';
 
 const _log = Logger('UpdateService');
@@ -66,12 +66,12 @@ class UpdateService {
           final assets = (latestAppRelease['assets'] as List)
               .cast<Map<String, dynamic>>();
           String? downloadUrl;
-          if (Platform.isAndroid) {
+          if (AppPlatform.isAndroid) {
             final apk = assets
                 .where((a) => (a['name'] as String).endsWith('.apk'))
                 .firstOrNull;
             downloadUrl = apk?['browser_download_url'] as String?;
-          } else if (Platform.isWindows) {
+          } else if (AppPlatform.isWindows) {
             final zip = assets
                 .where((a) => (a['name'] as String).endsWith('.zip'))
                 .firstOrNull;
@@ -89,7 +89,7 @@ class UpdateService {
       }
 
       // Проверка обновления расширения (только Windows)
-      if (Platform.isWindows && latestExtRelease != null) {
+      if (AppPlatform.isWindows && latestExtRelease != null) {
         final tag = latestExtRelease['tag_name'] as String;
         final extVersion = tag.replaceFirst('ext-', '');
         final prefs = await SharedPreferences.getInstance();

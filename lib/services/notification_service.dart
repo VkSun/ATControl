@@ -1,32 +1,20 @@
-import 'dart:io';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../platform/app_platform.dart';
 import '../utils/date_utils.dart';
 import '../utils/logger.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:local_notifier/local_notifier.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _log = Logger('NotificationService');
 
+/// Общая логика уведомлений об истечении сроков: запрос данных и подсчёт
+/// порогов 7/14/30 дней. Платформенный только показ — AppPlatform.notifications.
 class NotificationService {
-  static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
   static bool _checked = false;
-  static LocalNotification? _lastNotification;
 
   static Future<void> init() async {
     if (_initialized) return;
-    if (Platform.isAndroid) {
-      const settings = InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      );
-      await _plugin.initialize(settings);
-      await _plugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
-    } else if (Platform.isWindows) {
-      await localNotifier.setup(appName: 'ATControl');
-    }
+    await AppPlatform.notifications.init();
     _initialized = true;
   }
 
@@ -104,25 +92,10 @@ class NotificationService {
       if (count14 > 0) parts.add('14 дней: $count14');
       if (count30 > 0) parts.add('30 дней: $count30');
 
-      final title = 'ATControl — истекающих документов: $total';
-      final body = parts.join(' • ');
-
-      if (Platform.isAndroid) {
-        const details = NotificationDetails(
-          android: AndroidNotificationDetails(
-            'atcontrol_expiry',
-            'Истечение сроков',
-            channelDescription: 'Уведомления об истечении сроков документов',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-        );
-        await _plugin.show(0, title, body, details);
-      } else if (Platform.isWindows) {
-        await _lastNotification?.close();
-        _lastNotification = LocalNotification(title: title, body: body);
-        await _lastNotification!.show();
-      }
+      await AppPlatform.notifications.show(
+        title: 'ATControl — истекающих документов: $total',
+        body: parts.join(' • '),
+      );
     } catch (e, s) {
       _log.warning('checkAndNotify failed', e, s);
     }

@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:window_manager/window_manager.dart';
-import 'package:tray_manager/tray_manager.dart';
 import 'dart:async';
-import 'dart:io';
+import '../platform/app_platform.dart';
 import '../utils/theme.dart';
 import '../utils/date_utils.dart';
 import '../utils/responsive.dart';
@@ -33,7 +31,7 @@ class MainLayout extends ConsumerStatefulWidget {
 }
 
 class _MainLayoutState extends ConsumerState<MainLayout>
-    with WidgetsBindingObserver, WindowListener, TrayListener {
+    with WidgetsBindingObserver {
   late Timer _timer;
   late DateTime _now;
   double? _lastWidth;
@@ -48,50 +46,22 @@ class _MainLayoutState extends ConsumerState<MainLayout>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForUpdate();
-      if (Platform.isWindows) _setupTray();
+      AppPlatform.window.setupTray(); // no-op вне Windows
     });
-    if (Platform.isWindows) {
-      windowManager.addListener(this);
-      trayManager.addListener(this);
-    }
+    AppPlatform.window.addHandlers(WindowHandlers(
+      onCloseRequested: _onCloseRequested,
+      onQuitRequested: _showCloseConfirmation,
+    ));
   }
 
-  Future<void> _setupTray() async {
-    await trayManager.setIcon('assets/icons/app_icon.ico');
-    await trayManager.setToolTip('ATControl');
-    await trayManager.setContextMenu(Menu(items: [
-      MenuItem(key: 'show', label: 'Развернуть ATControl'),
-      MenuItem.separator(),
-      MenuItem(key: 'quit', label: 'Закрыть ATControl'),
-    ]));
-  }
-
-  // WindowListener
-  @override
-  void onWindowClose() async {
+  // Пользователь закрывает окно (Windows): в трей или диалог подтверждения.
+  Future<void> _onCloseRequested() async {
     if (!mounted) return;
     final closeToTray = ref.read(closeToTrayProvider);
     if (closeToTray) {
-      await windowManager.hide();
+      await AppPlatform.window.hide();
     } else {
       await _showCloseConfirmation();
-    }
-  }
-
-  // TrayListener
-  @override
-  void onTrayIconMouseDown() {
-    windowManager.show();
-    windowManager.focus();
-  }
-
-  @override
-  void onTrayMenuItemClick(MenuItem menuItem) {
-    if (menuItem.key == 'show') {
-      windowManager.show();
-      windowManager.focus();
-    } else if (menuItem.key == 'quit') {
-      _showCloseConfirmation();
     }
   }
 
@@ -125,7 +95,7 @@ class _MainLayoutState extends ConsumerState<MainLayout>
       ),
     );
     if (confirmed == true) {
-      await windowManager.destroy();
+      await AppPlatform.window.destroy();
     }
   }
 
@@ -164,13 +134,13 @@ class _MainLayoutState extends ConsumerState<MainLayout>
             ] else ...[
               Text('Версия ${update.version} готова к установке.'),
               const SizedBox(height: 8),
-              if (Platform.isAndroid)
+              if (AppPlatform.isAndroid)
                 const Text(
                   'Нажмите «Скачать» — откроется загрузка APK.\n'
                   'После загрузки установите поверх текущей версии.',
                   style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
                 ),
-              if (Platform.isWindows)
+              if (AppPlatform.isWindows)
                 const Text(
                   'Нажмите «Скачать» — откроется загрузка установщика (.exe).\n'
                   'Запустите его — он заменит текущую версию автоматически.',
@@ -245,10 +215,7 @@ class _MainLayoutState extends ConsumerState<MainLayout>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    if (Platform.isWindows) {
-      windowManager.removeListener(this);
-      trayManager.removeListener(this);
-    }
+    AppPlatform.window.removeHandlers();
     _timer.cancel();
     super.dispose();
   }
@@ -964,9 +931,7 @@ class _SidebarNetworkStatusState extends State<_SidebarNetworkStatus> {
 
   Future<void> _check() async {
     try {
-      final result = await InternetAddress.lookup('supabase.co')
-          .timeout(const Duration(seconds: 5));
-      final ok = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+      final ok = await AppPlatform.checkConnectivity();
       if (mounted) setState(() => _connected = ok);
     } catch (_) {
       if (mounted) setState(() => _connected = false);
