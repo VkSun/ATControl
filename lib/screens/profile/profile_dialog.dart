@@ -112,7 +112,9 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
       title: const Text('Профиль'),
       content: SizedBox(
         width: 380,
-        child: Column(
+        // Прокрутка на случай малой высоты экрана (телефон в альбомной ориентации)
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Center(
@@ -180,6 +182,7 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
               onChanged: (_) => setState(() {}),
             ),
           ],
+          ),
         ),
       ),
       actions: [

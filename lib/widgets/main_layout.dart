@@ -254,7 +254,7 @@ class _MainLayoutState extends ConsumerState<MainLayout>
     final themeMode = ref.watch(themeModeProvider);
     final location = GoRouterState.of(context).uri.toString();
     final collapsed = ref.watch(sidebarCollapsedProvider);
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     if (mobile) {
       return _MobileLayout(child: widget.child, location: location, colors: colors, now: _now);

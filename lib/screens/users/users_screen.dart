@@ -40,7 +40,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     if (mobile) {
       return DefaultTabController(
@@ -190,7 +190,7 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          if (isMobile(context)) ...[
+          if (isPhone(context)) ...[
             const Icon(Icons.notifications_outlined, size: 20),
             const SizedBox(width: 12),
             Consumer(
@@ -240,7 +240,7 @@ class _UsersTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(usersProvider);
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     if (mobile) {
       return AsyncValueView(
@@ -944,7 +944,9 @@ class _ShowCodeDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Код приглашения создан'),
-      content: Column(
+      // Прокрутка на случай малой высоты экрана (телефон в альбомной ориентации)
+      content: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text('Передайте этот код пользователю:',
@@ -969,6 +971,7 @@ class _ShowCodeDialog extends StatelessWidget {
               style: TextStyle(fontSize: 11, color: Color(0xFF888888)),
               textAlign: TextAlign.center),
         ],
+        ),
       ),
       actions: [
         IconButton(

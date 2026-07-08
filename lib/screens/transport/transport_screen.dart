@@ -33,7 +33,7 @@ class TransportScreen extends ConsumerWidget {
     final asc = ref.watch(vehicleSortAscProvider);
     final search = ref.watch(vehicleSearchProvider);
     final vehiclesAsync = ref.watch(vehiclesProvider);
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
     final perms = ref.watch(permissionsProvider);
 
     List<Vehicle> buildList(List<Vehicle> vehicles) {
@@ -215,7 +215,7 @@ class _TopBar extends StatelessWidget {
             ],
             const SizedBox(width: 8),
           ],
-          if (isMobile(context)) ...[
+          if (isPhone(context)) ...[
             const Icon(Icons.notifications_outlined, size: 20),
             const SizedBox(width: 12),
             Consumer(

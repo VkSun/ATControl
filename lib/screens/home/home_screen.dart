@@ -44,7 +44,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     if (mobile) {
       return _MobileHome(colors: colors);
@@ -149,7 +149,7 @@ class _ExpiryCard extends ConsumerWidget {
     final vehiclesAsync = ref.watch(vehiclesProvider);
     final driversAsync = ref.watch(driversProvider);
     final fmt = DateFormat('dd.MM.yy');
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -298,7 +298,7 @@ class _TasksCard extends ConsumerWidget {
     final fmt = DateFormat('d MMMM', 'ru');
     final today = DateTime.now();
     final tomorrow = today.add(const Duration(days: 1));
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     return Container(
       decoration: BoxDecoration(

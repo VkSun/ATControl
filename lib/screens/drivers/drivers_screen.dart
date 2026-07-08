@@ -54,7 +54,7 @@ class DriversScreen extends ConsumerWidget {
     final asc = ref.watch(driverSortAscProvider);
     final search = ref.watch(driverSearchProvider);
     final driversAsync = ref.watch(driversProvider);
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
     final perms = ref.watch(permissionsProvider);
 
     if (mobile) {
@@ -206,7 +206,7 @@ class _TopBar extends StatelessWidget {
             ],
             const SizedBox(width: 8),
           ],
-          if (isMobile(context)) ...[
+          if (isPhone(context)) ...[
             const Icon(Icons.notifications_outlined, size: 20),
             const SizedBox(width: 12),
             Consumer(

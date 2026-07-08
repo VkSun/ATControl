@@ -133,7 +133,7 @@ class SettingsScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   _CloseToTrayCard(colors: colors),
                 ],
-                if (!isMobile(context)) ...[
+                if (!isPhone(context)) ...[
                   const _SectionLabel('Импорт и экспорт'),
                   _ImportExportCard(colors: colors),
                 ],
@@ -405,10 +405,12 @@ class _PathSettingState extends State<_PathSetting> {
 
   @override
   Widget build(BuildContext context) {
-    final mobile = isMobile(context);
+    // Раскладка карточки зависит от текущей ширины, а не от типа устройства:
+    // на телефоне в альбомной ориентации строка помещается.
+    final compact = isCompactWidth(context);
     return _SettingCard(
       colors: widget.colors,
-      child: mobile
+      child: compact
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

@@ -123,7 +123,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
     final tasksAsync = ref.watch(tasksProvider);
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     if (mobile) {
       return _buildMobile(context, colors, tasksAsync);
@@ -252,27 +252,34 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
 
   Widget _buildMobile(BuildContext context, AppColors colors, AsyncValue<List<Task>> tasksAsync) {
     final perms = ref.watch(permissionsProvider);
+    // В альбомной ориентации закреплённый календарь не помещается по высоте —
+    // тогда он уходит внутрь прокручиваемого списка задач.
+    final compactHeight = MediaQuery.sizeOf(context).height < 500;
+
+    Widget buildCalendar(List<Task> tasks) => _MiniCalendar(
+          month: _calendarMonth,
+          tasks: tasks,
+          colors: colors,
+          onMonthChanged: (m) => setState(() => _calendarMonth = m),
+        );
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Column(
           children: [
-            // Календарь закреплён сверху
-            Container(
-              color: Theme.of(context).cardColor,
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-              child: tasksAsync.when(
-                loading: () => const SizedBox(height: 180),
-                error: (_, __) => const SizedBox(height: 180),
-                data: (tasks) => _MiniCalendar(
-                  month: _calendarMonth,
-                  tasks: tasks,
-                  colors: colors,
-                  onMonthChanged: (m) => setState(() => _calendarMonth = m),
+            // Календарь закреплён сверху (только если хватает высоты)
+            if (!compactHeight)
+              Container(
+                color: Theme.of(context).cardColor,
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+                child: tasksAsync.when(
+                  loading: () => const SizedBox(height: 180),
+                  error: (_, __) => const SizedBox(height: 180),
+                  data: buildCalendar,
                 ),
               ),
-            ),
             // Табы: Задачи / Заметки
             TabBar(
               tabs: const [
@@ -302,7 +309,21 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                       final keys = grouped.keys.toList()..sort();
                       return ListView(
                         padding: const EdgeInsets.only(bottom: 80),
-                        children: keys.map((dateKey) {
+                        children: [
+                          if (compactHeight)
+                            Container(
+                              color: Theme.of(context).cardColor,
+                              padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+                              // Ширина ограничена, иначе сетка календаря
+                              // растёт по высоте пропорционально ширине.
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 420),
+                                  child: buildCalendar(tasks),
+                                ),
+                              ),
+                            ),
+                          ...keys.map((dateKey) {
                           final dateTasks = grouped[dateKey]!;
                           String label;
                           if (dateKey == 'Без даты') {
@@ -332,7 +353,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                                   _TaskRow(task: t, colors: colors, ref: ref)),
                             ],
                           );
-                        }).toList(),
+                        }),
+                        ],
                       );
                     },
                   ),
@@ -869,7 +891,9 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
       title: const Text('Обновить срок'),
       content: SizedBox(
         width: 360,
-        child: Column(
+        // Прокрутка на случай малой высоты экрана (телефон в альбомной ориентации)
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -898,6 +922,7 @@ class _ExpiryEditDialogState extends ConsumerState<_ExpiryEditDialog> {
               ],
             ),
           ],
+          ),
         ),
       ),
       actions: [
@@ -1129,7 +1154,9 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
       title: Text(isEdit ? 'Редактировать задачу' : 'Новая задача'),
       content: SizedBox(
         width: 380,
-        child: Column(
+        // Прокрутка на случай малой высоты экрана (телефон в альбомной ориентации)
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
@@ -1221,6 +1248,7 @@ class _AddTaskDialogState extends ConsumerState<_AddTaskDialog> {
               ],
             ),
           ],
+          ),
         ),
       ),
       actions: [
