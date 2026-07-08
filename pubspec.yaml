@@ -26,6 +26,9 @@ dependencies:
   cupertino_icons: ^1.0.6
   flutter_svg: ^2.0.9
   
+  # Аннотации (@visibleForTesting)
+  meta: ^1.10.0
+
   # Работа с датами
   intl: ^0.20.0
   

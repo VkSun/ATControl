@@ -59,7 +59,15 @@ class Driver {
   );
 
   String get fullName => '$lastName $firstName${middleName != null ? ' $middleName' : ''}';
-  String get shortName => '$lastName ${firstName[0]}.${middleName != null ? '${middleName![0]}.' : ''}';
+  String get shortName {
+    // Имя/отчество могут быть пустыми (импорт из Excel) — без RangeError.
+    var s = lastName;
+    if (firstName.isNotEmpty) s += ' ${firstName[0]}.';
+    if (middleName != null && middleName!.isNotEmpty) {
+      s += firstName.isNotEmpty ? '${middleName![0]}.' : ' ${middleName![0]}.';
+    }
+    return s;
+  }
 
   factory Driver.fromJson(Map<String, dynamic> json) => Driver(
     id: json['id'],

@@ -45,7 +45,10 @@ class UserRole {
     userId: json['user_id'],
     fullName: json['full_name'] ?? '',
     position: json['position'],
-    initials: json['initials'] ?? 'ПП',
+    // Пустая строка тоже → 'ПП' (серверный _compute_initials может вернуть '')
+    initials: (json['initials'] as String?)?.trim().isNotEmpty == true
+        ? json['initials']
+        : 'ПП',
     avatarColor: json['avatar_color'] ?? '#4361EE',
     isAdmin: json['is_admin'] ?? false,
     permFullAccess: json['perm_full_access'] ?? false,
