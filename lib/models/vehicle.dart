@@ -88,6 +88,15 @@ class Vehicle {
     return equipmentHours! + equipmentToPeriodHours!;
   }
 
+  /// Колонки для select() — ровно поля, которые читает fromJson.
+  static const columns =
+      'id, inv_number, brand, model, gov_number, year, color, vin, '
+      'inspection_date, insurance_date, special_permit_date, '
+      'to_date, to_mileage, to_period_km, to_period_months, '
+      'equipment_type, equipment_to_date, equipment_hours, '
+      'equipment_to_period_hours, equipment_to_period_months, '
+      'notes, department_id, section_id';
+
   factory Vehicle.fromJson(Map<String, dynamic> json) => Vehicle(
     id: json['id'],
     invNumber: json['inv_number'],

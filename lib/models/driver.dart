@@ -69,6 +69,12 @@ class Driver {
     return s;
   }
 
+  /// Колонки для select() — ровно поля, которые читает fromJson.
+  static const columns =
+      'id, tab_number, last_name, first_name, middle_name, birth_date, '
+      'phone, address, license_number, license_expiry, license_categories, '
+      'medical_expiry, vehicle_ids, notes, department_id, section_id';
+
   factory Driver.fromJson(Map<String, dynamic> json) => Driver(
     id: json['id'],
     tabNumber: json['tab_number'],

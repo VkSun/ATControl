@@ -102,9 +102,10 @@ class TaskService extends OfflineCrudService<Task> {
   Future<int> countPending() async {
     final today = toDateString(DateTime.now());
     try {
-      final data =
-          await supabase.rpc('get_my_tasks', params: {'p_to': today}) as List;
-      return data.where((t) => t['is_completed'] == false).length;
+      // Count-RPC: сервер возвращает число, строки не скачиваются.
+      final count = await supabase
+          .rpc('count_my_pending_tasks', params: {'p_to': today});
+      return count as int;
     } catch (e, s) {
       _log.warning('overdueCount: offline fallback', e, s);
       // Offline: estimate from full cache

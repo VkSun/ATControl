@@ -66,7 +66,7 @@ class AuthService {
     try {
       final data = await supabase
           .from('user_roles')
-          .select()
+          .select(UserRole.columns)
           .eq('user_id', response.user!.id)
           .single();
       final role = UserRole.fromJson(data);
@@ -96,9 +96,10 @@ class AuthService {
     try {
       data = await supabase
           .from('invitation_codes')
-          .select()
+          .select(InvitationCode.columns)
           .eq('code', code.toUpperCase())
-          .eq('is_used', false);
+          .eq('is_used', false)
+          .limit(1);
     } catch (e, s) {
       _log.warning('validateInvitationCode failed', e, s);
       throw Exception('Код приглашения недействителен');

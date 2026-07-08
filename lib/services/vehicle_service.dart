@@ -68,7 +68,7 @@ class VehicleService extends OfflineCrudService<Vehicle> {
       fetchList(
         cacheKey: _cacheKey(departmentId: departmentId, sectionId: sectionId),
         query: () {
-          final base = supabase.from(table).select();
+          final base = supabase.from(table).select(Vehicle.columns);
           final q = sectionId != null
               ? base.eq('section_id', sectionId)
               : departmentId != null

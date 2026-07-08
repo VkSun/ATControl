@@ -56,7 +56,7 @@ class DriverService extends OfflineCrudService<Driver> {
       fetchList(
         cacheKey: _cacheKey(departmentId: departmentId, sectionId: sectionId),
         query: () {
-          final base = supabase.from(table).select();
+          final base = supabase.from(table).select(Driver.columns);
           final q = sectionId != null
               ? base.eq('section_id', sectionId)
               : departmentId != null
