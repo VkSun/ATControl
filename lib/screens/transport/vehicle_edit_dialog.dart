@@ -7,6 +7,7 @@ import '../../services/department_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../utils/date_picker.dart';
+import '../../utils/date_utils.dart';
 
 class VehicleEditDialog extends ConsumerStatefulWidget {
   final Vehicle? vehicle;
@@ -497,8 +498,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
     int? km,
     int? hours,
   }) {
-    final now = DateTime.now();
-    final diff = date != null ? date.difference(now).inDays : null;
+    final diff = date != null ? daysUntil(date) : null;
     Color color = const Color(0xFF888888);
     if (diff != null) {
       if (diff < 0) color = const Color(0xFFE24B4A);

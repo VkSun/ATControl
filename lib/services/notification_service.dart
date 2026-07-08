@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../utils/date_utils.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -40,9 +41,7 @@ class NotificationService {
       final supabase = Supabase.instance.client;
       if (supabase.auth.currentUser == null) return;
 
-      final now = DateTime.now();
-      final cutoff =
-          now.add(const Duration(days: 30)).toIso8601String().split('T')[0];
+      final cutoff = toDateString(DateTime.now().add(const Duration(days: 30)));
 
       final vehicles = await supabase
           .from('vehicles')
@@ -61,7 +60,7 @@ class NotificationService {
         if (raw == null) return;
         final date = DateTime.tryParse(raw);
         if (date == null) return;
-        final days = date.difference(now).inDays;
+        final days = daysUntil(date);
         if (days < 0 || (days <= 7 && notify7)) {
           count7++;
         } else if (days <= 14 && notify14) {

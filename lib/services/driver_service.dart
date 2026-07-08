@@ -6,6 +6,7 @@ import 'cache_service.dart';
 import 'offline_queue.dart';
 import 'offline_state.dart';
 import 'vehicle_service.dart';
+import '../utils/date_utils.dart';
 
 final driverServiceProvider = Provider((ref) => DriverService());
 
@@ -167,13 +168,12 @@ class DriverService {
     String? sectionId,
   }) async {
     final all = await getAll(departmentId: departmentId, sectionId: sectionId);
-    final now = DateTime.now();
     final result = <Map<String, dynamic>>[];
 
     for (final d in all) {
       void check(DateTime? date, String type) {
         if (date == null) return;
-        final diff = date.difference(now).inDays;
+        final diff = daysUntil(date);
         if (diff <= 30) {
           result.add({'driver': d, 'type': type, 'date': date, 'diff': diff});
         }

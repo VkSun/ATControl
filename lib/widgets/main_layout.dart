@@ -8,6 +8,7 @@ import 'package:tray_manager/tray_manager.dart';
 import 'dart:async';
 import 'dart:io';
 import '../utils/theme.dart';
+import '../utils/date_utils.dart';
 import '../utils/responsive.dart';
 import '../services/weather_service.dart';
 import '../services/vehicle_service.dart';
@@ -1110,20 +1111,19 @@ class _OfflineBanner extends ConsumerWidget {
 // ─── Expiring documents badge count ──────────────────────────────────────────
 
 final pendingCountProvider = FutureProvider<int>((ref) async {
-  final now = DateTime.now();
   int count = 0;
   final vehicles = await ref.read(vehicleServiceProvider).getAll();
   for (final v in vehicles) {
     for (final date in [v.inspectionDate, v.insuranceDate, v.specialPermitDate]) {
       if (date == null) continue;
-      if (date.difference(now).inDays <= 7) count++;
+      if (daysUntil(date) <= 7) count++;
     }
   }
   final drivers = await ref.read(driverServiceProvider).getAll();
   for (final d in drivers) {
     for (final date in [d.licenseExpiry, d.medicalExpiry]) {
       if (date == null) continue;
-      if (date.difference(now).inDays <= 7) count++;
+      if (daysUntil(date) <= 7) count++;
     }
   }
   return count;

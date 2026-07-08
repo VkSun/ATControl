@@ -1,3 +1,5 @@
+import '../utils/date_utils.dart';
+
 class Task {
   final String id;
   final String title;
@@ -39,7 +41,7 @@ class Task {
   Map<String, dynamic> toJson() => {
     'title': title,
     'description': description,
-    'due_date': dueDate?.toIso8601String().split('T')[0],
+    'due_date': dateStr(dueDate),
     'due_time': dueTime,
     'is_completed': isCompleted,
     'priority': priority,

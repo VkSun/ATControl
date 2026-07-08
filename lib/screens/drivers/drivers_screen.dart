@@ -6,6 +6,7 @@ import '../../models/driver.dart';
 import '../../services/driver_service.dart';
 import '../../services/department_service.dart';
 import '../../utils/theme.dart';
+import '../../utils/date_utils.dart';
 import 'driver_edit_dialog.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/profile_service.dart';
@@ -572,8 +573,7 @@ class _DateCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (date == null) return const Text('—', style: TextStyle(fontSize: 12));
-    final now = DateTime.now();
-    final diff = date!.difference(now).inDays;
+    final diff = daysUntil(date!);
     Color textColor;
     if (diff < 0 || diff <= 7) {
       textColor = colors.badgeRedText;

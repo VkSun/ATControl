@@ -10,6 +10,7 @@ import '../../services/task_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../utils/theme.dart';
+import '../../utils/date_utils.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
 import '../../utils/date_picker.dart';
@@ -95,14 +96,13 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
   Future<void> _syncExpiryTasks() async {
     setState(() => _syncing = true);
     try {
-      final now = DateTime.now();
       final items = <Map<String, dynamic>>[];
 
       final vehicles = await ref.read(vehicleServiceProvider).getAll();
       for (final v in vehicles) {
         void check(DateTime? date, String type) {
           if (date == null) return;
-          final diff = date.difference(now).inDays;
+          final diff = daysUntil(date);
           if (diff <= 30) {
             items.add({
               'title': '$type — ${v.brandModel} (${v.govNumber})',
@@ -123,7 +123,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
       for (final d in drivers) {
         void check(DateTime? date, String type) {
           if (date == null) return;
-          final diff = date.difference(now).inDays;
+          final diff = daysUntil(date);
           if (diff <= 30) {
             items.add({
               'title': '$type — ${d.fullName}',
@@ -333,8 +333,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                     error: (e, _) => Center(child: Text('Ошибка: $e')),
                     data: (tasks) {
                       final fmt = DateFormat('dd MMMM', 'ru');
-                      final today = DateTime.now();
-                      final todayStr = DateFormat('yyyy-MM-dd').format(today);
+                      final todayStr = toDateString(DateTime.now());
                       final Map<String, List<Task>> grouped = {};
                       for (final t in tasks) {
                         final key = t.dueDate != null
@@ -352,7 +351,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                             label = 'Без даты';
                           } else {
                             final d = DateTime.parse(dateKey);
-                            final diff = d.difference(today).inDays;
+                            final diff = daysUntil(d);
                             if (dateKey == todayStr)
                               label = 'Сегодня, ${fmt.format(d)}';
                             else if (diff == 1)
@@ -516,8 +515,7 @@ class _TaskList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd MMMM', 'ru');
-    final today = DateTime.now();
-    final todayStr = DateFormat('yyyy-MM-dd').format(today);
+    final todayStr = toDateString(DateTime.now());
 
     final Map<String, List<Task>> grouped = {};
     for (final t in tasks) {
@@ -546,7 +544,7 @@ class _TaskList extends StatelessWidget {
                 label = 'Без даты';
               } else {
                 final d = DateTime.parse(dateKey);
-                final diff = d.difference(today).inDays;
+                final diff = daysUntil(d);
                 if (dateKey == todayStr) {
                   label = 'Сегодня, ${fmt.format(d)}';
                 } else if (diff == 1)

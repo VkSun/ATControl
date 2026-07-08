@@ -10,6 +10,7 @@ import '../../services/task_service.dart';
 import '../../services/notification_service.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
+import '../../utils/date_utils.dart';
 import '../settings/settings_screen.dart' show notifyDay7Provider, notifyDay14Provider, notifyDay30Provider;
 import '../../widgets/main_layout.dart' show SplitHandle;
 
@@ -147,7 +148,6 @@ class _ExpiryCard extends ConsumerWidget {
     final vehiclesAsync = ref.watch(vehiclesProvider);
     final driversAsync = ref.watch(driversProvider);
     final fmt = DateFormat('dd.MM.yy');
-    final now = DateTime.now();
     final mobile = isMobile(context);
 
     return Container(
@@ -178,7 +178,7 @@ class _ExpiryCard extends ConsumerWidget {
             for (final v in vehicles) {
               void check(DateTime? date, String type) {
                 if (date == null) return;
-                final diff = date.difference(now).inDays;
+                final diff = daysUntil(date);
                 if (diff <= 30) {
                   items.add({'label': type, 'subject': v.brandModel,
                     'extra': v.govNumber, 'date': date, 'diff': diff});
@@ -193,7 +193,7 @@ class _ExpiryCard extends ConsumerWidget {
             for (final d in drivers) {
               void check(DateTime? date, String type) {
                 if (date == null) return;
-                final diff = date.difference(now).inDays;
+                final diff = daysUntil(date);
                 if (diff <= 30) {
                   items.add({'label': type, 'subject': d.fullName,
                     'extra': '', 'date': date, 'diff': diff});

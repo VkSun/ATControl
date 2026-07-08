@@ -1,3 +1,5 @@
+import '../utils/date_utils.dart';
+
 class Driver {
   final String id;
   final String tabNumber;
@@ -83,13 +85,13 @@ class Driver {
     'last_name': lastName,
     'first_name': firstName,
     'middle_name': middleName,
-    'birth_date': birthDate?.toIso8601String().split('T')[0],
+    'birth_date': dateStr(birthDate),
     'phone': phone,
     'address': address,
     'license_number': licenseNumber,
-    'license_expiry': licenseExpiry?.toIso8601String().split('T')[0],
+    'license_expiry': dateStr(licenseExpiry),
     'license_categories': licenseCategories,
-    'medical_expiry': medicalExpiry?.toIso8601String().split('T')[0],
+    'medical_expiry': dateStr(medicalExpiry),
     'vehicle_ids': vehicleIds,
     'notes': notes,
     'department_id': departmentId,

@@ -5,6 +5,7 @@ import 'cache_service.dart';
 import 'offline_queue.dart';
 import 'offline_state.dart';
 import 'vehicle_service.dart';
+import '../utils/date_utils.dart';
 
 final taskServiceProvider = Provider((ref) => TaskService());
 
@@ -56,7 +57,7 @@ class TaskService {
 
   Future<List<Task>> getToday() async {
     final uid = _userId;
-    final today = DateTime.now().toIso8601String().split('T')[0];
+    final today = toDateString(DateTime.now());
     try {
       final data = uid != null
           ? await supabase
@@ -87,9 +88,8 @@ class TaskService {
 
   Future<List<Task>> getTodayAndTomorrow() async {
     final uid = _userId;
-    final now = DateTime.now();
-    final today = now.toIso8601String().split('T')[0];
-    final tomorrow = now.add(const Duration(days: 1)).toIso8601String().split('T')[0];
+    final today = toDateString(DateTime.now());
+    final tomorrow = toDateString(DateTime.now().add(const Duration(days: 1)));
     try {
       final data = uid != null
           ? await supabase
@@ -215,7 +215,7 @@ class TaskService {
 
   Future<int> countPending() async {
     final uid = _userId;
-    final today = DateTime.now().toIso8601String().split('T')[0];
+    final today = toDateString(DateTime.now());
     try {
       final data = uid != null
           ? await supabase
@@ -250,7 +250,7 @@ class TaskService {
     final rows = expiringItems
         .map((item) => {
               'title': item['title'],
-              'due_date': (item['date'] as DateTime).toIso8601String().split('T')[0],
+              'due_date': toDateString(item['date'] as DateTime),
               'is_completed': false,
               'priority': (item['diff'] as int) <= 7 ? 'high' : 'normal',
               'type': 'expiry',

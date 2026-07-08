@@ -6,6 +6,7 @@ import 'cache_service.dart';
 import 'offline_queue.dart';
 import 'offline_state.dart';
 import 'supabase_client.dart';
+import '../utils/date_utils.dart';
 export 'supabase_client.dart';
 
 // Фильтры по подразделению/участку (null = все; только для admin/full_access)
@@ -177,13 +178,12 @@ class VehicleService {
     String? sectionId,
   }) async {
     final all = await getAll(departmentId: departmentId, sectionId: sectionId);
-    final now = DateTime.now();
     final result = <Map<String, dynamic>>[];
 
     for (final v in all) {
       void check(DateTime? date, String type) {
         if (date == null) return;
-        final diff = date.difference(now).inDays;
+        final diff = daysUntil(date);
         if (diff <= 30) {
           result.add({'vehicle': v, 'type': type, 'date': date, 'diff': diff});
         }
