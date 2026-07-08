@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
+import 'package:meta/meta.dart';
 import 'package:xml/xml.dart';
 
 class VehicleImportRow {
@@ -50,7 +51,8 @@ class EngineHoursRow {
 // ────────────────────────────────────────────────────────────────────────────
 
 /// Конвертирует буквенный адрес колонки ("A"→0, "B"→1, "AA"→26 …)
-int _colIndex(String cellRef) {
+@visibleForTesting
+int colIndex(String cellRef) {
   final letters = cellRef.replaceAll(RegExp(r'\d'), '').toUpperCase();
   int col = 0;
   for (final ch in letters.codeUnits) {
@@ -119,10 +121,19 @@ List<List<String?>> readXlsx(Uint8List bytes) {
 
     for (final c in rowElem.findAllElements('c')) {
       final ref = c.getAttribute('r') ?? '';
-      final col = ref.isNotEmpty ? _colIndex(ref) : sparse.length;
+      final col = ref.isNotEmpty ? colIndex(ref) : sparse.length;
       maxCol = max(maxCol, col + 1);
 
       final type = c.getAttribute('t');
+
+      // Inline-строка живёт в <is><t>, элемента <v> у неё нет —
+      // проверяем до чтения <v>.
+      if (type == 'inlineStr') {
+        sparse[col] =
+            c.findAllElements('t').map((t) => t.innerText).join();
+        continue;
+      }
+
       final vElem = c.findElements('v').firstOrNull;
       final raw = vElem?.innerText;
 
@@ -134,9 +145,6 @@ List<List<String?>> readXlsx(Uint8List bytes) {
       if (type == 's') {
         final idx = int.tryParse(raw) ?? 0;
         sparse[col] = idx < sharedStrings.length ? sharedStrings[idx] : null;
-      } else if (type == 'inlineStr') {
-        sparse[col] =
-            c.findAllElements('t').map((t) => t.innerText).join();
       } else if (type == 'b') {
         sparse[col] = raw == '1' ? 'true' : 'false';
       } else {
@@ -179,7 +187,12 @@ double? _d(List<String?> row, int c) {
 DateTime? _dt(List<String?> row, int c) {
   final v = _s(row, c);
   if (v == null) return null;
+  return parseExcelDate(v);
+}
 
+/// Парсит дату из значения ячейки: dd.mm.yyyy, ISO или excel-serial.
+@visibleForTesting
+DateTime? parseExcelDate(String v) {
   // dd.mm.yyyy
   final dots = v.split('.');
   if (dots.length == 3) {

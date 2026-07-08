@@ -10,8 +10,10 @@ import '../../services/task_service.dart';
 import '../../services/notification_service.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
+import '../../utils/date_utils.dart';
 import '../settings/settings_screen.dart' show notifyDay7Provider, notifyDay14Provider, notifyDay30Provider;
 import '../../widgets/main_layout.dart' show SplitHandle;
+import '../../widgets/async_value_view.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -42,7 +44,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     if (mobile) {
       return _MobileHome(colors: colors);
@@ -147,8 +149,7 @@ class _ExpiryCard extends ConsumerWidget {
     final vehiclesAsync = ref.watch(vehiclesProvider);
     final driversAsync = ref.watch(driversProvider);
     final fmt = DateFormat('dd.MM.yy');
-    final now = DateTime.now();
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -178,7 +179,7 @@ class _ExpiryCard extends ConsumerWidget {
             for (final v in vehicles) {
               void check(DateTime? date, String type) {
                 if (date == null) return;
-                final diff = date.difference(now).inDays;
+                final diff = daysUntil(date);
                 if (diff <= 30) {
                   items.add({'label': type, 'subject': v.brandModel,
                     'extra': v.govNumber, 'date': date, 'diff': diff});
@@ -193,7 +194,7 @@ class _ExpiryCard extends ConsumerWidget {
             for (final d in drivers) {
               void check(DateTime? date, String type) {
                 if (date == null) return;
-                final diff = date.difference(now).inDays;
+                final diff = daysUntil(date);
                 if (diff <= 30) {
                   items.add({'label': type, 'subject': d.fullName,
                     'extra': '', 'date': date, 'diff': diff});
@@ -297,7 +298,7 @@ class _TasksCard extends ConsumerWidget {
     final fmt = DateFormat('d MMMM', 'ru');
     final today = DateTime.now();
     final tomorrow = today.add(const Duration(days: 1));
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -305,79 +306,74 @@ class _TasksCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.tableBorder, width: 0.5),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: mobile ? MainAxisSize.min : MainAxisSize.max,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Text('Задачи на сегодня и завтра',
-                style: Theme.of(context).textTheme.titleSmall),
-          ),
-          tasksAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (e, _) => Padding(
-              padding: const EdgeInsets.all(14),
-              child: Text('Ошибка: $e'),
-            ),
-            data: (allTasks) {
-              var todayTasks = allTasks.where((t) =>
-                t.dueDate != null &&
-                t.dueDate!.year == today.year &&
-                t.dueDate!.month == today.month &&
-                t.dueDate!.day == today.day).toList();
+      child: Builder(builder: (context) {
+        final asyncView = AsyncValueView<List<Task>>(
+          value: tasksAsync,
+          onRetry: tasksProvider,
+          builder: (allTasks) {
+            var todayTasks = allTasks.where((t) =>
+              t.dueDate != null &&
+              t.dueDate!.year == today.year &&
+              t.dueDate!.month == today.month &&
+              t.dueDate!.day == today.day).toList();
 
-              var tomorrowTasks = allTasks.where((t) =>
-                t.dueDate != null &&
-                t.dueDate!.year == tomorrow.year &&
-                t.dueDate!.month == tomorrow.month &&
-                t.dueDate!.day == tomorrow.day).toList();
+            var tomorrowTasks = allTasks.where((t) =>
+              t.dueDate != null &&
+              t.dueDate!.year == tomorrow.year &&
+              t.dueDate!.month == tomorrow.month &&
+              t.dueDate!.day == tomorrow.day).toList();
 
-              if (limit != null) {
-                final remaining = limit!;
-                if (todayTasks.length > remaining) {
-                  todayTasks = todayTasks.take(remaining).toList();
-                  tomorrowTasks = [];
-                } else {
-                  tomorrowTasks = tomorrowTasks
-                      .take(remaining - todayTasks.length)
-                      .toList();
-                }
+            if (limit != null) {
+              final remaining = limit!;
+              if (todayTasks.length > remaining) {
+                todayTasks = todayTasks.take(remaining).toList();
+                tomorrowTasks = [];
+              } else {
+                tomorrowTasks = tomorrowTasks
+                    .take(remaining - todayTasks.length)
+                    .toList();
               }
+            }
 
-              if (todayTasks.isEmpty && tomorrowTasks.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(child: Text('Задач на сегодня и завтра нет')),
-                );
-              }
-
-              final content = ListView(
-                shrinkWrap: mobile,
-                physics: mobile
-                    ? const NeverScrollableScrollPhysics()
-                    : const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                children: [
-                  if (todayTasks.isNotEmpty) ...[
-                    _dayLabel('Сегодня, ${fmt.format(today)}', colors, context),
-                    ...todayTasks.map((t) => _TaskRow(task: t, colors: colors)),
-                  ],
-                  if (tomorrowTasks.isNotEmpty) ...[
-                    _dayLabel('Завтра, ${fmt.format(tomorrow)}', colors, context),
-                    ...tomorrowTasks.map((t) => _TaskRow(task: t, colors: colors)),
-                  ],
-                ],
+            if (todayTasks.isEmpty && tomorrowTasks.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: Text('Задач на сегодня и завтра нет')),
               );
+            }
 
-              return mobile ? content : Expanded(child: content);
-            },
-          ),
-        ],
-      ),
+            return ListView(
+              shrinkWrap: mobile,
+              physics: mobile
+                  ? const NeverScrollableScrollPhysics()
+                  : const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              children: [
+                if (todayTasks.isNotEmpty) ...[
+                  _dayLabel('Сегодня, ${fmt.format(today)}', colors, context),
+                  ...todayTasks.map((t) => _TaskRow(task: t, colors: colors)),
+                ],
+                if (tomorrowTasks.isNotEmpty) ...[
+                  _dayLabel('Завтра, ${fmt.format(tomorrow)}', colors, context),
+                  ...tomorrowTasks.map((t) => _TaskRow(task: t, colors: colors)),
+                ],
+              ],
+            );
+          },
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: mobile ? MainAxisSize.min : MainAxisSize.max,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+              child: Text('Задачи на сегодня и завтра',
+                  style: Theme.of(context).textTheme.titleSmall),
+            ),
+            mobile ? asyncView : Expanded(child: asyncView),
+          ],
+        );
+      }),
     );
   }
 

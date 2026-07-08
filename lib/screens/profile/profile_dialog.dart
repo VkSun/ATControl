@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/profile.dart';
 import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
+import '../../utils/logger.dart';
+import '../../widgets/dialog_scroll_content.dart';
+
+const _log = Logger('ProfileDialog');
 
 class ProfileDialog extends ConsumerStatefulWidget {
   const ProfileDialog({super.key});
@@ -41,7 +45,9 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
           _avatarColor = p?.avatarColor ?? '#4361EE';
         });
       }
-    } catch (_) {}
+    } catch (e, s) {
+      _log.warning('_loadProfile failed', e, s);
+    }
   }
 
   @override
@@ -63,7 +69,8 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Сохранить профиль?'),
-        content: const Text('Данные профиля будут обновлены.'),
+        content: const DialogScrollContent(
+            child: Text('Данные профиля будут обновлены.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -105,7 +112,7 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
       backgroundColor: Theme.of(context).cardColor,
       surfaceTintColor: Colors.transparent,
       title: const Text('Профиль'),
-      content: SizedBox(
+      content: DialogScrollContent(
         width: 380,
         child: Column(
           mainAxisSize: MainAxisSize.min,

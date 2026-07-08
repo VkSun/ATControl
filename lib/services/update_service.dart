@@ -1,9 +1,13 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:meta/meta.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../platform/app_platform.dart';
+import '../utils/logger.dart';
+
+const _log = Logger('UpdateService');
 
 enum UpdateType { app, extension }
 
@@ -58,16 +62,16 @@ class UpdateService {
       if (latestAppRelease != null) {
         final tag = latestAppRelease['tag_name'] as String;
         final latest = tag.replaceFirst('v', '');
-        if (_compareVersions(latest, currentApp) > 0) {
+        if (compareVersions(latest, currentApp) > 0) {
           final assets = (latestAppRelease['assets'] as List)
               .cast<Map<String, dynamic>>();
           String? downloadUrl;
-          if (Platform.isAndroid) {
+          if (AppPlatform.isAndroid) {
             final apk = assets
                 .where((a) => (a['name'] as String).endsWith('.apk'))
                 .firstOrNull;
             downloadUrl = apk?['browser_download_url'] as String?;
-          } else if (Platform.isWindows) {
+          } else if (AppPlatform.isWindows) {
             final zip = assets
                 .where((a) => (a['name'] as String).endsWith('.zip'))
                 .firstOrNull;
@@ -85,12 +89,12 @@ class UpdateService {
       }
 
       // Проверка обновления расширения (только Windows)
-      if (Platform.isWindows && latestExtRelease != null) {
+      if (AppPlatform.isWindows && latestExtRelease != null) {
         final tag = latestExtRelease['tag_name'] as String;
         final extVersion = tag.replaceFirst('ext-', '');
         final prefs = await SharedPreferences.getInstance();
         final dismissed = prefs.getString(_prefKeyDismissedExt) ?? '0.0.0';
-        if (_compareVersions(extVersion, dismissed) > 0) {
+        if (compareVersions(extVersion, dismissed) > 0) {
           updates.add(UpdateInfo(
             version: extVersion,
             downloadUrl: latestExtRelease['html_url'] as String,
@@ -99,7 +103,9 @@ class UpdateService {
           ));
         }
       }
-    } catch (_) {}
+    } catch (e, s) {
+      _log.warning('checkForUpdates failed', e, s);
+    }
     return updates;
   }
 
@@ -109,7 +115,8 @@ class UpdateService {
   }
 
   // возвращает >0 если a > b
-  static int _compareVersions(String a, String b) {
+  @visibleForTesting
+  static int compareVersions(String a, String b) {
     final pa = a.split('.').map(int.tryParse).toList();
     final pb = b.split('.').map(int.tryParse).toList();
     for (var i = 0; i < 3; i++) {

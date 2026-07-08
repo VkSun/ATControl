@@ -1,28 +1,20 @@
-import 'dart:io';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:local_notifier/local_notifier.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../platform/app_platform.dart';
+import '../utils/date_utils.dart';
+import '../utils/logger.dart';
+
+const _log = Logger('NotificationService');
+
+/// Общая логика уведомлений об истечении сроков: запрос данных и подсчёт
+/// порогов 7/14/30 дней. Платформенный только показ — AppPlatform.notifications.
 class NotificationService {
-  static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
   static bool _checked = false;
-  static LocalNotification? _lastNotification;
 
   static Future<void> init() async {
     if (_initialized) return;
-    if (Platform.isAndroid) {
-      const settings = InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      );
-      await _plugin.initialize(settings);
-      await _plugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
-    } else if (Platform.isWindows) {
-      await localNotifier.setup(appName: 'ATControl');
-    }
+    await AppPlatform.notifications.init();
     _initialized = true;
   }
 
@@ -40,15 +32,16 @@ class NotificationService {
       final supabase = Supabase.instance.client;
       if (supabase.auth.currentUser == null) return;
 
-      final now = DateTime.now();
-      final cutoff =
-          now.add(const Duration(days: 30)).toIso8601String().split('T')[0];
+      final cutoff = toDateString(DateTime.now().add(const Duration(days: 30)));
 
       final vehicles = await supabase
           .from('vehicles')
-          .select('inspection_date, insurance_date, special_permit_date')
+          .select(
+              'inspection_date, insurance_date, special_permit_date, '
+              'to_date, to_period_months, equipment_to_date, equipment_to_period_months')
           .or(
-              'inspection_date.lte.$cutoff,insurance_date.lte.$cutoff,special_permit_date.lte.$cutoff');
+              'inspection_date.lte.$cutoff,insurance_date.lte.$cutoff,'
+              'special_permit_date.lte.$cutoff,to_date.not.is.null,equipment_to_date.not.is.null');
 
       final drivers = await supabase
           .from('drivers')
@@ -61,7 +54,7 @@ class NotificationService {
         if (raw == null) return;
         final date = DateTime.tryParse(raw);
         if (date == null) return;
-        final days = date.difference(now).inDays;
+        final days = daysUntil(date);
         if (days < 0 || (days <= 7 && notify7)) {
           count7++;
         } else if (days <= 14 && notify14) {
@@ -75,6 +68,16 @@ class NotificationService {
         check(v['inspection_date']);
         check(v['insurance_date']);
         check(v['special_permit_date']);
+        if (v['to_date'] != null && v['to_period_months'] != null) {
+          final d = DateTime.parse(v['to_date'] as String);
+          final months = v['to_period_months'] as int;
+          check(toDateString(DateTime(d.year, d.month + months, d.day)));
+        }
+        if (v['equipment_to_date'] != null && v['equipment_to_period_months'] != null) {
+          final d = DateTime.parse(v['equipment_to_date'] as String);
+          final months = v['equipment_to_period_months'] as int;
+          check(toDateString(DateTime(d.year, d.month + months, d.day)));
+        }
       }
       for (final d in drivers as List) {
         check(d['license_expiry']);
@@ -89,26 +92,13 @@ class NotificationService {
       if (count14 > 0) parts.add('14 дней: $count14');
       if (count30 > 0) parts.add('30 дней: $count30');
 
-      final title = 'ATControl — истекающих документов: $total';
-      final body = parts.join(' • ');
-
-      if (Platform.isAndroid) {
-        const details = NotificationDetails(
-          android: AndroidNotificationDetails(
-            'atcontrol_expiry',
-            'Истечение сроков',
-            channelDescription: 'Уведомления об истечении сроков документов',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-        );
-        await _plugin.show(0, title, body, details);
-      } else if (Platform.isWindows) {
-        await _lastNotification?.close();
-        _lastNotification = LocalNotification(title: title, body: body);
-        await _lastNotification!.show();
-      }
-    } catch (_) {}
+      await AppPlatform.notifications.show(
+        title: 'ATControl — истекающих документов: $total',
+        body: parts.join(' • '),
+      );
+    } catch (e, s) {
+      _log.warning('checkAndNotify failed', e, s);
+    }
   }
 
   static void resetCheckFlag() => _checked = false;

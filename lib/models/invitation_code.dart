@@ -40,6 +40,12 @@ class InvitationCode {
   bool get isExpired => expiresAt != null && expiresAt!.isBefore(DateTime.now());
   bool get isValid => !isUsed && !isExpired;
 
+  /// Колонки для select() — ровно поля, которые читает fromJson.
+  static const columns =
+      'id, code, created_by, used_by, is_used, full_name, position, '
+      'perm_full_access, perm_edit, perm_execute, perm_read, perm_write, '
+      'perm_own_only, expires_at, created_at, department_id, section_id';
+
   factory InvitationCode.fromJson(Map<String, dynamic> json) => InvitationCode(
     id: json['id'],
     code: json['code'],

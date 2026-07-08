@@ -1,32 +1,34 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:window_manager/window_manager.dart';
+import 'config.dart';
 import 'utils/router.dart';
 import 'utils/theme.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'dart:async';
+
+import 'platform/app_platform.dart';
 import 'services/notification_service.dart';
-import 'services/autostart_service.dart';
+import 'services/offline_queue.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (Platform.isWindows) {
-    await windowManager.ensureInitialized();
-    await windowManager.setPreventClose(true);
-  }
+  await AppPlatform.window.init(); // prevent-close и трей (no-op вне Windows)
 
   await SharedPreferences.getInstance(); // кэшируем, чтобы провайдеры читали синхронно
   await initializeDateFormatting('ru', null);
   await NotificationService.init();
-  await AutostartService.init();
+  await AppPlatform.autostart.init();
+
+  // Очередь могла остаться с прошлого запуска — показываем её в бейдже сразу
+  unawaited(OfflineQueue.instance.refreshCount());
 
   await Supabase.initialize(
-    url: 'https://gmekcuwebewdhupywyal.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtZWtjdXdlYmV3ZGh1cHl3eWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTU5NDMsImV4cCI6MjA5Mjk3MTk0M30.gqxIiHldZViI4f_sTrjuG3Bmr18jAZKfJNyLpO8l10s',
+    url: AppConfig.supabaseUrl,
+    anonKey: AppConfig.supabaseAnonKey,
   );
 
   runApp(

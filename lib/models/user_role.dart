@@ -40,12 +40,21 @@ class UserRole {
   bool get canRead => permFullAccess || permRead;
   bool get canWrite => permFullAccess || permWrite;
 
+  /// Колонки для select() — ровно поля, которые читает fromJson.
+  static const columns =
+      'id, user_id, full_name, position, initials, avatar_color, is_admin, '
+      'perm_full_access, perm_edit, perm_execute, perm_read, perm_write, '
+      'perm_own_only, is_active, department_id, section_id';
+
   factory UserRole.fromJson(Map<String, dynamic> json) => UserRole(
     id: json['id'],
     userId: json['user_id'],
     fullName: json['full_name'] ?? '',
     position: json['position'],
-    initials: json['initials'] ?? 'ПП',
+    // Пустая строка тоже → 'ПП' (серверный _compute_initials может вернуть '')
+    initials: (json['initials'] as String?)?.trim().isNotEmpty == true
+        ? json['initials']
+        : 'ПП',
     avatarColor: json['avatar_color'] ?? '#4361EE',
     isAdmin: json['is_admin'] ?? false,
     permFullAccess: json['perm_full_access'] ?? false,

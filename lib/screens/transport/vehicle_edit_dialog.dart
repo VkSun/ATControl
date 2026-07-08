@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +9,8 @@ import '../../services/department_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../utils/date_picker.dart';
+import '../../utils/date_utils.dart';
+import '../../widgets/dialog_scroll_content.dart';
 
 class VehicleEditDialog extends ConsumerStatefulWidget {
   final Vehicle? vehicle;
@@ -130,9 +134,10 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
         title: Text(isEdit ? 'Сохранить изменения?' : 'Добавить транспорт?'),
-        content: Text(isEdit
-            ? 'Данные транспортного средства будут обновлены.'
-            : 'Транспортное средство будет добавлено в систему.'),
+        content: DialogScrollContent(
+            child: Text(isEdit
+                ? 'Данные транспортного средства будут обновлены.'
+                : 'Транспортное средство будет добавлено в систему.')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Сохранить')),
@@ -230,12 +235,11 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
       backgroundColor: Theme.of(context).cardColor,
       surfaceTintColor: Colors.transparent,
       title: Text(title),
-      content: SizedBox(
+      content: DialogScrollContent(
         width: 560,
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
+          child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -252,7 +256,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   const SizedBox(width: 12),
                   Expanded(child: _field(_model, 'Модель', required: true)),
                   const SizedBox(width: 12),
-                  Expanded(child: _field(_year, 'Год выпуска')),
+                  Expanded(child: _field(_year, 'Год')),
                 ]),
                 const SizedBox(height: 14),
 
@@ -274,17 +278,17 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   (d) => setState(() => _toDate = d)),
                 const SizedBox(height: 8),
                 Row(children: [
-                  Expanded(child: _field(_toMileage, 'Пробег на момент ТО (км)',
+                  Expanded(child: _field(_toMileage, 'Пробег при ТО',
                     keyboardType: TextInputType.number)),
                   const SizedBox(width: 12),
-                  Expanded(child: _periodField(_toPeriodKm, 'Периодичность, км',
+                  Expanded(child: _periodField(_toPeriodKm, 'Интервал, км',
                     suffix: 'км')),
                 ]),
                 const SizedBox(height: 8),
                 Row(children: [
                   const Expanded(child: SizedBox()),
                   const SizedBox(width: 12),
-                  Expanded(child: _periodField(_toPeriodMonths, 'Периодичность, мес.',
+                  Expanded(child: _periodField(_toPeriodMonths, 'Интервал, мес.',
                     suffix: 'мес.')),
                 ]),
                 if (_nextToDate != null || _nextToMileage != null) ...[
@@ -307,17 +311,17 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   (d) => setState(() => _equipmentToDate = d)),
                 const SizedBox(height: 8),
                 Row(children: [
-                  Expanded(child: _field(_equipmentHours, 'Наработка моточасов',
+                  Expanded(child: _field(_equipmentHours, 'Моточасы',
                     keyboardType: TextInputType.number)),
                   const SizedBox(width: 12),
-                  Expanded(child: _periodField(_equipmentToPeriodHours, 'Периодичность, м/ч',
+                  Expanded(child: _periodField(_equipmentToPeriodHours, 'Интервал, м/ч',
                     suffix: 'м/ч')),
                 ]),
                 const SizedBox(height: 8),
                 Row(children: [
                   const Expanded(child: SizedBox()),
                   const SizedBox(width: 12),
-                  Expanded(child: _periodField(_equipmentToPeriodMonths, 'Периодичность, мес.',
+                  Expanded(child: _periodField(_equipmentToPeriodMonths, 'Интервал, мес.',
                     suffix: 'мес.')),
                 ]),
                 if (_nextEquipmentToDate != null || _nextEquipmentToHours != null) ...[
@@ -390,8 +394,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 // Заметки
                 _sectionLabel('Заметки'),
                 _field(_notes, 'Заметки', maxLines: 2),
-              ],
-            ),
+            ],
           ),
         ),
       ),
@@ -405,8 +408,9 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 backgroundColor: Theme.of(ctx).cardColor,
                 surfaceTintColor: Colors.transparent,
                 title: const Text('Удалить транспорт?'),
-                content: Text(
-                  '${widget.vehicle!.brandModel} (${widget.vehicle!.govNumber})\n\nЭто действие нельзя отменить.'),
+                content: DialogScrollContent(
+                    child: Text(
+                        '${widget.vehicle!.brandModel} (${widget.vehicle!.govNumber})\n\nЭто действие нельзя отменить.')),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
@@ -497,8 +501,7 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
     int? km,
     int? hours,
   }) {
-    final now = DateTime.now();
-    final diff = date != null ? date.difference(now).inDays : null;
+    final diff = date != null ? daysUntil(date) : null;
     Color color = const Color(0xFF888888);
     if (diff != null) {
       if (diff < 0) color = const Color(0xFFE24B4A);
@@ -660,7 +663,8 @@ class _DriverPickerDialogState extends State<_DriverPickerDialog> {
       title: const Text('Закреплённый водитель'),
       content: SizedBox(
         width: 400,
-        height: 400,
+        // Список прокручивается внутри; высота лишь ограничивается экраном.
+        height: math.min(400, dialogMaxHeight(context)),
         child: Column(
           children: [
             TextField(

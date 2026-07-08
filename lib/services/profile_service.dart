@@ -13,31 +13,18 @@ class ProfileService {
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return null;
 
-    final data = await supabase
-        .from('profiles')
-        .select()
-        .eq('id', userId)
-        .maybeSingle();
-    if (data != null) return Profile.fromJson(data);
-
-    // Профиль ещё не создан — берём данные из user_roles
-    try {
-      final role = await supabase
-          .from('user_roles')
-          .select()
-          .eq('user_id', userId)
-          .maybeSingle();
-      if (role == null) return null;
-      return Profile(
-        id: userId,
-        fullName: role['full_name'] ?? '',
-        position: role['position'] ?? '',
-        initials: role['initials'] ?? '',
-        avatarColor: role['avatar_color'] ?? '#4361EE',
-      );
-    } catch (_) {
-      return null;
-    }
+    // Логика «profiles, а если профиля нет — user_roles» едина для
+    // приложения и расширения и живёт в БД: get_my_profile().
+    final data = await supabase.rpc('get_my_profile');
+    if (data == null) return null;
+    final json = Map<String, dynamic>.from(data as Map);
+    return Profile(
+      id: userId,
+      fullName: json['full_name'] ?? '',
+      position: json['position'] ?? '',
+      initials: json['initials'] ?? '',
+      avatarColor: json['avatar_color'] ?? '#4361EE',
+    );
   }
 
   Future<Profile> save(Profile p) async {
@@ -52,13 +39,13 @@ class ProfileService {
         .select()
         .single();
 
-    // Синхронизируем имя/должность/инициалы/цвет в user_roles
-    await supabase.from('user_roles').update({
-      'full_name': p.fullName,
-      'position': p.position,
-      'initials': p.initials,
-      'avatar_color': p.avatarColor,
-    }).eq('user_id', userId);
+    // Синхронизируем имя/должность/инициалы/цвет в user_roles (через RPC — только display-поля)
+    await supabase.rpc('sync_profile_display', params: {
+      'p_full_name': p.fullName,
+      'p_position': p.position,
+      'p_initials': p.initials,
+      'p_avatar_color': p.avatarColor,
+    });
 
     return Profile.fromJson(data);
   }

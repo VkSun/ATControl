@@ -11,6 +11,8 @@ import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
+import '../../utils/inv_sort.dart';
+import '../../widgets/async_value_view.dart';
 
 enum VehicleSort {
   invNumber, brand, govNumber,
@@ -32,7 +34,7 @@ class TransportScreen extends ConsumerWidget {
     final asc = ref.watch(vehicleSortAscProvider);
     final search = ref.watch(vehicleSearchProvider);
     final vehiclesAsync = ref.watch(vehiclesProvider);
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
     final perms = ref.watch(permissionsProvider);
 
     List<Vehicle> buildList(List<Vehicle> vehicles) {
@@ -51,7 +53,7 @@ class TransportScreen extends ConsumerWidget {
       list = [...list];
       list.sort((a, b) {
         final r = switch (sort) {
-          VehicleSort.invNumber       => a.invNumber.compareTo(b.invNumber),
+          VehicleSort.invNumber       => compareInvNumbers(a.invNumber, b.invNumber),
           VehicleSort.brand           => a.brandModel.compareTo(b.brandModel),
           VehicleSort.govNumber       => a.govNumber.compareTo(b.govNumber),
           VehicleSort.inspectionDate  => (a.inspectionDate ?? DateTime(2099)).compareTo(b.inspectionDate ?? DateTime(2099)),
@@ -75,11 +77,10 @@ class TransportScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             ),
             Expanded(
-              child: vehiclesAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Ошибка: $e')),
-                data: (vehicles) => _VehicleTable(
+              child: AsyncValueView(
+                value: vehiclesAsync,
+                onRetry: vehiclesProvider,
+                builder: (vehicles) => _VehicleTable(
                   vehicles: buildList(vehicles),
                   colors: colors,
                   mobile: true,
@@ -88,9 +89,9 @@ class TransportScreen extends ConsumerWidget {
             ),
           ],
         ),
-        floatingActionButton: perms.canAddVehicle
+        floatingActionButton: (perms.canAddVehicle || perms.isLoading)
             ? FloatingActionButton(
-                onPressed: () => showDialog(
+                onPressed: perms.isLoading ? null : () => showDialog(
                   context: context,
                   builder: (_) => VehicleEditDialog(
                     onSaved: () => ref.invalidate(vehiclesProvider),
@@ -125,11 +126,10 @@ class TransportScreen extends ConsumerWidget {
                 children: [
                   _SearchBar(colors: colors),
                   Expanded(
-                    child: vehiclesAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Ошибка: $e')),
-                      data: (vehicles) => _VehicleTable(
+                    child: AsyncValueView(
+                      value: vehiclesAsync,
+                      onRetry: vehiclesProvider,
+                      builder: (vehicles) => _VehicleTable(
                         vehicles: buildList(vehicles),
                         colors: colors,
                       ),
@@ -175,9 +175,9 @@ class _TopBar extends StatelessWidget {
         children: [
           Text('Транспорт', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(width: 12),
-          if (perms.canAddVehicle)
+          if (perms.canAddVehicle || perms.isLoading)
             FilledButton.icon(
-              onPressed: () => showDialog(
+              onPressed: perms.isLoading ? null : () => showDialog(
                 context: context,
                 builder: (_) => VehicleEditDialog(
                   onSaved: () => ref.invalidate(vehiclesProvider),
@@ -216,7 +216,7 @@ class _TopBar extends StatelessWidget {
             ],
             const SizedBox(width: 8),
           ],
-          if (isMobile(context)) ...[
+          if (isPhone(context)) ...[
             const Icon(Icons.notifications_outlined, size: 20),
             const SizedBox(width: 12),
             Consumer(
@@ -484,7 +484,8 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
 
     if (widget.mobile) {
       return ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 80),
+        // bottom: 96 — FAB не перекрывает последнюю строку списка
+        padding: const EdgeInsets.only(top: 8, bottom: 96),
         itemCount: widget.vehicles.length,
         itemBuilder: (context, i) => _VehicleRow(
           vehicle: widget.vehicles[i],

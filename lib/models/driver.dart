@@ -1,3 +1,5 @@
+import '../utils/date_utils.dart';
+
 class Driver {
   final String id;
   final String tabNumber;
@@ -57,7 +59,21 @@ class Driver {
   );
 
   String get fullName => '$lastName $firstName${middleName != null ? ' $middleName' : ''}';
-  String get shortName => '$lastName ${firstName[0]}.${middleName != null ? '${middleName![0]}.' : ''}';
+  String get shortName {
+    // Имя/отчество могут быть пустыми (импорт из Excel) — без RangeError.
+    var s = lastName;
+    if (firstName.isNotEmpty) s += ' ${firstName[0]}.';
+    if (middleName != null && middleName!.isNotEmpty) {
+      s += firstName.isNotEmpty ? '${middleName![0]}.' : ' ${middleName![0]}.';
+    }
+    return s;
+  }
+
+  /// Колонки для select() — ровно поля, которые читает fromJson.
+  static const columns =
+      'id, tab_number, last_name, first_name, middle_name, birth_date, '
+      'phone, address, license_number, license_expiry, license_categories, '
+      'medical_expiry, vehicle_ids, notes, department_id, section_id';
 
   factory Driver.fromJson(Map<String, dynamic> json) => Driver(
     id: json['id'],
@@ -83,13 +99,13 @@ class Driver {
     'last_name': lastName,
     'first_name': firstName,
     'middle_name': middleName,
-    'birth_date': birthDate?.toIso8601String().split('T')[0],
+    'birth_date': dateStr(birthDate),
     'phone': phone,
     'address': address,
     'license_number': licenseNumber,
-    'license_expiry': licenseExpiry?.toIso8601String().split('T')[0],
+    'license_expiry': dateStr(licenseExpiry),
     'license_categories': licenseCategories,
-    'medical_expiry': medicalExpiry?.toIso8601String().split('T')[0],
+    'medical_expiry': dateStr(medicalExpiry),
     'vehicle_ids': vehicleIds,
     'notes': notes,
     'department_id': departmentId,

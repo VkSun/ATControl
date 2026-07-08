@@ -7,6 +7,7 @@ import '../../models/driver.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/excel_import_service.dart';
+import '../../widgets/dialog_scroll_content.dart';
 
 enum _Step { pick, preview, importing, done }
 
@@ -254,7 +255,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
           Text(_stepTitle),
         ],
       ),
-      content: SizedBox(
+      content: DialogScrollContent(
         width: 520,
         child: _buildContent(),
       ),

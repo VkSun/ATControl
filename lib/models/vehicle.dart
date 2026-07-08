@@ -1,3 +1,5 @@
+import '../utils/date_utils.dart';
+
 class Vehicle {
   final String id;
   final String invNumber;
@@ -51,6 +53,15 @@ class Vehicle {
 
   String get brandModel => '$brand $model';
 
+  // Все пять типов дат истечения для единого обхода
+  List<({String type, DateTime? date})> expiryDates() => [
+    (type: 'Техосмотр', date: inspectionDate),
+    (type: 'Страховка', date: insuranceDate),
+    (type: 'Спец. разрешение', date: specialPermitDate),
+    (type: 'ТО автомобиля', date: nextToDate),
+    (type: 'ТО оборудования', date: nextEquipmentToDate),
+  ];
+
   // Вычисляемая дата следующего ТО автомобиля
   DateTime? get nextToDate {
     if (toDate == null || toPeriodMonths == null) return null;
@@ -76,6 +87,15 @@ class Vehicle {
     if (equipmentHours == null || equipmentToPeriodHours == null) return null;
     return equipmentHours! + equipmentToPeriodHours!;
   }
+
+  /// Колонки для select() — ровно поля, которые читает fromJson.
+  static const columns =
+      'id, inv_number, brand, model, gov_number, year, color, vin, '
+      'inspection_date, insurance_date, special_permit_date, '
+      'to_date, to_mileage, to_period_km, to_period_months, '
+      'equipment_type, equipment_to_date, equipment_hours, '
+      'equipment_to_period_hours, equipment_to_period_months, '
+      'notes, department_id, section_id';
 
   factory Vehicle.fromJson(Map<String, dynamic> json) => Vehicle(
     id: json['id'],
@@ -116,15 +136,15 @@ class Vehicle {
     'year': year,
     'color': color,
     'vin': vin,
-    'inspection_date': inspectionDate?.toIso8601String().split('T')[0],
-    'insurance_date': insuranceDate?.toIso8601String().split('T')[0],
-    'special_permit_date': specialPermitDate?.toIso8601String().split('T')[0],
-    'to_date': toDate?.toIso8601String().split('T')[0],
+    'inspection_date': dateStr(inspectionDate),
+    'insurance_date': dateStr(insuranceDate),
+    'special_permit_date': dateStr(specialPermitDate),
+    'to_date': dateStr(toDate),
     'to_mileage': toMileage,
     'to_period_km': toPeriodKm,
     'to_period_months': toPeriodMonths,
     'equipment_type': equipmentType,
-    'equipment_to_date': equipmentToDate?.toIso8601String().split('T')[0],
+    'equipment_to_date': dateStr(equipmentToDate),
     'equipment_hours': equipmentHours,
     'equipment_to_period_hours': equipmentToPeriodHours,
     'equipment_to_period_months': equipmentToPeriodMonths,
@@ -135,8 +155,7 @@ class Vehicle {
 
   static int dateStatus(DateTime? date) {
     if (date == null) return 0;
-    final now = DateTime.now();
-    final diff = date.difference(now).inDays;
+    final diff = daysUntil(date);
     if (diff < 0) return 4;   // expired → red
     if (diff <= 7) return 3;  // 1-7 days → red
     if (diff <= 14) return 2; // 7-14 days → amber

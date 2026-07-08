@@ -1,9 +1,13 @@
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/auth_exceptions.dart';
 import '../models/user_role.dart';
 import '../models/invitation_code.dart';
+import '../utils/logger.dart';
 import 'supabase_client.dart';
+
+final _log = Logger('AuthService');
 
 final authServiceProvider = Provider((ref) => AuthService());
 
@@ -17,14 +21,13 @@ final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
   final user = userAsync.value;
   if (user == null) return null;
   try {
-    final data = await supabase
-        .from('user_roles')
-        .select()
-        .eq('user_id', user.id)
-        .single();
-    return UserRole.fromJson(data);
-  } catch (_) {
-    return null;
+    // Общая для приложения и расширения логика профиля — в БД (get_my_profile).
+    final data = await supabase.rpc('get_my_profile');
+    if (data == null) return null; // пользователя нет в user_roles
+    return UserRole.fromJson(Map<String, dynamic>.from(data as Map));
+  } catch (e, s) {
+    _log.warning('currentUserRoleProvider failed', e, s);
+    rethrow;
   }
 });
 
@@ -42,34 +45,11 @@ class AuthService {
     );
     if (response.user == null) throw Exception('Ошибка регистрации');
 
-    final initials = _getInitials(fullName);
-    final userId = response.user!.id;
-
-    final role = await supabase.from('user_roles').insert({
-      'user_id': userId,
-      'full_name': fullName,
-      'position': position,
-      'initials': initials,
-      'avatar_color': '#4361EE',
-      'is_admin': true,
-      'perm_full_access': true,
-      'perm_edit': true,
-      'perm_execute': true,
-      'perm_read': true,
-      'perm_write': true,
-      'perm_own_only': false,
-      'is_active': true,
-    }).select().single();
-
-    await supabase.from('profiles').insert({
-      'id': userId,
-      'full_name': fullName,
-      'position': position,
-      'initials': initials,
-      'avatar_color': '#4361EE',
+    final data = await supabase.rpc('register_first_admin', params: {
+      'p_full_name': fullName,
+      'p_position': position,
     });
-
-    return UserRole.fromJson(role);
+    return UserRole.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   // Вход по email/пароль
@@ -86,17 +66,26 @@ class AuthService {
     try {
       final data = await supabase
           .from('user_roles')
-          .select()
+          .select(UserRole.columns)
           .eq('user_id', response.user!.id)
           .single();
       final role = UserRole.fromJson(data);
       if (!role.isActive) {
         await supabase.auth.signOut();
-        throw Exception('Ваш аккаунт заблокирован. Обратитесь к администратору.');
+        throw AccountBlockedException();
       }
       return role;
-    } catch (e) {
-      if (e.toString().contains('заблокирован')) rethrow;
+    } on AccountBlockedException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      if (e.code == 'PGRST116') {
+        await supabase.auth.signOut();
+        throw RoleNotFoundException();
+      }
+      _log.warning('signIn: role fetch failed', e);
+      return null;
+    } catch (e, s) {
+      _log.warning('signIn: unexpected error', e, s);
       return null;
     }
   }
@@ -107,10 +96,12 @@ class AuthService {
     try {
       data = await supabase
           .from('invitation_codes')
-          .select()
+          .select(InvitationCode.columns)
           .eq('code', code.toUpperCase())
-          .eq('is_used', false);
-    } catch (_) {
+          .eq('is_used', false)
+          .limit(1);
+    } catch (e, s) {
+      _log.warning('validateInvitationCode failed', e, s);
       throw Exception('Код приглашения недействителен');
     }
     if (data.isEmpty) throw Exception('Код приглашения недействителен');
@@ -131,43 +122,23 @@ class AuthService {
     );
     if (response.user == null) throw Exception('Ошибка регистрации');
 
-    final initials = _getInitials(invitation.fullName ?? '');
-    final userId = response.user!.id;
-    final fullName = invitation.fullName ?? '';
+    try {
+      // Все три операции (user_roles + profiles + mark used) выполняются
+      // атомарно в одной транзакции с FOR UPDATE на строке приглашения.
+      await supabase.rpc('redeem_invitation', params: {'p_code': invitation.code});
+    } on PostgrestException catch (e) {
+      // RPC провалилась — откатываем сессию, чтобы не оставлять auth-пользователя без роли.
+      await supabase.auth.signOut();
+      throw Exception(_translateRedeemError(e.message));
+    }
+  }
 
-    await supabase.from('user_roles').insert({
-      'user_id': userId,
-      'full_name': fullName,
-      'position': invitation.position,
-      'initials': initials,
-      'avatar_color': '#4361EE',
-      'is_admin': false,
-      'perm_full_access': invitation.permFullAccess,
-      'perm_edit': invitation.permEdit,
-      'perm_execute': invitation.permExecute,
-      'perm_read': invitation.permRead,
-      'perm_write': invitation.permWrite,
-      'perm_own_only': invitation.permOwnOnly,
-      'is_active': true,
-      'department_id': invitation.departmentId,
-      'section_id': invitation.sectionId,
-    });
-
-    await supabase.from('profiles').insert({
-      'id': userId,
-      'full_name': fullName,
-      'position': invitation.position,
-      'initials': initials,
-      'avatar_color': '#4361EE',
-    });
-
-    await supabase
-        .from('invitation_codes')
-        .update({
-          'is_used': true,
-          'used_by': response.user!.id,
-        })
-        .eq('id', invitation.id);
+  static String _translateRedeemError(String? msg) {
+    if (msg == null) return 'Ошибка активации кода приглашения';
+    if (msg.contains('invitation_not_found')) return 'Код приглашения не найден';
+    if (msg.contains('invitation_used'))      return 'Код приглашения уже использован';
+    if (msg.contains('invitation_expired'))   return 'Срок действия кода истёк';
+    return 'Ошибка активации кода приглашения';
   }
 
   // Выход
@@ -213,20 +184,9 @@ class AuthService {
     return '${random.substring(0, 4)}-${random.substring(4, 8)}-${random.substring(8, 12)}';
   }
 
-  String _getInitials(String fullName) {
-    final parts = fullName.trim().split(' ');
-    if (parts.isEmpty) return 'ПП';
-    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-  }
-
   // Проверка существует ли уже админ
   Future<bool> hasAdmin() async {
-    final data = await supabase
-        .from('user_roles')
-        .select()
-        .eq('is_admin', true)
-        .limit(1);
-    return (data as List).isNotEmpty;
+    final result = await supabase.rpc('has_admin');
+    return result as bool;
   }
 }

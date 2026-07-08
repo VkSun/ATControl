@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import '../utils/logger.dart';
+
+final _log = Logger('CacheService');
 
 class CacheService {
   CacheService._();
@@ -16,7 +19,9 @@ class CacheService {
       final path = await _dir;
       await File('$path/atc_$key.json')
           .writeAsString(jsonEncode(data), flush: true);
-    } catch (_) {}
+    } catch (e, s) {
+      _log.warning('save($key) failed', e, s);
+    }
   }
 
   Future<List<Map<String, dynamic>>?> load(String key) async {
@@ -26,7 +31,8 @@ class CacheService {
       if (!await file.exists()) return null;
       final list = jsonDecode(await file.readAsString()) as List;
       return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    } catch (_) {
+    } catch (e, s) {
+      _log.warning('load($key) failed', e, s);
       return null;
     }
   }

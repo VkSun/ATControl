@@ -6,12 +6,14 @@ import '../../models/driver.dart';
 import '../../services/driver_service.dart';
 import '../../services/department_service.dart';
 import '../../utils/theme.dart';
+import '../../utils/date_utils.dart';
 import 'driver_edit_dialog.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
+import '../../widgets/async_value_view.dart';
 
 enum DriverSort { fullName, tabNumber, licenseExpiry, medicalExpiry, birthDate }
 
@@ -52,7 +54,7 @@ class DriversScreen extends ConsumerWidget {
     final asc = ref.watch(driverSortAscProvider);
     final search = ref.watch(driverSearchProvider);
     final driversAsync = ref.watch(driversProvider);
-    final mobile = isMobile(context);
+    final mobile = isPhone(context);
     final perms = ref.watch(permissionsProvider);
 
     if (mobile) {
@@ -65,10 +67,10 @@ class DriversScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             ),
             Expanded(
-              child: driversAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Ошибка: $e')),
-                data: (drivers) => _DriverTable(
+              child: AsyncValueView(
+                value: driversAsync,
+                onRetry: driversProvider,
+                builder: (drivers) => _DriverTable(
                   drivers: _buildList(drivers, search, sort, asc),
                   colors: colors,
                   mobile: true,
@@ -77,9 +79,9 @@ class DriversScreen extends ConsumerWidget {
             ),
           ],
         ),
-        floatingActionButton: perms.canAddDriver
+        floatingActionButton: (perms.canAddDriver || perms.isLoading)
             ? FloatingActionButton(
-                onPressed: () => showDialog(
+                onPressed: perms.isLoading ? null : () => showDialog(
                   context: context,
                   builder: (_) => DriverEditDialog(
                     onSaved: () => ref.invalidate(driversProvider),
@@ -114,10 +116,10 @@ class DriversScreen extends ConsumerWidget {
                 children: [
                   _SearchBar(colors: colors),
                   Expanded(
-                    child: driversAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Ошибка: $e')),
-                      data: (drivers) => _DriverTable(
+                    child: AsyncValueView(
+                      value: driversAsync,
+                      onRetry: driversProvider,
+                      builder: (drivers) => _DriverTable(
                         drivers: _buildList(drivers, search, sort, asc),
                         colors: colors,
                       ),
@@ -163,9 +165,9 @@ class _TopBar extends StatelessWidget {
         children: [
           Text('Водители', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(width: 12),
-          if (perms.canAddDriver)
+          if (perms.canAddDriver || perms.isLoading)
             FilledButton.icon(
-              onPressed: () => showDialog(
+              onPressed: perms.isLoading ? null : () => showDialog(
                 context: context,
                 builder: (_) => DriverEditDialog(
                   onSaved: () => ref.invalidate(driversProvider),
@@ -204,7 +206,7 @@ class _TopBar extends StatelessWidget {
             ],
             const SizedBox(width: 8),
           ],
-          if (isMobile(context)) ...[
+          if (isPhone(context)) ...[
             const Icon(Icons.notifications_outlined, size: 20),
             const SizedBox(width: 12),
             Consumer(
@@ -464,7 +466,8 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
 
     if (widget.mobile) {
       return ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 80),
+        // bottom: 96 — FAB не перекрывает последнюю строку списка
+        padding: const EdgeInsets.only(top: 8, bottom: 96),
         itemCount: widget.drivers.length,
         itemBuilder: (context, i) {
           final d = widget.drivers[i];
@@ -572,8 +575,7 @@ class _DateCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (date == null) return const Text('—', style: TextStyle(fontSize: 12));
-    final now = DateTime.now();
-    final diff = date!.difference(now).inDays;
+    final diff = daysUntil(date!);
     Color textColor;
     if (diff < 0 || diff <= 7) {
       textColor = colors.badgeRedText;
