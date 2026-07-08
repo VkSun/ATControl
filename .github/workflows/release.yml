@@ -227,6 +227,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          # Без этого workflow_dispatch создаёт тег на HEAD дефолтной ветки,
+          # а не на собранном коммите
+          target_commitish: ${{ github.sha }}
           name: "ATControl ${{ github.event.inputs.version || github.ref_name }}"
           generate_release_notes: true
           files: |
