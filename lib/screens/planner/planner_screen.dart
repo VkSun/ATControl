@@ -959,7 +959,8 @@ class _MiniCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = DateFormat('MMMM yyyy', 'ru');
+    // LLLL — standalone-форма месяца («Июль», не «июля» как в 'd MMMM').
+    final fmt = DateFormat('LLLL yyyy', 'ru');
     final today = DateTime.now();
     final firstDay = DateTime(month.year, month.month, 1);
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
@@ -986,7 +987,7 @@ class _MiniCalendar extends StatelessWidget {
               constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
             ),
             Expanded(
-              child: Text(fmt.format(month),
+              child: Text(toBeginningOfSentenceCase(fmt.format(month)),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                       fontSize: 12, fontWeight: FontWeight.w500)),
