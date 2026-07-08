@@ -21,18 +21,12 @@ final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
   final user = userAsync.value;
   if (user == null) return null;
   try {
-    final data = await supabase
-        .from('user_roles')
-        .select()
-        .eq('user_id', user.id)
-        .single();
-    return UserRole.fromJson(data);
-  } on PostgrestException catch (e) {
-    if (e.code == 'PGRST116') return null;
-    _log.warning('currentUserRoleProvider failed', e);
-    rethrow;
+    // Общая для приложения и расширения логика профиля — в БД (get_my_profile).
+    final data = await supabase.rpc('get_my_profile');
+    if (data == null) return null; // пользователя нет в user_roles
+    return UserRole.fromJson(Map<String, dynamic>.from(data as Map));
   } catch (e, s) {
-    _log.warning('currentUserRoleProvider: unexpected error', e, s);
+    _log.warning('currentUserRoleProvider failed', e, s);
     rethrow;
   }
 });

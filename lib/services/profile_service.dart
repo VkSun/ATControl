@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/profile.dart';
-import '../utils/logger.dart';
 import 'vehicle_service.dart';
-
-final _log = Logger('ProfileService');
 
 final profileProvider = FutureProvider<Profile?>((ref) async {
   return ref.read(profileServiceProvider).get();
@@ -16,32 +13,18 @@ class ProfileService {
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return null;
 
-    final data = await supabase
-        .from('profiles')
-        .select()
-        .eq('id', userId)
-        .maybeSingle();
-    if (data != null) return Profile.fromJson(data);
-
-    // Профиль ещё не создан — берём данные из user_roles
-    try {
-      final role = await supabase
-          .from('user_roles')
-          .select()
-          .eq('user_id', userId)
-          .maybeSingle();
-      if (role == null) return null;
-      return Profile(
-        id: userId,
-        fullName: role['full_name'] ?? '',
-        position: role['position'] ?? '',
-        initials: role['initials'] ?? '',
-        avatarColor: role['avatar_color'] ?? '#4361EE',
-      );
-    } catch (e, s) {
-      _log.warning('get: user_roles fallback failed', e, s);
-      return null;
-    }
+    // Логика «profiles, а если профиля нет — user_roles» едина для
+    // приложения и расширения и живёт в БД: get_my_profile().
+    final data = await supabase.rpc('get_my_profile');
+    if (data == null) return null;
+    final json = Map<String, dynamic>.from(data as Map);
+    return Profile(
+      id: userId,
+      fullName: json['full_name'] ?? '',
+      position: json['position'] ?? '',
+      initials: json['initials'] ?? '',
+      avatarColor: json['avatar_color'] ?? '#4361EE',
+    );
   }
 
   Future<Profile> save(Profile p) async {

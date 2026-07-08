@@ -59,11 +59,8 @@ export default function TodoCard({ userId }) {
     setLoading(true)
     setError('')
     try {
-      const { data, error: err } = await supabase
-        .from('tasks')
-        .select('*')
-        .or(`type.eq.expiry,user_id.eq.${userId}`)
-        .order('due_date', { ascending: true, nullsFirst: false })
+      // Общая с Flutter-приложением видимость задач живёт в БД (см. README)
+      const { data, error: err } = await supabase.rpc('get_my_tasks')
       if (err) throw err
       setTasks((data || []).map(taskToDisplay))
     } catch (e) {

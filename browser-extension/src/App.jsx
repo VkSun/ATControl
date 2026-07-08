@@ -118,17 +118,25 @@ export default function App() {
   useEffect(() => { settingsRef.current = settings }, [settings])
   useEffect(() => { sessionRef.current = session }, [session])
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
-      if (session) loadProfileAndSettings(session.user.id)
-    })
+  const loadedForRef = useRef(null)
 
+  useEffect(() => {
+    // onAuthStateChange сразу выдаёт INITIAL_SESSION, поэтому отдельный
+    // getSession() не нужен — раньше он приводил к двойному вызову
+    // loadProfileAndSettings при старте. Ref защищает и от повторной
+    // загрузки на TOKEN_REFRESHED.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      if (session) loadProfileAndSettings(session.user.id)
-      else setProfile(null)
+      setLoading(false)
+      if (session) {
+        if (loadedForRef.current !== session.user.id) {
+          loadedForRef.current = session.user.id
+          loadProfileAndSettings(session.user.id)
+        }
+      } else {
+        loadedForRef.current = null
+        setProfile(null)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -136,7 +144,8 @@ export default function App() {
 
   async function loadProfileAndSettings(userId) {
     const [profileRes, settingsRes] = await Promise.all([
-      supabase.from('user_roles').select('*').eq('user_id', userId).single(),
+      // Общая с Flutter-приложением логика профиля живёт в БД (см. README)
+      supabase.rpc('get_my_profile'),
       supabase.from('newtab_settings').select('*').eq('user_id', userId).single(),
     ])
     if (profileRes.data) setProfile(profileRes.data)

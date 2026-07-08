@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/task.dart';
 import '../utils/date_utils.dart';
 import '../utils/logger.dart';
@@ -43,18 +42,12 @@ class TaskService extends OfflineCrudService<Task> {
   Map<String, dynamic> insertJson(Task item) =>
       {...item.toJson(), 'user_id': _userId};
 
-  /// Задачи, видимые пользователю: expiry-задачи + собственные.
-  PostgrestFilterBuilder<PostgrestList> _visible() {
-    final uid = _userId;
-    final base = supabase.from(table).select();
-    return uid != null
-        ? base.or('type.eq.expiry,user_id.eq.$uid')
-        : base.eq('type', 'expiry');
-  }
+  // Видимость задач (expiry + собственные) — общая для приложения и
+  // расширения логика, живёт в БД: get_my_tasks(p_from, p_to).
 
   Future<List<Task>> getAll() => fetchList(
         cacheKey: _cacheKey,
-        query: () => _visible().order('due_date').order('due_time'),
+        query: () => supabase.rpc('get_my_tasks'),
       );
 
   Future<List<Task>> getToday() {
@@ -62,7 +55,8 @@ class TaskService extends OfflineCrudService<Task> {
     return fetchList(
       cacheKey: _todayCacheKey,
       flushQueue: false,
-      query: () => _visible().eq('due_date', today).order('due_time'),
+      query: () =>
+          supabase.rpc('get_my_tasks', params: {'p_from': today, 'p_to': today}),
     );
   }
 
@@ -72,10 +66,8 @@ class TaskService extends OfflineCrudService<Task> {
     return fetchList(
       cacheKey: 'tasks_2days_${_userId ?? 'anon'}',
       flushQueue: false,
-      query: () => _visible()
-          .inFilter('due_date', [today, tomorrow])
-          .order('due_date')
-          .order('due_time'),
+      query: () => supabase
+          .rpc('get_my_tasks', params: {'p_from': today, 'p_to': tomorrow}),
     );
   }
 
@@ -105,8 +97,8 @@ class TaskService extends OfflineCrudService<Task> {
     final today = toDateString(DateTime.now());
     try {
       final data =
-          await _visible().eq('is_completed', false).lte('due_date', today);
-      return data.length;
+          await supabase.rpc('get_my_tasks', params: {'p_to': today}) as List;
+      return data.where((t) => t['is_completed'] == false).length;
     } catch (e, s) {
       _log.warning('overdueCount: offline fallback', e, s);
       // Offline: estimate from full cache
