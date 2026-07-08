@@ -7,6 +7,7 @@ import 'offline_queue.dart';
 import 'offline_state.dart';
 import 'supabase_client.dart';
 import '../utils/date_utils.dart';
+import '../utils/inv_sort.dart';
 export 'supabase_client.dart';
 
 // Фильтры по подразделению/участку (null = все; только для admin/full_access)
@@ -37,6 +38,10 @@ final vehiclesProvider = FutureProvider<List<Vehicle>>((ref) async {
 class VehicleService {
   final _table = 'vehicles';
 
+  // Числовой порядок инвентарных номеров — и для сети, и для кэша/офлайна.
+  List<Vehicle> _sorted(List<Vehicle> list) =>
+      list..sort((a, b) => compareInvNumbers(a.invNumber, b.invNumber));
+
   String _cacheKey({String? departmentId, String? sectionId}) => sectionId != null
       ? 'vehicles_sec_$sectionId'
       : departmentId != null
@@ -57,12 +62,12 @@ class VehicleService {
       unawaited(CacheService.instance.save(key, maps));
       isOfflineNotifier.value = false;
       unawaited(OfflineQueue.instance.flush());
-      return maps.map((e) => Vehicle.fromJson(e)).toList();
+      return _sorted(maps.map((e) => Vehicle.fromJson(e)).toList());
     } catch (e) {
       if (isNetworkError(e)) {
         isOfflineNotifier.value = true;
         final cached = await CacheService.instance.load(key);
-        if (cached != null) return cached.map(Vehicle.fromJson).toList();
+        if (cached != null) return _sorted(cached.map(Vehicle.fromJson).toList());
       }
       rethrow;
     }

@@ -11,6 +11,7 @@ import '../../services/profile_service.dart';
 import '../../screens/profile/profile_dialog.dart';
 import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
+import '../../utils/inv_sort.dart';
 import '../../widgets/async_value_view.dart';
 
 enum VehicleSort {
@@ -52,7 +53,7 @@ class TransportScreen extends ConsumerWidget {
       list = [...list];
       list.sort((a, b) {
         final r = switch (sort) {
-          VehicleSort.invNumber       => a.invNumber.compareTo(b.invNumber),
+          VehicleSort.invNumber       => compareInvNumbers(a.invNumber, b.invNumber),
           VehicleSort.brand           => a.brandModel.compareTo(b.brandModel),
           VehicleSort.govNumber       => a.govNumber.compareTo(b.govNumber),
           VehicleSort.inspectionDate  => (a.inspectionDate ?? DateTime(2099)).compareTo(b.inspectionDate ?? DateTime(2099)),
