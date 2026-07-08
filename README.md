@@ -55,16 +55,33 @@ git clone https://github.com/VkSun/ATControl.git
 2. Установить зависимости:
 flutter pub get
 
-3. Указать ключи Supabase в `lib/main.dart`:
-```dart
-await Supabase.initialize(
-  url: 'ВАША_SUPABASE_URL',
-  anonKey: 'ВАШ_SUPABASE_ANON_KEY',
-);
+3. Запустить:
+flutter run -d windows
+
+### Свой инстанс Supabase (без правки кода)
+
+Конфигурация отделена от исходников (`lib/config.dart`,
+`browser-extension/src/lib/supabase.js`); без параметров используются
+значения основного инстанса.
+
+**Flutter** — через `--dart-define`:
+```bash
+flutter run -d windows \
+  --dart-define=SUPABASE_URL=https://xxx.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=eyJ...
+# то же для flutter build windows / apk
 ```
 
-4. Запустить:
-flutter run -d windows
+**Расширение** — через `.env` (см. `browser-extension/.env.example`):
+```bash
+cd browser-extension
+cp .env.example .env   # заполнить VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
+npm run build
+```
+
+**CI/релизы** — GitHub Secrets `SUPABASE_URL` и `SUPABASE_ANON_KEY`
+(передаются в сборки через `--dart-define` и `VITE_*`; если секреты не
+заданы, используются значения по умолчанию).
 
 ## Версия
 
