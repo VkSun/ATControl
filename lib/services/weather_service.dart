@@ -41,14 +41,37 @@ class WeatherData {
   });
 }
 
+// weatherProvider — FutureProvider, пересчитывается при каждом invalidate/
+// ребилде дерева провайдеров. Чтобы ограничение частоты запросов работало,
+// сервис должен быть один и тот же между пересчётами — держим его в
+// отдельном провайдере, а не создаём заново на каждый вызов.
+final _weatherServiceProvider = Provider<WeatherService>((ref) => WeatherService());
+
 final weatherProvider = FutureProvider<WeatherData>((ref) async {
   final city = ref.watch(weatherCityProvider);
-  return WeatherService().getWeather(city: city);
+  return ref.watch(_weatherServiceProvider).getWeather(city: city);
 });
 
 class WeatherService {
+  // Не чаще одного запроса к wttr.in за этот интервал — повторные вызовы
+  // getWeather() в пределах интервала отдают кэш без обращения к сети.
+  static const _minRequestInterval = Duration(minutes: 10);
+
+  WeatherData? _cachedData;
+  DateTime? _cachedAt;
+  String? _cachedCity;
+
   // Используем открытый API wttr.in — не требует ключа
   Future<WeatherData> getWeather({String city = 'Minsk'}) async {
+    final cachedAt = _cachedAt;
+    final cachedData = _cachedData;
+    if (cachedData != null &&
+        cachedAt != null &&
+        _cachedCity == city &&
+        DateTime.now().difference(cachedAt) < _minRequestInterval) {
+      return cachedData;
+    }
+
     final uri = Uri.parse('https://wttr.in/$city?format=j1');
     final response = await http.get(uri).timeout(const Duration(seconds: 5));
 
@@ -85,12 +108,16 @@ class WeatherService {
       icon = '⛈';
     }
 
-    return WeatherData(
+    final data = WeatherData(
       temp: temp,
       descCode: _matchDescCode(desc),
       rawDescription: desc,
       icon: icon,
     );
+    _cachedData = data;
+    _cachedAt = DateTime.now();
+    _cachedCity = city;
+    return data;
   }
 
   WeatherDescCode _matchDescCode(String desc) {
