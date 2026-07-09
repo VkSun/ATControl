@@ -24,20 +24,31 @@ class WeatherService {
 
     final json = jsonDecode(response.body);
     final current = json['current_condition'][0];
-    final temp = double.parse(current['temp_C']);
+    // wttr.in отдаёт числа строками; битый/отсутствующий формат — не повод падать.
+    final temp = double.tryParse(current['temp_C'] as String? ?? '') ?? 0.0;
     final desc = (current['weatherDesc'][0]['value'] as String).toLowerCase();
 
+    final code = int.tryParse(current['weatherCode'] as String? ?? '');
     String icon;
-    final code = int.parse(current['weatherCode']);
-    if (code == 113) {
+    if (code == null) {
+      icon = '☁';
+    } else if (code == 113) {
       icon = '☀';
-    } else if (code == 116) icon = '⛅';
-    else if (code <= 122) icon = '☁';
-    else if (code <= 185) icon = '🌦';
-    else if (code <= 246) icon = '❄';
-    else if (code <= 299) icon = '🌧';
-    else if (code <= 399) icon = '🌨';
-    else icon = '⛈';
+    } else if (code == 116) {
+      icon = '⛅';
+    } else if (code <= 122) {
+      icon = '☁';
+    } else if (code <= 185) {
+      icon = '🌦';
+    } else if (code <= 246) {
+      icon = '❄';
+    } else if (code <= 299) {
+      icon = '🌧';
+    } else if (code <= 399) {
+      icon = '🌨';
+    } else {
+      icon = '⛈';
+    }
 
     return WeatherData(
       temp: temp,
