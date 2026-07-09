@@ -39,7 +39,7 @@ function getCache() {
   try {
     const c = JSON.parse(localStorage.getItem(CACHE_KEY))
     if (c && Date.now() - c.ts < CACHE_TTL) return c
-  } catch {}
+  } catch { /* битый кэш игнорируем */ }
   return null
 }
 

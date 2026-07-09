@@ -91,7 +91,6 @@ export default function CalendarCard({ userId }) {
         {cells.map((d, i) => {
           const dayTasks = d ? (tasksByDay[d] || []) : []
           const hasActive = dayTasks.some(t => !t.is_completed)
-          const hasDone = dayTasks.length > 0 && !hasActive
           const isSelected = d === selectedDay
           return (
             <div key={i}

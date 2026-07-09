@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { I } from './Icons'
 
@@ -121,26 +121,9 @@ export default function ShortcutsCard({ userId }) {
   const [editingItem, setEditingItem] = useState(null)
   const [editForm, setEditForm] = useState(EMPTY_FORM)
 
-  useEffect(() => { if (userId) loadItems() }, [userId])
-
-  useEffect(() => {
-    if (openFolder) loadFolderItems(openFolder.id)
-  }, [openFolder?.id])
-
-  async function loadItems() {
-    const { data, error } = await supabase
-      .from('newtab_shortcuts')
-      .select('*')
-      .eq('user_id', userId)
-      .is('folder_id', null)
-      .order('sort_order', { ascending: true })
-    if (error) return
-    if (data.length === 0) { await seedDefaults(); return }
-    setItems(data)
-    refreshFolderCounts(data)
-  }
-
-  async function refreshFolderCounts(data) {
+  // useCallback: стабильные ссылки, чтобы честно указать загрузчики
+  // в зависимостях эффектов (react-hooks/exhaustive-deps).
+  const refreshFolderCounts = useCallback(async (data) => {
     const folderIds = data.filter(d => d.type === 'folder').map(d => d.id)
     if (folderIds.length === 0) return
     const { data: rows } = await supabase
@@ -151,22 +134,41 @@ export default function ShortcutsCard({ userId }) {
     const counts = {}
     rows.forEach(r => { counts[r.folder_id] = (counts[r.folder_id] || 0) + 1 })
     setFolderCounts(counts)
-  }
+  }, [])
 
-  async function loadFolderItems(folderId) {
+  const seedDefaults = useCallback(async () => {
+    const rows = DEFAULT_SHORTCUTS.map(s => ({ ...s, user_id: userId }))
+    const { data } = await supabase.from('newtab_shortcuts').insert(rows).select()
+    if (data) setItems(data)
+  }, [userId])
+
+  const loadItems = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('newtab_shortcuts')
+      .select('*')
+      .eq('user_id', userId)
+      .is('folder_id', null)
+      .order('sort_order', { ascending: true })
+    if (error) return
+    if (data.length === 0) { await seedDefaults(); return }
+    setItems(data)
+    refreshFolderCounts(data)
+  }, [userId, seedDefaults, refreshFolderCounts])
+
+  const loadFolderItems = useCallback(async (folderId) => {
     const { data } = await supabase
       .from('newtab_shortcuts')
       .select('*')
       .eq('folder_id', folderId)
       .order('sort_order', { ascending: true })
     setFolderItems(data || [])
-  }
+  }, [])
 
-  async function seedDefaults() {
-    const rows = DEFAULT_SHORTCUTS.map(s => ({ ...s, user_id: userId }))
-    const { data } = await supabase.from('newtab_shortcuts').insert(rows).select()
-    if (data) setItems(data)
-  }
+  useEffect(() => { if (userId) loadItems() }, [userId, loadItems])
+
+  useEffect(() => {
+    if (openFolder) loadFolderItems(openFolder.id)
+  }, [openFolder, loadFolderItems])
 
   const addItem = async (folderId = null) => {
     if (!form.label) return
