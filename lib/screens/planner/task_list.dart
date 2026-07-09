@@ -144,6 +144,17 @@ class TaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isExpiry = task.type == 'expiry';
     final isHighPriority = task.priority == 'high';
+    // Как на главной: красный (просрочено/≤7 дней), жёлтый (≤14),
+    // зелёный (дальше). priority у задачи-срока бинарный ('high'/'normal'),
+    // поэтому третий уровень считаем от даты, а не от priority.
+    final expiryDiff = task.dueDate != null ? daysUntil(task.dueDate!) : null;
+    final expiryColor = expiryDiff == null
+        ? colors.badgeAmberText
+        : expiryDiff < 0 || expiryDiff <= 7
+            ? colors.badgeRedText
+            : expiryDiff <= 14
+                ? colors.badgeAmberText
+                : colors.badgeGreenText;
 
     return Consumer(
       builder: (context, ref, _) {
@@ -196,10 +207,7 @@ class TaskRow extends StatelessWidget {
                 const SizedBox(width: 16, height: 16)
               else
                 Icon(Icons.warning_amber_rounded,
-                    size: 16,
-                    color: isHighPriority
-                        ? colors.badgeRedText
-                        : colors.badgeAmberText),
+                    size: 16, color: expiryColor),
               const SizedBox(width: 10),
               Expanded(
                 child: GestureDetector(
@@ -209,9 +217,7 @@ class TaskRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       color: isExpiry
-                          ? (isHighPriority
-                              ? colors.badgeRedText
-                              : colors.badgeAmberText)
+                          ? expiryColor
                           : Theme.of(context).textTheme.bodyMedium!.color,
                       decoration:
                           task.isCompleted ? TextDecoration.lineThrough : null,
