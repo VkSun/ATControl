@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/user_role.dart';
-import '../../services/supabase_client.dart';
+import '../../services/user_admin_service.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/async_value_view.dart';
@@ -266,9 +266,9 @@ class UsersTab extends ConsumerWidget {
       ),
     );
     if (confirmed == true) {
-      await supabase
-          .from('user_roles')
-          .update({'is_active': !user.isActive}).eq('id', user.id);
+      await ref
+          .read(userAdminServiceProvider)
+          .setActive(user.id, !user.isActive);
       ref.invalidate(usersProvider);
     }
   }

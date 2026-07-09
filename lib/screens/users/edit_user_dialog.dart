@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/user_role.dart';
 import '../../services/department_service.dart';
-import '../../services/supabase_client.dart';
+import '../../services/user_admin_service.dart';
 import '../../widgets/dialog_scroll_content.dart';
 
 class EditUserDialog extends ConsumerStatefulWidget {
@@ -63,16 +63,19 @@ class EditUserDialogState extends ConsumerState<EditUserDialog> {
     if (confirmed != true) return;
     setState(() => _loading = true);
     try {
-      await supabase.from('user_roles').update({
-        'perm_full_access': _permFullAccess,
-        'perm_edit': _permEdit,
-        'perm_execute': _permExecute,
-        'perm_read': _permRead,
-        'perm_write': _permWrite,
-        'perm_own_only': _permOwnOnly,
-        'department_id': _departmentId,
-        'section_id': _sectionId,
-      }).eq('id', widget.user.id);
+      await ref.read(userAdminServiceProvider).updatePermissions(
+        widget.user.id,
+        {
+          'perm_full_access': _permFullAccess,
+          'perm_edit': _permEdit,
+          'perm_execute': _permExecute,
+          'perm_read': _permRead,
+          'perm_write': _permWrite,
+          'perm_own_only': _permOwnOnly,
+          'department_id': _departmentId,
+          'section_id': _sectionId,
+        },
+      );
       widget.onSaved();
       if (mounted) Navigator.pop(context);
     } catch (e) {
