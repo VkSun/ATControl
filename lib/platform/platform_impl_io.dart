@@ -130,7 +130,19 @@ class WindowsWindowService
   }
 
   @override
-  Future<void> destroy() => windowManager.destroy();
+  Future<void> destroy() async {
+    // windowManager.destroy()/trayManager.destroy() лишь просят Win32
+    // аккуратно закрыть окно и убрать иконку из трея — если ответ по
+    // platform-каналу не придёт (например, цикл сообщений уже занят
+    // диалогом закрытия), await здесь никогда не вернётся и приложение
+    // зависнет как «не отвечает». Даём короткое окно на аккуратное
+    // закрытие, но в любом случае завершаем процесс сами.
+    await Future.wait([
+      trayManager.destroy(),
+      windowManager.destroy(),
+    ]).timeout(const Duration(seconds: 1), onTimeout: () => []);
+    exit(0);
+  }
 
   // WindowListener
   @override
@@ -142,6 +154,11 @@ class WindowsWindowService
   @override
   void onTrayIconMouseDown() {
     showAndFocus();
+  }
+
+  @override
+  void onTrayIconRightMouseUp() {
+    trayManager.popUpContextMenu();
   }
 
   @override
