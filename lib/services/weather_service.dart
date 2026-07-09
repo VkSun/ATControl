@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../screens/settings/settings_screen.dart' show weatherCityProvider;
 
 class WeatherData {
   final double temp;
@@ -11,7 +12,8 @@ class WeatherData {
 }
 
 final weatherProvider = FutureProvider<WeatherData>((ref) async {
-  return WeatherService().getWeather();
+  final city = ref.watch(weatherCityProvider);
+  return WeatherService().getWeather(city: city);
 });
 
 class WeatherService {

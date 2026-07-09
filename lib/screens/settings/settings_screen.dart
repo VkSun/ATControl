@@ -32,6 +32,25 @@ class _BoolPref extends StateNotifier<bool> {
 final closeToTrayProvider = StateNotifierProvider<_BoolPref, bool>(
     (_) => _BoolPref('close_to_tray', false));
 
+// Провайдер города для виджета погоды
+final weatherCityProvider = StateNotifierProvider<_StringPref, String>(
+    (_) => _StringPref('weather_city', 'Minsk'));
+
+class _StringPref extends StateNotifier<String> {
+  final String _key;
+  _StringPref(this._key, String def) : super(def) {
+    SharedPreferences.getInstance().then((p) {
+      final v = p.getString(_key);
+      if (v != null && v.isNotEmpty) state = v;
+    });
+  }
+  Future<void> set(String v) async {
+    state = v;
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_key, v);
+  }
+}
+
 // Провайдер автозагрузки (только Windows)
 final autostartProvider = StateNotifierProvider<_AutostartNotifier, AsyncValue<bool>>(
     (_) => _AutostartNotifier());
@@ -126,6 +145,8 @@ class SettingsScreen extends ConsumerWidget {
                   },
                   colors: colors,
                 ),
+                const SizedBox(height: 8),
+                _WeatherCityCard(colors: colors),
                 if (AppPlatform.isWindows) ...[
                   const _SectionLabel('Система'),
                   _AutostartCard(colors: colors),
@@ -361,6 +382,83 @@ class _CloseToTrayCard extends ConsumerWidget {
       value: enabled,
       onChanged: (v) => ref.read(closeToTrayProvider.notifier).set(v),
       colors: colors,
+    );
+  }
+}
+
+class _WeatherCityCard extends ConsumerStatefulWidget {
+  final AppColors colors;
+  const _WeatherCityCard({required this.colors});
+
+  @override
+  ConsumerState<_WeatherCityCard> createState() => _WeatherCityCardState();
+}
+
+class _WeatherCityCardState extends ConsumerState<_WeatherCityCard> {
+  late final TextEditingController _ctrl;
+  late final FocusNode _focus;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: ref.read(weatherCityProvider));
+    _focus = FocusNode()..addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (!_focus.hasFocus) _save();
+  }
+
+  void _save() {
+    final city = _ctrl.text.trim();
+    if (city.isNotEmpty) {
+      ref.read(weatherCityProvider.notifier).set(city);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focus.removeListener(_onFocusChange);
+    _focus.dispose();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingCard(
+      colors: widget.colors,
+      child: Row(
+        children: [
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Город (погода)', style: TextStyle(fontSize: 13)),
+                SizedBox(height: 2),
+                Text('Город для виджета погоды в боковой панели',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF888888))),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 160,
+            child: TextField(
+              controller: _ctrl,
+              focusNode: _focus,
+              onSubmitted: (_) => _save(),
+              decoration: InputDecoration(
+                isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              ),
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
