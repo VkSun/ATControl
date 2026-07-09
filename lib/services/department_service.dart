@@ -15,7 +15,7 @@ final sectionsProvider = FutureProvider<List<Section>>((ref) async {
 class DepartmentService {
   Future<List<Department>> getDepartments() async {
     final data = await supabase.from('departments').select().order('name');
-    return (data as List).map((e) => Department.fromJson(e)).toList();
+    return data.map((e) => Department.fromJson(e)).toList();
   }
 
   Future<List<Section>> getSections({String? departmentId}) async {
@@ -23,7 +23,7 @@ class DepartmentService {
     final data = departmentId != null
         ? await base.eq('department_id', departmentId).order('name')
         : await base.order('name');
-    return (data as List).map((e) => Section.fromJson(e)).toList();
+    return data.map((e) => Section.fromJson(e)).toList();
   }
 
   Future<Department> createDepartment(String name, {String? parentId}) async {

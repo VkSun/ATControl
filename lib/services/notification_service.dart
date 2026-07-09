@@ -34,7 +34,7 @@ class NotificationService {
 
       final cutoff = toDateString(DateTime.now().add(const Duration(days: 30)));
 
-      final vehicles = await supabase
+      final List<Map<String, dynamic>> vehicles = await supabase
           .from('vehicles')
           .select(
               'inspection_date, insurance_date, special_permit_date, '
@@ -43,7 +43,7 @@ class NotificationService {
               'inspection_date.lte.$cutoff,insurance_date.lte.$cutoff,'
               'special_permit_date.lte.$cutoff,to_date.not.is.null,equipment_to_date.not.is.null');
 
-      final drivers = await supabase
+      final List<Map<String, dynamic>> drivers = await supabase
           .from('drivers')
           .select('license_expiry, medical_expiry')
           .or('license_expiry.lte.$cutoff,medical_expiry.lte.$cutoff');
@@ -64,10 +64,10 @@ class NotificationService {
         }
       }
 
-      for (final v in vehicles as List) {
-        check(v['inspection_date']);
-        check(v['insurance_date']);
-        check(v['special_permit_date']);
+      for (final v in vehicles) {
+        check(v['inspection_date'] as String?);
+        check(v['insurance_date'] as String?);
+        check(v['special_permit_date'] as String?);
         if (v['to_date'] != null && v['to_period_months'] != null) {
           final d = DateTime.parse(v['to_date'] as String);
           final months = v['to_period_months'] as int;
@@ -79,9 +79,9 @@ class NotificationService {
           check(toDateString(DateTime(d.year, d.month + months, d.day)));
         }
       }
-      for (final d in drivers as List) {
-        check(d['license_expiry']);
-        check(d['medical_expiry']);
+      for (final d in drivers) {
+        check(d['license_expiry'] as String?);
+        check(d['medical_expiry'] as String?);
       }
 
       final total = count7 + count14 + count30;

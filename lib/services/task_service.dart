@@ -115,7 +115,7 @@ class TaskService extends OfflineCrudService<Task> {
           .where((t) =>
               t['is_completed'] == false &&
               t['due_date'] != null &&
-              t['due_date'].compareTo(today) <= 0)
+              (t['due_date'] as String).compareTo(today) <= 0)
           .length;
     }
   }

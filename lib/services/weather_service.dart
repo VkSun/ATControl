@@ -22,11 +22,14 @@ class WeatherService {
 
     if (response.statusCode != 200) throw Exception('Ошибка погоды');
 
-    final json = jsonDecode(response.body);
-    final current = json['current_condition'][0];
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final current =
+        (json['current_condition'] as List)[0] as Map<String, dynamic>;
     // wttr.in отдаёт числа строками; битый/отсутствующий формат — не повод падать.
     final temp = double.tryParse(current['temp_C'] as String? ?? '') ?? 0.0;
-    final desc = (current['weatherDesc'][0]['value'] as String).toLowerCase();
+    final weatherDesc =
+        (current['weatherDesc'] as List)[0] as Map<String, dynamic>;
+    final desc = (weatherDesc['value'] as String).toLowerCase();
 
     final code = int.tryParse(current['weatherCode'] as String? ?? '');
     String icon;

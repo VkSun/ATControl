@@ -8,7 +8,7 @@ final invitationsProvider = FutureProvider.autoDispose<List<InvitationCode>>((re
       .from('invitation_codes')
       .select(InvitationCode.columns)
       .order('created_at', ascending: false);
-  return (data as List).map((e) => InvitationCode.fromJson(e)).toList();
+  return data.map((e) => InvitationCode.fromJson(e)).toList();
 });
 
 final usersProvider = FutureProvider.autoDispose<List<UserRole>>((ref) async {
@@ -16,5 +16,5 @@ final usersProvider = FutureProvider.autoDispose<List<UserRole>>((ref) async {
       .from('user_roles')
       .select(UserRole.columns)
       .order('created_at');
-  return (data as List).map((e) => UserRole.fromJson(e)).toList();
+  return data.map((e) => UserRole.fromJson(e)).toList();
 });

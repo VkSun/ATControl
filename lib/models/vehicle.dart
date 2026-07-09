@@ -98,34 +98,34 @@ class Vehicle {
       'notes, department_id, section_id';
 
   factory Vehicle.fromJson(Map<String, dynamic> json) => Vehicle(
-    id: json['id'],
-    invNumber: json['inv_number'],
-    brand: json['brand'],
-    model: json['model'],
-    govNumber: json['gov_number'],
-    year: json['year'],
-    color: json['color'],
-    vin: json['vin'],
+    id: json['id'] as String,
+    invNumber: json['inv_number'] as String,
+    brand: json['brand'] as String,
+    model: json['model'] as String,
+    govNumber: json['gov_number'] as String,
+    year: json['year'] as int?,
+    color: json['color'] as String?,
+    vin: json['vin'] as String?,
     inspectionDate: json['inspection_date'] != null
-        ? DateTime.parse(json['inspection_date']) : null,
+        ? DateTime.parse(json['inspection_date'] as String) : null,
     insuranceDate: json['insurance_date'] != null
-        ? DateTime.parse(json['insurance_date']) : null,
+        ? DateTime.parse(json['insurance_date'] as String) : null,
     specialPermitDate: json['special_permit_date'] != null
-        ? DateTime.parse(json['special_permit_date']) : null,
+        ? DateTime.parse(json['special_permit_date'] as String) : null,
     toDate: json['to_date'] != null
-        ? DateTime.parse(json['to_date']) : null,
-    toMileage: json['to_mileage'],
-    toPeriodKm: json['to_period_km'],
-    toPeriodMonths: json['to_period_months'],
-    equipmentType: json['equipment_type'],
+        ? DateTime.parse(json['to_date'] as String) : null,
+    toMileage: json['to_mileage'] as int?,
+    toPeriodKm: json['to_period_km'] as int?,
+    toPeriodMonths: json['to_period_months'] as int?,
+    equipmentType: json['equipment_type'] as String?,
     equipmentToDate: json['equipment_to_date'] != null
-        ? DateTime.parse(json['equipment_to_date']) : null,
-    equipmentHours: json['equipment_hours'],
-    equipmentToPeriodHours: json['equipment_to_period_hours'],
-    equipmentToPeriodMonths: json['equipment_to_period_months'],
-    notes: json['notes'],
-    departmentId: json['department_id'],
-    sectionId: json['section_id'],
+        ? DateTime.parse(json['equipment_to_date'] as String) : null,
+    equipmentHours: json['equipment_hours'] as int?,
+    equipmentToPeriodHours: json['equipment_to_period_hours'] as int?,
+    equipmentToPeriodMonths: json['equipment_to_period_months'] as int?,
+    notes: json['notes'] as String?,
+    departmentId: json['department_id'] as String?,
+    sectionId: json['section_id'] as String?,
   );
 
   Map<String, dynamic> toJson() => {

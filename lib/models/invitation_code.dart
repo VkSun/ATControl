@@ -47,24 +47,24 @@ class InvitationCode {
       'perm_own_only, expires_at, created_at, department_id, section_id';
 
   factory InvitationCode.fromJson(Map<String, dynamic> json) => InvitationCode(
-    id: json['id'],
-    code: json['code'],
-    createdBy: json['created_by'],
-    usedBy: json['used_by'],
-    isUsed: json['is_used'] ?? false,
-    fullName: json['full_name'],
-    position: json['position'],
-    permFullAccess: json['perm_full_access'] ?? false,
-    permEdit: json['perm_edit'] ?? false,
-    permExecute: json['perm_execute'] ?? false,
-    permRead: json['perm_read'] ?? true,
-    permWrite: json['perm_write'] ?? false,
-    permOwnOnly: json['perm_own_only'] ?? false,
+    id: json['id'] as String,
+    code: json['code'] as String,
+    createdBy: json['created_by'] as String?,
+    usedBy: json['used_by'] as String?,
+    isUsed: json['is_used'] as bool? ?? false,
+    fullName: json['full_name'] as String?,
+    position: json['position'] as String?,
+    permFullAccess: json['perm_full_access'] as bool? ?? false,
+    permEdit: json['perm_edit'] as bool? ?? false,
+    permExecute: json['perm_execute'] as bool? ?? false,
+    permRead: json['perm_read'] as bool? ?? true,
+    permWrite: json['perm_write'] as bool? ?? false,
+    permOwnOnly: json['perm_own_only'] as bool? ?? false,
     expiresAt: json['expires_at'] != null
-        ? DateTime.parse(json['expires_at']) : null,
-    createdAt: DateTime.parse(json['created_at']),
-    departmentId: json['department_id'],
-    sectionId: json['section_id'],
+        ? DateTime.parse(json['expires_at'] as String) : null,
+    createdAt: DateTime.parse(json['created_at'] as String),
+    departmentId: json['department_id'] as String?,
+    sectionId: json['section_id'] as String?,
   );
 
   Map<String, dynamic> toJson() => {

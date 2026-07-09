@@ -85,22 +85,22 @@ class Driver {
       'medical_expiry, vehicle_ids, notes, department_id, section_id';
 
   factory Driver.fromJson(Map<String, dynamic> json) => Driver(
-    id: json['id'],
-    tabNumber: json['tab_number'],
-    lastName: json['last_name'],
-    firstName: json['first_name'],
-    middleName: json['middle_name'],
-    birthDate: json['birth_date'] != null ? DateTime.parse(json['birth_date']) : null,
-    phone: json['phone'],
-    address: json['address'],
-    licenseNumber: json['license_number'],
-    licenseExpiry: json['license_expiry'] != null ? DateTime.parse(json['license_expiry']) : null,
-    licenseCategories: json['license_categories'],
-    medicalExpiry: json['medical_expiry'] != null ? DateTime.parse(json['medical_expiry']) : null,
+    id: json['id'] as String,
+    tabNumber: json['tab_number'] as String,
+    lastName: json['last_name'] as String,
+    firstName: json['first_name'] as String,
+    middleName: json['middle_name'] as String?,
+    birthDate: json['birth_date'] != null ? DateTime.parse(json['birth_date'] as String) : null,
+    phone: json['phone'] as String?,
+    address: json['address'] as String?,
+    licenseNumber: json['license_number'] as String?,
+    licenseExpiry: json['license_expiry'] != null ? DateTime.parse(json['license_expiry'] as String) : null,
+    licenseCategories: json['license_categories'] as String?,
+    medicalExpiry: json['medical_expiry'] != null ? DateTime.parse(json['medical_expiry'] as String) : null,
     vehicleIds: (json['vehicle_ids'] as List?)?.map((e) => e.toString()).toList() ?? [],
-    notes: json['notes'],
-    departmentId: json['department_id'],
-    sectionId: json['section_id'],
+    notes: json['notes'] as String?,
+    departmentId: json['department_id'] as String?,
+    sectionId: json['section_id'] as String?,
   );
 
   Map<String, dynamic> toJson() => {

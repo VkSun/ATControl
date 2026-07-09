@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../platform/app_platform.dart';
 import '../services/update_service.dart';
@@ -70,7 +72,8 @@ if (!context.mounted) return;
             if (update.type == UpdateType.extension) {
               await UpdateService.dismissExtensionUpdate(update.version);
             }
-            UpdateService.openDownload(update.downloadUrl);
+            // Открывает внешний браузер — ждать здесь больше нечего.
+            unawaited(UpdateService.openDownload(update.downloadUrl));
           },
           child: const Text('Скачать'),
         ),

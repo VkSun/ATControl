@@ -6,9 +6,9 @@ class Department {
   const Department({required this.id, required this.name, this.parentId});
 
   factory Department.fromJson(Map<String, dynamic> json) => Department(
-        id: json['id'],
-        name: json['name'],
-        parentId: json['parent_id'],
+        id: json['id'] as String,
+        name: json['name'] as String,
+        parentId: json['parent_id'] as String?,
       );
 
   Map<String, dynamic> toJson() => {'name': name};
@@ -35,9 +35,9 @@ class Section {
   });
 
   factory Section.fromJson(Map<String, dynamic> json) => Section(
-        id: json['id'],
-        name: json['name'],
-        departmentId: json['department_id'],
+        id: json['id'] as String,
+        name: json['name'] as String,
+        departmentId: json['department_id'] as String,
       );
 
   Map<String, dynamic> toJson() => {'name': name, 'department_id': departmentId};

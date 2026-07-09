@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/driver.dart';
+import '../../models/vehicle.dart';
 import '../../services/department_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/vehicle_service.dart';
@@ -398,7 +399,7 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
 }
 
 class _VehicleSelectorField extends StatelessWidget {
-  final List<dynamic> vehicles;
+  final List<Vehicle> vehicles;
   final List<String> selectedIds;
   final ValueChanged<List<String>> onChanged;
 
@@ -422,7 +423,7 @@ class _VehicleSelectorField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final matched =
-        vehicles.where((v) => selectedIds.contains(v.id as String)).toList();
+        vehicles.where((v) => selectedIds.contains(v.id)).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -436,12 +437,12 @@ class _VehicleSelectorField extends StatelessWidget {
           children: [
             for (final v in matched)
               InputChip(
-                label: Text(v.invNumber as String,
+                label: Text(v.invNumber,
                     style: const TextStyle(fontSize: 12)),
                 visualDensity: VisualDensity.compact,
                 deleteButtonTooltipMessage: 'Открепить',
                 onDeleted: () =>
-                    onChanged([...selectedIds]..remove(v.id as String)),
+                    onChanged([...selectedIds]..remove(v.id)),
               ),
             ActionChip(
               avatar: const Icon(Icons.add, size: 16),
@@ -458,7 +459,7 @@ class _VehicleSelectorField extends StatelessWidget {
 }
 
 class _VehiclePickerDialog extends StatefulWidget {
-  final List<dynamic> vehicles;
+  final List<Vehicle> vehicles;
   final List<String> initialSelected;
 
   const _VehiclePickerDialog({
@@ -529,14 +530,14 @@ class _VehiclePickerDialogState extends State<_VehiclePickerDialog> {
                       itemBuilder: (context, i) {
                         final v = filtered[i];
                         final isSelected =
-                            _selected.contains(v.id as String);
+                            _selected.contains(v.id);
                         return InkWell(
                           borderRadius: BorderRadius.circular(6),
                           onTap: () => setState(() {
                             if (isSelected) {
                               _selected.remove(v.id);
                             } else {
-                              _selected.add(v.id as String);
+                              _selected.add(v.id);
                             }
                           }),
                           child: Padding(

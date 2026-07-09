@@ -314,7 +314,7 @@ class OfflineQueue {
   }
 
   Future<bool> _doFlush() async {
-    var ops = await _store.getAll();
+    final ops = await _store.getAll();
     if (ops.isEmpty) return true;
 
     // Process inserts before their dependent updates/deletes.

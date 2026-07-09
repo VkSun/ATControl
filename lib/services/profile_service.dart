@@ -21,10 +21,10 @@ class ProfileService {
     final json = Map<String, dynamic>.from(data as Map);
     return Profile(
       id: userId,
-      fullName: json['full_name'] ?? '',
-      position: json['position'] ?? '',
-      initials: json['initials'] ?? '',
-      avatarColor: json['avatar_color'] ?? kPrimaryColorHex,
+      fullName: json['full_name'] as String? ?? '',
+      position: json['position'] as String? ?? '',
+      initials: json['initials'] as String? ?? '',
+      avatarColor: json['avatar_color'] as String? ?? kPrimaryColorHex,
     );
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/auth_service.dart';
@@ -57,10 +59,11 @@ class CreateInvitationDialogState
       widget.onSaved();
       if (mounted) {
         Navigator.pop(context);
-        showDialog(
+        // Диалог с кодом открывается поверх — дожидаться его закрытия здесь не нужно.
+        unawaited(showDialog(
           context: context,
           builder: (_) => ShowCodeDialog(code: invitation.code),
-        );
+        ));
       }
     } catch (e) {
       if (mounted) {

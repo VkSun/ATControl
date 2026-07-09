@@ -49,25 +49,25 @@ class UserRole {
       'perm_own_only, is_active, department_id, section_id';
 
   factory UserRole.fromJson(Map<String, dynamic> json) => UserRole(
-    id: json['id'],
-    userId: json['user_id'],
-    fullName: json['full_name'] ?? '',
-    position: json['position'],
+    id: json['id'] as String,
+    userId: json['user_id'] as String,
+    fullName: json['full_name'] as String? ?? '',
+    position: json['position'] as String?,
     // Пустая строка тоже → 'ПП' (серверный _compute_initials может вернуть '')
     initials: (json['initials'] as String?)?.trim().isNotEmpty == true
-        ? json['initials']
+        ? json['initials'] as String
         : 'ПП',
-    avatarColor: json['avatar_color'] ?? kPrimaryColorHex,
-    isAdmin: json['is_admin'] ?? false,
-    permFullAccess: json['perm_full_access'] ?? false,
-    permEdit: json['perm_edit'] ?? false,
-    permExecute: json['perm_execute'] ?? false,
-    permRead: json['perm_read'] ?? true,
-    permWrite: json['perm_write'] ?? false,
-    permOwnOnly: json['perm_own_only'] ?? false,
-    isActive: json['is_active'] ?? true,
-    departmentId: json['department_id'],
-    sectionId: json['section_id'],
+    avatarColor: json['avatar_color'] as String? ?? kPrimaryColorHex,
+    isAdmin: json['is_admin'] as bool? ?? false,
+    permFullAccess: json['perm_full_access'] as bool? ?? false,
+    permEdit: json['perm_edit'] as bool? ?? false,
+    permExecute: json['perm_execute'] as bool? ?? false,
+    permRead: json['perm_read'] as bool? ?? true,
+    permWrite: json['perm_write'] as bool? ?? false,
+    permOwnOnly: json['perm_own_only'] as bool? ?? false,
+    isActive: json['is_active'] as bool? ?? true,
+    departmentId: json['department_id'] as String?,
+    sectionId: json['section_id'] as String?,
   );
 
   Map<String, dynamic> toJson() => {

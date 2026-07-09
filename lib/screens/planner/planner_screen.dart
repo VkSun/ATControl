@@ -54,7 +54,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
           .eq('user_id', userId)
           .limit(1)
           .single();
-      if (mounted) _notesCtrl.text = data['content'] ?? '';
+      if (mounted) _notesCtrl.text = data['content'] as String? ?? '';
     } catch (_) {
       // Заметки ещё не созданы для этого пользователя
       if (mounted) _notesCtrl.text = '';

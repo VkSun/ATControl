@@ -26,16 +26,16 @@ class Task {
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
-    id: json['id'],
-    title: json['title'],
-    description: json['description'],
-    dueDate: json['due_date'] != null ? DateTime.parse(json['due_date']) : null,
-    dueTime: json['due_time'],
-    isCompleted: json['is_completed'] ?? false,
-    priority: json['priority'] ?? 'normal',
-    type: json['type'] ?? 'manual',
-    vehicleId: json['vehicle_id'],
-    driverId: json['driver_id'],
+    id: json['id'] as String,
+    title: json['title'] as String,
+    description: json['description'] as String?,
+    dueDate: json['due_date'] != null ? DateTime.parse(json['due_date'] as String) : null,
+    dueTime: json['due_time'] as String?,
+    isCompleted: json['is_completed'] as bool? ?? false,
+    priority: json['priority'] as String? ?? 'normal',
+    type: json['type'] as String? ?? 'manual',
+    vehicleId: json['vehicle_id'] as String?,
+    driverId: json['driver_id'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
