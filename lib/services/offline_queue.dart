@@ -14,7 +14,7 @@ final _log = Logger('OfflineQueue');
 /// Maximum consecutive non-network failures before an op is dead-lettered.
 const int maxQueueAttempts = 5;
 
-// ─── PendingOp ────────────────────────────────────────────────────────────────
+// ─── PendingOp ─────────────────────────────────────────────────────────────
 
 class PendingOp {
   final String id;
@@ -56,7 +56,7 @@ class PendingOp {
         id: j['id'] as String,
         table: j['table'] as String,
         op: j['op'] as String,
-        data: Map<String, dynamic>.from(j['data'] as Map),
+        data: _safeMapCast(j['data']),
         rowId: j['row_id'] as String?,
         createdAt: DateTime.parse(j['created_at'] as String),
         attempts: (j['attempts'] as int?) ?? 0,
@@ -84,7 +84,7 @@ class DeadLetterEntry {
   DeadLetterEntry({required this.op, required this.reason, required this.killedAt});
 
   factory DeadLetterEntry.fromJson(Map<String, dynamic> j) => DeadLetterEntry(
-        op: PendingOp.fromJson(Map<String, dynamic>.from(j['op'] as Map)),
+        op: PendingOp.fromJson(_safeMapCast(j['op'])),
         reason: (j['reason'] as String?) ?? '',
         killedAt: DateTime.tryParse(j['killed_at'] as String? ?? '') ??
             DateTime.now(),
@@ -97,7 +97,21 @@ class DeadLetterEntry {
       };
 }
 
-// ─── Executor interface ───────────────────────────────────────────────────────
+/// Безопасно преобразует значение в Map<String, dynamic>
+Map<String, dynamic> _safeMapCast(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    try {
+      return Map<String, dynamic>.from(value);
+    } catch (e) {
+      _log.warning('Failed to cast Map to Map<String, dynamic>', e);
+      return <String, dynamic>{};
+    }
+  }
+  return <String, dynamic>{};
+}
+
+// ─── Executor interface ──────────────────────────────────────────────────────
 
 /// Abstracts the actual DB calls so flush() can be unit-tested without Supabase.
 abstract class QueueExecutor {
@@ -154,7 +168,7 @@ class _FileQueueStore implements QueueStore {
       if (!await f.exists()) return [];
       final list = jsonDecode(await f.readAsString()) as List;
       return list
-          .map((e) => PendingOp.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map((e) => PendingOp.fromJson(_safeMapCast(e)))
           .toList();
     } catch (e, s) {
       _log.warning('getAll: failed to read pending queue', e, s);
@@ -182,8 +196,7 @@ class _FileQueueStore implements QueueStore {
       if (!await f.exists()) return [];
       final list = jsonDecode(await f.readAsString()) as List;
       return list
-          .map((e) =>
-              DeadLetterEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map((e) => DeadLetterEntry.fromJson(_safeMapCast(e)))
           .toList();
     } catch (e, s) {
       _log.warning('getDeadLetters: failed to read dead-letter file', e, s);
@@ -228,7 +241,7 @@ class _FileQueueStore implements QueueStore {
   }
 }
 
-// ─── OfflineQueue ─────────────────────────────────────────────────────────────
+// ─── OfflineQueue ────────────────────────────────────────────────────────────
 
 class OfflineQueue {
   final QueueExecutor _executor;

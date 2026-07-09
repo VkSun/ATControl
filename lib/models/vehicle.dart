@@ -63,10 +63,26 @@ class Vehicle {
   ];
 
   // Вычисляемая дата следующего ТО автомобиля
+  // Корректно обрабатывает переход между месяцами/годами
   DateTime? get nextToDate {
     if (toDate == null || toPeriodMonths == null) return null;
     final d = toDate!;
-    return DateTime(d.year, d.month + toPeriodMonths!, d.day);
+    
+    // Добавляем месяцы с корректной обработкой дней месяца
+    int month = d.month + toPeriodMonths!;
+    int year = d.year;
+    
+    // Нормализуем месяц и год
+    while (month > 12) {
+      month -= 12;
+      year += 1;
+    }
+    
+    // Обрабатываем дни месяца (31-й день февраля → последний день февраля)
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    final day = d.day > daysInMonth ? daysInMonth : d.day;
+    
+    return DateTime(year, month, day);
   }
 
   // Вычисляемый пробег следующего ТО автомобиля
@@ -76,10 +92,26 @@ class Vehicle {
   }
 
   // Вычисляемая дата следующего ТО оборудования
+  // Корректно обрабатывает переход между месяцами/годами
   DateTime? get nextEquipmentToDate {
     if (equipmentToDate == null || equipmentToPeriodMonths == null) return null;
     final d = equipmentToDate!;
-    return DateTime(d.year, d.month + equipmentToPeriodMonths!, d.day);
+    
+    // Добавляем месяцы с корректной обработкой дней месяца
+    int month = d.month + equipmentToPeriodMonths!;
+    int year = d.year;
+    
+    // Нормализуем месяц и год
+    while (month > 12) {
+      month -= 12;
+      year += 1;
+    }
+    
+    // Обрабатываем дни месяца
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    final day = d.day > daysInMonth ? daysInMonth : d.day;
+    
+    return DateTime(year, month, day);
   }
 
   // Вычисляемые моточасы следующего ТО оборудования
