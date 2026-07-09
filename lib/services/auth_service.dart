@@ -43,7 +43,7 @@ class AuthService {
       email: email,
       password: password,
     );
-    if (response.user == null) throw Exception('Ошибка регистрации');
+    if (response.user == null) throw const SignUpFailedException();
 
     final data = await supabase.rpc('register_first_admin', params: {
       'p_full_name': fullName,
@@ -61,7 +61,7 @@ class AuthService {
       email: email,
       password: password,
     );
-    if (response.user == null) throw Exception('Неверный логин или пароль');
+    if (response.user == null) throw const InvalidCredentialsException();
 
     try {
       final data = await supabase
@@ -102,11 +102,11 @@ class AuthService {
           .limit(1);
     } catch (e, s) {
       _log.warning('validateInvitationCode failed', e, s);
-      throw Exception('Код приглашения недействителен');
+      throw const InvitationCodeInvalidException();
     }
-    if (data.isEmpty) throw Exception('Код приглашения недействителен');
+    if (data.isEmpty) throw const InvitationCodeInvalidException();
     final invitation = InvitationCode.fromJson(data.first as Map<String, dynamic>);
-    if (invitation.isExpired) throw Exception('Код приглашения истёк');
+    if (invitation.isExpired) throw const InvitationCodeExpiredException();
     return invitation;
   }
 
@@ -120,7 +120,7 @@ class AuthService {
       email: email,
       password: password,
     );
-    if (response.user == null) throw Exception('Ошибка регистрации');
+    if (response.user == null) throw const SignUpFailedException();
 
     try {
       // Все три операции (user_roles + profiles + mark used) выполняются
@@ -129,16 +129,8 @@ class AuthService {
     } on PostgrestException catch (e) {
       // RPC провалилась — откатываем сессию, чтобы не оставлять auth-пользователя без роли.
       await supabase.auth.signOut();
-      throw Exception(_translateRedeemError(e.message));
+      throw RedeemInvitationException.fromMessage(e.message);
     }
-  }
-
-  static String _translateRedeemError(String? msg) {
-    if (msg == null) return 'Ошибка активации кода приглашения';
-    if (msg.contains('invitation_not_found')) return 'Код приглашения не найден';
-    if (msg.contains('invitation_used'))      return 'Код приглашения уже использован';
-    if (msg.contains('invitation_expired'))   return 'Срок действия кода истёк';
-    return 'Ошибка активации кода приглашения';
   }
 
   // Выход

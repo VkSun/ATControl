@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
 import 'package:go_router/go_router.dart';
+import '../../l10n/gen/app_localizations.dart';
+import 'auth_error_text.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -26,8 +28,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signIn() async {
+    final l10n = AppLocalizations.of(context);
     if (_emailCtrl.text.trim().isEmpty || _passwordCtrl.text.isEmpty) {
-      setState(() => _error = 'Заполните все поля');
+      setState(() => _error = l10n.fillAllFieldsError);
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -37,8 +40,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: _passwordCtrl.text,
       );
     } catch (e) {
-      final msg = e.toString().replaceFirst('Exception: ', '');
-      setState(() => _error = msg);
+      if (mounted) setState(() => _error = authErrorText(context, e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -47,6 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: Center(
@@ -74,22 +77,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  const Text('ATControl',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                  Text(l10n.appTitle,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
                 ],
               ),
               const SizedBox(height: 32),
-              const Text('Вход в систему',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              Text(l10n.loginTitle,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               const SizedBox(height: 4),
-              Text('Введите ваши данные для входа',
+              Text(l10n.loginSubtitle,
                 style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 24),
               TextField(
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  labelText: 'Email',
+                  labelText: l10n.emailLabel,
                   prefixIcon: const Icon(Icons.email_outlined, size: 18),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8)),
@@ -102,7 +105,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 obscureText: _obscure,
                 onSubmitted: (_) => _signIn(),
                 decoration: InputDecoration(
-                  labelText: 'Пароль',
+                  labelText: l10n.passwordLabel,
                   prefixIcon: const Icon(Icons.lock_outlined, size: 18),
                   suffixIcon: IconButton(
                     icon: Icon(_obscure
@@ -154,23 +157,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ? const SizedBox(width: 18, height: 18,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
-                      : const Text('Войти',
-                          style: TextStyle(fontSize: 14)),
+                      : Text(l10n.loginButton,
+                          style: const TextStyle(fontSize: 14)),
                 ),
               ),
               const SizedBox(height: 16),
               Center(
                 child: TextButton(
                   onPressed: () => context.go('/register'),
-                  child: const Text('Первый запуск? Зарегистрировать админа',
-                    style: TextStyle(fontSize: 12)),
+                  child: Text(l10n.loginRegisterAdminLink,
+                    style: const TextStyle(fontSize: 12)),
                 ),
               ),
               Center(
                 child: TextButton(
                   onPressed: () => context.go('/invite'),
-                  child: const Text('Есть код приглашения? Активировать',
-                    style: TextStyle(fontSize: 12)),
+                  child: Text(l10n.loginInviteLink,
+                    style: const TextStyle(fontSize: 12)),
                 ),
               ),
             ],

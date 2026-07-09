@@ -1,0 +1,48 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "ATControl",
+
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "confirmPasswordLabel": "Confirm password",
+  "alreadyHaveAccountLink": "Already have an account? Sign in",
+  "requiredFieldError": "Required field",
+  "invalidEmailError": "Enter a valid email",
+  "passwordTooShortError": "{count, plural, one{Minimum {count} character} other{Minimum {count} characters}}",
+  "passwordMismatchError": "Passwords don't match",
+
+  "loginTitle": "Sign in",
+  "loginSubtitle": "Enter your credentials to sign in",
+  "loginButton": "Sign in",
+  "fillAllFieldsError": "Fill in all fields",
+  "loginRegisterAdminLink": "First run? Register an admin",
+  "loginInviteLink": "Have an invitation code? Activate it",
+
+  "registerTitle": "Register administrator",
+  "registerSubtitle": "Initial system setup",
+  "fullNameLabel": "Full name",
+  "positionLabel": "Position",
+  "registerButton": "Register",
+  "registerAdminAlreadyExistsError": "An administrator is already registered",
+
+  "inviteCodeLabel": "Invitation code",
+  "inviteCodeSubtitle": "Enter the code you received from the administrator",
+  "inviteCodeHint": "XXXX-XXXX-XXXX",
+  "inviteVerifyButton": "Verify code",
+  "inviteEnterCodeError": "Enter the invitation code",
+  "inviteCodeInvalidOrExpiredError": "The code is invalid or expired",
+  "inviteCreateAccountTitle": "Create account",
+  "inviteWelcomeSubtitle": "Welcome, {name}!",
+  "inviteRegisterButton": "Register",
+
+  "authInvalidCredentialsError": "Incorrect login or password",
+  "authAccountBlockedError": "Your account is blocked. Contact the administrator.",
+  "authRoleNotFoundError": "Account not found. Contact the administrator.",
+  "authSignUpFailedError": "Registration failed",
+  "authRedeemNotFoundError": "Invitation code not found",
+  "authRedeemAlreadyUsedError": "Invitation code already used",
+  "authRedeemExpiredError": "The code has expired",
+  "authRedeemUnknownError": "Failed to activate the invitation code",
+  "authGenericError": "Couldn't complete the operation. Please try again."
+}

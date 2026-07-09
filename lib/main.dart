@@ -12,6 +12,7 @@ import 'dart:async';
 import 'platform/app_platform.dart';
 import 'services/notification_service.dart';
 import 'services/offline_queue.dart';
+import 'l10n/gen/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,9 +52,15 @@ class ATControlApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'ATControl',
       debugShowCheckedModeBanner: false,
+      // Локаль пока зафиксирована: часть экранов ещё не переведена
+      // (см. docs/l10n-todo.md). Переключить на системную — когда миграция
+      // на AppLocalizations завершится.
       locale: const Locale('ru'),
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      supportedLocales: const [Locale('ru'), Locale('en')],
+      localizationsDelegates: const [
+        ...GlobalMaterialLocalizations.delegates,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: resolvedTheme,
       themeMode: ThemeMode.light,
       routerConfig: router,

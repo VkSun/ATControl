@@ -10,6 +10,7 @@ import 'package:atcontrol/models/task.dart';
 import 'package:atcontrol/models/user_role.dart';
 import 'package:atcontrol/models/vehicle.dart';
 import 'package:atcontrol/utils/theme.dart';
+import 'package:atcontrol/l10n/gen/app_localizations.dart';
 
 /// Общий каркас widget-тестов: ProviderScope + MaterialApp с локализацией ru
 /// (как в main.dart, но без роутера и Supabase — данные через overrides).
@@ -34,8 +35,11 @@ Future<void> pumpApp(
     child: MaterialApp(
       theme: AppTheme.lightTheme,
       locale: const Locale('ru'),
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      supportedLocales: const [Locale('ru')],
+      localizationsDelegates: const [
+        ...GlobalMaterialLocalizations.delegates,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: home,
     ),
   ));

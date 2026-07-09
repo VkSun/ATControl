@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../models/invitation_code.dart';
 import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
+import '../../l10n/gen/app_localizations.dart';
+import 'auth_error_text.dart';
 
 class InviteScreen extends ConsumerStatefulWidget {
   const InviteScreen({super.key});
@@ -33,8 +35,9 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   }
 
   Future<void> _validateCode() async {
+    final l10n = AppLocalizations.of(context);
     if (_codeCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Введите код приглашения');
+      setState(() => _error = l10n.inviteEnterCodeError);
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -43,23 +46,26 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
           .validateInvitationCode(_codeCtrl.text.trim());
       setState(() { _invitation = invitation; _step = 2; });
     } catch (e) {
-      setState(() => _error = 'Код недействителен или истёк');
+      // Экран не различает «не найден»/«истёк» — единое сообщение,
+      // как и раньше; тип ошибки нужен лишь другим экранам auth.
+      if (mounted) setState(() => _error = l10n.inviteCodeInvalidOrExpiredError);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _register() async {
+    final l10n = AppLocalizations.of(context);
     if (_emailCtrl.text.trim().isEmpty || _passwordCtrl.text.isEmpty) {
-      setState(() => _error = 'Заполните все поля');
+      setState(() => _error = l10n.fillAllFieldsError);
       return;
     }
     if (_passwordCtrl.text != _confirmCtrl.text) {
-      setState(() => _error = 'Пароли не совпадают');
+      setState(() => _error = l10n.passwordMismatchError);
       return;
     }
     if (_passwordCtrl.text.length < 6) {
-      setState(() => _error = 'Минимум 6 символов');
+      setState(() => _error = l10n.passwordTooShortError(6));
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -71,7 +77,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
       );
       if (mounted) context.go('/');
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = authErrorText(context, e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -80,6 +86,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: Center(
@@ -107,26 +114,26 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
                         color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  const Text('ATControl',
-                    style: TextStyle(fontSize: 20,
+                  Text(l10n.appTitle,
+                    style: const TextStyle(fontSize: 20,
                         fontWeight: FontWeight.w500)),
                 ],
               ),
               const SizedBox(height: 32),
               if (_step == 1) ...[
-                const Text('Код приглашения',
-                  style: TextStyle(fontSize: 16,
+                Text(l10n.inviteCodeLabel,
+                  style: const TextStyle(fontSize: 16,
                       fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text('Введите код полученный от администратора',
+                Text(l10n.inviteCodeSubtitle,
                   style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 24),
                 TextField(
                   controller: _codeCtrl,
                   textCapitalization: TextCapitalization.characters,
                   decoration: InputDecoration(
-                    labelText: 'Код приглашения',
-                    hintText: 'XXXX-XXXX-XXXX',
+                    labelText: l10n.inviteCodeLabel,
+                    hintText: l10n.inviteCodeHint,
                     prefixIcon: const Icon(Icons.vpn_key_outlined, size: 18),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
@@ -151,22 +158,22 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
                         ? const SizedBox(width: 18, height: 18,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
-                        : const Text('Проверить код'),
+                        : Text(l10n.inviteVerifyButton),
                   ),
                 ),
               ] else ...[
-                const Text('Создание аккаунта',
-                  style: TextStyle(fontSize: 16,
+                Text(l10n.inviteCreateAccountTitle,
+                  style: const TextStyle(fontSize: 16,
                       fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text('Добро пожаловать, ${_invitation!.fullName}!',
+                Text(l10n.inviteWelcomeSubtitle(_invitation!.fullName ?? ''),
                   style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 24),
                 TextField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Email',
+                    labelText: l10n.emailLabel,
                     prefixIcon: const Icon(Icons.email_outlined, size: 18),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
@@ -178,7 +185,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
                   controller: _passwordCtrl,
                   obscureText: _obscure,
                   decoration: InputDecoration(
-                    labelText: 'Пароль',
+                    labelText: l10n.passwordLabel,
                     prefixIcon: const Icon(Icons.lock_outlined, size: 18),
                     suffixIcon: IconButton(
                       icon: Icon(_obscure
@@ -196,7 +203,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
                   controller: _confirmCtrl,
                   obscureText: _obscure,
                   decoration: InputDecoration(
-                    labelText: 'Подтвердите пароль',
+                    labelText: l10n.confirmPasswordLabel,
                     prefixIcon: const Icon(Icons.lock_outlined, size: 18),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
@@ -221,7 +228,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
                         ? const SizedBox(width: 18, height: 18,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
-                        : const Text('Зарегистрироваться'),
+                        : Text(l10n.inviteRegisterButton),
                   ),
                 ),
               ],
@@ -229,8 +236,8 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
               Center(
                 child: TextButton(
                   onPressed: () => context.go('/login'),
-                  child: const Text('Уже есть аккаунт? Войти',
-                    style: TextStyle(fontSize: 12)),
+                  child: Text(l10n.alreadyHaveAccountLink,
+                    style: const TextStyle(fontSize: 12)),
                 ),
               ),
             ],

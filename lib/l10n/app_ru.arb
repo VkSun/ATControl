@@ -1,0 +1,128 @@
+{
+  "@@locale": "ru",
+
+  "appTitle": "ATControl",
+  "@appTitle": {
+    "description": "Название приложения в шапке экранов входа/регистрации"
+  },
+
+  "emailLabel": "Email",
+  "@emailLabel": { "description": "Подпись поля email на формах входа/регистрации" },
+
+  "passwordLabel": "Пароль",
+  "@passwordLabel": { "description": "Подпись поля пароля" },
+
+  "confirmPasswordLabel": "Подтвердите пароль",
+  "@confirmPasswordLabel": { "description": "Подпись поля повтора пароля" },
+
+  "alreadyHaveAccountLink": "Уже есть аккаунт? Войти",
+  "@alreadyHaveAccountLink": { "description": "Ссылка на форму входа снизу форм регистрации" },
+
+  "requiredFieldError": "Обязательное поле",
+  "@requiredFieldError": { "description": "Валидатор пустого обязательного поля" },
+
+  "invalidEmailError": "Введите корректный email",
+  "@invalidEmailError": { "description": "Валидатор поля email" },
+
+  "passwordTooShortError": "{count, plural, one{Минимум {count} символ} few{Минимум {count} символа} many{Минимум {count} символов} other{Минимум {count} символов}}",
+  "@passwordTooShortError": {
+    "description": "Валидатор минимальной длины пароля",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "passwordMismatchError": "Пароли не совпадают",
+  "@passwordMismatchError": { "description": "Валидатор совпадения пароля и его подтверждения" },
+
+  "loginTitle": "Вход в систему",
+  "@loginTitle": { "description": "Заголовок экрана входа" },
+
+  "loginSubtitle": "Введите ваши данные для входа",
+  "@loginSubtitle": { "description": "Подзаголовок экрана входа" },
+
+  "loginButton": "Войти",
+  "@loginButton": { "description": "Кнопка отправки формы входа" },
+
+  "fillAllFieldsError": "Заполните все поля",
+  "@fillAllFieldsError": { "description": "Валидация формы входа: пустые email/пароль" },
+
+  "loginRegisterAdminLink": "Первый запуск? Зарегистрировать админа",
+  "@loginRegisterAdminLink": { "description": "Ссылка на регистрацию первого администратора" },
+
+  "loginInviteLink": "Есть код приглашения? Активировать",
+  "@loginInviteLink": { "description": "Ссылка на экран активации кода приглашения" },
+
+  "registerTitle": "Регистрация администратора",
+  "@registerTitle": { "description": "Заголовок экрана регистрации первого администратора" },
+
+  "registerSubtitle": "Первоначальная настройка системы",
+  "@registerSubtitle": { "description": "Подзаголовок экрана регистрации администратора" },
+
+  "fullNameLabel": "Полное имя",
+  "@fullNameLabel": { "description": "Подпись поля ФИО" },
+
+  "positionLabel": "Должность",
+  "@positionLabel": { "description": "Подпись поля должности" },
+
+  "registerButton": "Зарегистрировать",
+  "@registerButton": { "description": "Кнопка отправки формы регистрации администратора" },
+
+  "registerAdminAlreadyExistsError": "Администратор уже зарегистрирован",
+  "@registerAdminAlreadyExistsError": { "description": "Повторная попытка зарегистрировать первого администратора" },
+
+  "inviteCodeLabel": "Код приглашения",
+  "@inviteCodeLabel": { "description": "Заголовок шага и подпись поля кода приглашения" },
+
+  "inviteCodeSubtitle": "Введите код полученный от администратора",
+  "@inviteCodeSubtitle": { "description": "Подзаголовок первого шага активации приглашения" },
+
+  "inviteCodeHint": "XXXX-XXXX-XXXX",
+  "@inviteCodeHint": { "description": "Подсказка формата кода приглашения в поле ввода" },
+
+  "inviteVerifyButton": "Проверить код",
+  "@inviteVerifyButton": { "description": "Кнопка проверки кода приглашения" },
+
+  "inviteEnterCodeError": "Введите код приглашения",
+  "@inviteEnterCodeError": { "description": "Валидация: пустое поле кода приглашения" },
+
+  "inviteCodeInvalidOrExpiredError": "Код недействителен или истёк",
+  "@inviteCodeInvalidOrExpiredError": { "description": "Общее сообщение о непройденной проверке кода приглашения" },
+
+  "inviteCreateAccountTitle": "Создание аккаунта",
+  "@inviteCreateAccountTitle": { "description": "Заголовок второго шага активации приглашения" },
+
+  "inviteWelcomeSubtitle": "Добро пожаловать, {name}!",
+  "@inviteWelcomeSubtitle": {
+    "description": "Подзаголовок второго шага с именем приглашённого",
+    "placeholders": { "name": { "type": "String" } }
+  },
+
+  "inviteRegisterButton": "Зарегистрироваться",
+  "@inviteRegisterButton": { "description": "Кнопка отправки формы регистрации по приглашению" },
+
+  "authInvalidCredentialsError": "Неверный логин или пароль",
+  "@authInvalidCredentialsError": { "description": "AuthService.signIn: неверные учётные данные" },
+
+  "authAccountBlockedError": "Ваш аккаунт заблокирован. Обратитесь к администратору.",
+  "@authAccountBlockedError": { "description": "AuthService.signIn: пользователь деактивирован" },
+
+  "authRoleNotFoundError": "Учётная запись не найдена. Обратитесь к администратору.",
+  "@authRoleNotFoundError": { "description": "AuthService.signIn: нет строки в user_roles" },
+
+  "authSignUpFailedError": "Ошибка регистрации",
+  "@authSignUpFailedError": { "description": "AuthService: Supabase не вернул пользователя при регистрации" },
+
+  "authRedeemNotFoundError": "Код приглашения не найден",
+  "@authRedeemNotFoundError": { "description": "redeem_invitation: код не найден" },
+
+  "authRedeemAlreadyUsedError": "Код приглашения уже использован",
+  "@authRedeemAlreadyUsedError": { "description": "redeem_invitation: код уже использован" },
+
+  "authRedeemExpiredError": "Срок действия кода истёк",
+  "@authRedeemExpiredError": { "description": "redeem_invitation: код истёк" },
+
+  "authRedeemUnknownError": "Ошибка активации кода приглашения",
+  "@authRedeemUnknownError": { "description": "redeem_invitation: прочие ошибки" },
+
+  "authGenericError": "Не удалось выполнить операцию. Попробуйте ещё раз.",
+  "@authGenericError": { "description": "Резервное сообщение для нераспознанных ошибок аутентификации" }
+}

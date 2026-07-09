@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:atcontrol/l10n/gen/app_localizations.dart';
+import 'package:atcontrol/models/auth_exceptions.dart';
 import 'package:atcontrol/models/user_role.dart';
 import 'package:atcontrol/screens/auth/login_screen.dart';
 import 'package:atcontrol/services/auth_service.dart';
@@ -60,9 +62,10 @@ void main() {
     expect(find.text('Заполните все поля'), findsNothing);
   });
 
-  testWidgets('ошибка сервиса показывается на форме', (tester) async {
+  testWidgets('типизированная ошибка сервиса показывается на форме',
+      (tester) async {
     final auth = FakeAuthService()
-      ..throwOnSignIn = Exception('Неверный логин или пароль');
+      ..throwOnSignIn = const InvalidCredentialsException();
     await pumpApp(tester, const LoginScreen(), overrides: [
       authServiceProvider.overrideWithValue(auth),
     ]);
@@ -73,6 +76,24 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Войти'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Неверный логин или пароль'), findsOneWidget);
+    final l10n = await AppLocalizations.delegate.load(const Locale('ru'));
+    expect(find.text(l10n.authInvalidCredentialsError), findsOneWidget);
+  });
+
+  testWidgets('нераспознанная ошибка сервиса — общее сообщение',
+      (tester) async {
+    final auth = FakeAuthService()..throwOnSignIn = Exception('boom');
+    await pumpApp(tester, const LoginScreen(), overrides: [
+      authServiceProvider.overrideWithValue(auth),
+    ]);
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Email'), 'user@test.ru');
+    await tester.enterText(find.widgetWithText(TextField, 'Пароль'), 'x');
+    await tester.tap(find.widgetWithText(FilledButton, 'Войти'));
+    await tester.pumpAndSettle();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('ru'));
+    expect(find.text(l10n.authGenericError), findsOneWidget);
   });
 }

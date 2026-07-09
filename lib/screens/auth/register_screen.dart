@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
 import 'package:go_router/go_router.dart';
+import '../../l10n/gen/app_localizations.dart';
+import 'auth_error_text.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -37,7 +39,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     try {
       final hasAdmin = await ref.read(authServiceProvider).hasAdmin();
       if (hasAdmin) {
-        setState(() => _error = 'Администратор уже зарегистрирован');
+        if (mounted) {
+          setState(() => _error = AppLocalizations.of(context).registerAdminAlreadyExistsError);
+        }
         return;
       }
       await ref.read(authServiceProvider).registerAdmin(
@@ -48,7 +52,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = authErrorText(context, e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -57,6 +61,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: Center(
@@ -86,35 +91,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           color: Colors.white, size: 22),
                     ),
                     const SizedBox(width: 12),
-                    const Text('ATControl',
-                      style: TextStyle(fontSize: 20,
+                    Text(l10n.appTitle,
+                      style: const TextStyle(fontSize: 20,
                           fontWeight: FontWeight.w500)),
                   ],
                 ),
                 const SizedBox(height: 32),
-                const Text('Регистрация администратора',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                Text(l10n.registerTitle,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text('Первоначальная настройка системы',
+                Text(l10n.registerSubtitle,
                   style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _fullNameCtrl,
                   decoration: InputDecoration(
-                    labelText: 'Полное имя',
+                    labelText: l10n.fullNameLabel,
                     prefixIcon: const Icon(Icons.person_outlined, size: 18),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
                     isDense: true,
                   ),
                   validator: (v) => v == null || v.isEmpty
-                      ? 'Обязательное поле' : null,
+                      ? l10n.requiredFieldError : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _positionCtrl,
                   decoration: InputDecoration(
-                    labelText: 'Должность',
+                    labelText: l10n.positionLabel,
                     prefixIcon: const Icon(Icons.work_outlined, size: 18),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
@@ -126,21 +131,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Email',
+                    labelText: l10n.emailLabel,
                     prefixIcon: const Icon(Icons.email_outlined, size: 18),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
                     isDense: true,
                   ),
                   validator: (v) => v == null || !v.contains('@')
-                      ? 'Введите корректный email' : null,
+                      ? l10n.invalidEmailError : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _passwordCtrl,
                   obscureText: _obscure,
                   decoration: InputDecoration(
-                    labelText: 'Пароль',
+                    labelText: l10n.passwordLabel,
                     prefixIcon: const Icon(Icons.lock_outlined, size: 18),
                     suffixIcon: IconButton(
                       icon: Icon(_obscure
@@ -153,21 +158,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     isDense: true,
                   ),
                   validator: (v) => v == null || v.length < 6
-                      ? 'Минимум 6 символов' : null,
+                      ? l10n.passwordTooShortError(6) : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _confirmCtrl,
                   obscureText: _obscure,
                   decoration: InputDecoration(
-                    labelText: 'Подтвердите пароль',
+                    labelText: l10n.confirmPasswordLabel,
                     prefixIcon: const Icon(Icons.lock_outlined, size: 18),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
                     isDense: true,
                   ),
                   validator: (v) => v != _passwordCtrl.text
-                      ? 'Пароли не совпадают' : null,
+                      ? l10n.passwordMismatchError : null,
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 10),
@@ -206,16 +211,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ? const SizedBox(width: 18, height: 18,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
-                        : const Text('Зарегистрировать',
-                            style: TextStyle(fontSize: 14)),
+                        : Text(l10n.registerButton,
+                            style: const TextStyle(fontSize: 14)),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Center(
                   child: TextButton(
                     onPressed: () => context.go('/login'),
-                    child: const Text('Уже есть аккаунт? Войти',
-                      style: TextStyle(fontSize: 12)),
+                    child: Text(l10n.alreadyHaveAccountLink,
+                      style: const TextStyle(fontSize: 12)),
                   ),
                 ),
               ],
