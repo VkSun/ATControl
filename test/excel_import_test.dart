@@ -135,7 +135,7 @@ void main() {
 <row r="1">${cell('A1', '№')}</row>
 <row r="2">${num_('A2', 1)}${cell('B2', '4501')}${cell('C2', 'Иванов Иван Иванович')}${cell('D2', '99 XX 123456')}${cell('I2', '15.03.2024')}${num_('J2', 2)}${cell('K2', '100011')}</row>
 <row r="3">${num_('A3', 2)}${cell('B3', '4501')}${cell('C3', 'Иванов Иван Иванович')}${cell('K3', '1059')}</row>
-<row r="4">${num_('A4', 3)}${cell('B4', '4502')}${cell('C4', 'Петров')}</row>
+<row r="4">${num_('A4', 3)}${cell('B4', '4502')}${cell('C4', 'Петров Пётр')}</row>
 ''');
       final drivers = svc.parseDrivers(bytes);
 
@@ -152,10 +152,30 @@ void main() {
 
       final petrov = drivers.firstWhere((d) => d.tabNumber == '4502');
       expect(petrov.lastName, 'Петров');
-      expect(petrov.firstName, '');
+      expect(petrov.firstName, 'Пётр');
       expect(petrov.middleName, null);
       expect(petrov.medicalExpiry, null);
       expect(petrov.vehicleInvNumbers, isEmpty);
+    });
+
+    test('parseDrivers: строка с пустым/неполным/пробельным ФИО пропускается',
+        () {
+      final bytes = xlsxBytes('''
+<row r="1">${cell('A1', '№')}</row>
+<row r="2">${num_('A2', 1)}${cell('B2', '4501')}${cell('C2', 'Иванов Иван')}</row>
+<row r="3">${num_('A3', 2)}${cell('B3', '4502')}</row>
+<row r="4">${num_('A4', 3)}${cell('B4', '4503')}${cell('C4', '   ')}</row>
+<row r="5">${num_('A5', 4)}${cell('B5', '4504')}${cell('C5', 'Сидоров')}</row>
+''');
+      final drivers = svc.parseDrivers(bytes);
+
+      // Табельные без имени/фамилии (нет ФИО, пробелы, только фамилия
+      // без имени) в результат не попадают.
+      expect(drivers.length, 1);
+      expect(drivers.single.tabNumber, '4501');
+      expect(drivers.any((d) => d.tabNumber == '4502'), false);
+      expect(drivers.any((d) => d.tabNumber == '4503'), false);
+      expect(drivers.any((d) => d.tabNumber == '4504'), false);
     });
 
     test('parseEngineHours: гаражные № >100000, часы округляются', () {

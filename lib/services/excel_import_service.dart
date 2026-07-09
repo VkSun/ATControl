@@ -4,6 +4,9 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:meta/meta.dart';
 import 'package:xml/xml.dart';
+import '../utils/logger.dart';
+
+const _log = Logger('ExcelImportService');
 
 class VehicleImportRow {
   final String invNumber;
@@ -271,6 +274,17 @@ class ExcelImportService {
         final fullName = (_s(row, 2) ?? '').trim();
         final parts = fullName.split(RegExp(r'\s+'));
 
+        final lastName = parts.isNotEmpty ? parts[0] : '';
+        final firstName = parts.length > 1 ? parts[1] : '';
+
+        // Без фамилии/имени запись водителя бессмысленна — пропускаем строку,
+        // а не создаём водителя без имени.
+        if (lastName.isEmpty || firstName.isEmpty) {
+          _log.warning(
+              'parseDrivers: строка таб.№ $tabNum пропущена — не удалось разобрать ФИО "$fullName"');
+          continue;
+        }
+
         final medIssued = _dt(row, 8);
         final medYears = _i(row, 9);
         DateTime? medicalExpiry;
@@ -281,8 +295,8 @@ class ExcelImportService {
 
         driverMap[tabNum] = DriverImportRow(
           tabNumber: tabNum,
-          lastName: parts.isNotEmpty ? parts[0] : '',
-          firstName: parts.length > 1 ? parts[1] : '',
+          lastName: lastName,
+          firstName: firstName,
           middleName: parts.length > 2 ? parts.sublist(2).join(' ') : null,
           licenseNumber: _s(row, 3),
           medicalExpiry: medicalExpiry,
