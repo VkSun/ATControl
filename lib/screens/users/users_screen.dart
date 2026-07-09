@@ -116,10 +116,10 @@ class _TabBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFF4361EE) : Colors.transparent,
+          color: active ? AppTheme.primaryColor : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: active ? const Color(0xFF4361EE) : colors.tableBorder,
+            color: active ? AppTheme.primaryColor : colors.tableBorder,
           ),
         ),
         child: Text(
@@ -180,7 +180,7 @@ class _TopBar extends StatelessWidget {
               builder: (context, ref, _) {
                 final profileAsync = ref.watch(profileProvider);
                 final initials = profileAsync.value?.initials ?? 'АИ';
-                final color = profileAsync.value?.avatarColor ?? '#4361EE';
+                final color = profileAsync.value?.avatarColor ?? AppTheme.primaryColorHex;
                 final avatarColor =
                     Color(int.parse(color.replaceFirst('#', '0xFF')));
                 return GestureDetector(

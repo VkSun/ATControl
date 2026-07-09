@@ -229,7 +229,7 @@ class _ToggleSetting extends StatelessWidget {
               ],
             ),
           ),
-          Switch(value: value, onChanged: onChanged, activeThumbColor: const Color(0xFF4361EE)),
+          Switch(value: value, onChanged: onChanged, activeThumbColor: AppTheme.primaryColor),
         ],
       ),
     );
@@ -339,7 +339,7 @@ class _AutostartCard extends ConsumerWidget {
             data: (enabled) => Switch(
               value: enabled,
               onChanged: (v) => ref.read(autostartProvider.notifier).set(v),
-              activeThumbColor: const Color(0xFF4361EE),
+              activeThumbColor: AppTheme.primaryColor,
             ),
           ),
         ],

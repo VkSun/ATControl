@@ -4,6 +4,7 @@ import '../../models/profile.dart';
 import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
 import '../../utils/logger.dart';
+import '../../utils/theme.dart';
 import '../../widgets/dialog_scroll_content.dart';
 
 const _log = Logger('ProfileDialog');
@@ -17,11 +18,11 @@ class ProfileDialog extends ConsumerStatefulWidget {
 
 class _ProfileDialogState extends ConsumerState<ProfileDialog> {
   late TextEditingController _fullName, _position, _initials;
-  String _avatarColor = '#4361EE';
+  String _avatarColor = AppTheme.primaryColorHex;
   bool _loading = false;
 
   final _colors = [
-    '#4361EE', '#E24B4A', '#1D9E75', '#EF9F27',
+    AppTheme.primaryColorHex, '#E24B4A', '#1D9E75', '#EF9F27',
     '#534AB7', '#D85A30', '#0F6E56', '#854F0B',
   ];
 
@@ -42,7 +43,7 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
           _fullName.text = p?.fullName ?? '';
           _position.text = p?.position ?? '';
           _initials.text = p?.initials ?? '';
-          _avatarColor = p?.avatarColor ?? '#4361EE';
+          _avatarColor = p?.avatarColor ?? AppTheme.primaryColorHex;
         });
       }
     } catch (e, s) {

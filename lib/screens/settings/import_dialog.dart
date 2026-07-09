@@ -7,6 +7,7 @@ import '../../models/driver.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/excel_import_service.dart';
+import '../../utils/theme.dart';
 import '../../widgets/dialog_scroll_content.dart';
 
 enum _Step { pick, preview, importing, done }
@@ -349,7 +350,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
               ),
               if (file != null)
                 Text(file.name,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF4361EE)),
+                    style: const TextStyle(fontSize: 11, color: AppTheme.primaryColor),
                     overflow: TextOverflow.ellipsis)
               else
                 const Text('Файл не выбран',
@@ -456,7 +457,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF4361EE)),
+          Icon(icon, size: 18, color: AppTheme.primaryColor),
           const SizedBox(width: 10),
           Expanded(child: Text(label, style: const TextStyle(fontSize: 12))),
           Column(

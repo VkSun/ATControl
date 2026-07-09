@@ -8,6 +8,7 @@ import '../../services/driver_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../utils/date_picker.dart';
 import '../../utils/responsive.dart';
+import '../../utils/theme.dart';
 import '../../widgets/dialog_scroll_content.dart';
 
 class DriverEditDialog extends ConsumerStatefulWidget {
@@ -549,7 +550,7 @@ class _VehiclePickerDialogState extends State<_VehiclePickerDialog> {
                                       : Icons.check_box_outline_blank,
                                   size: 18,
                                   color: isSelected
-                                      ? const Color(0xFF4361EE)
+                                      ? AppTheme.primaryColor
                                       : const Color(0xFF888888),
                                 ),
                                 const SizedBox(width: 10),
@@ -573,7 +574,7 @@ class _VehiclePickerDialogState extends State<_VehiclePickerDialog> {
                   alignment: Alignment.centerLeft,
                   child: Text('Выбрано: ${_selected.length}',
                       style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF4361EE))),
+                          fontSize: 11, color: AppTheme.primaryColor)),
                 ),
               ),
           ],

@@ -1,3 +1,5 @@
+import '../utils/brand_colors.dart';
+
 class UserRole {
   final String id;
   final String userId;
@@ -55,7 +57,7 @@ class UserRole {
     initials: (json['initials'] as String?)?.trim().isNotEmpty == true
         ? json['initials']
         : 'ПП',
-    avatarColor: json['avatar_color'] ?? '#4361EE',
+    avatarColor: json['avatar_color'] ?? kPrimaryColorHex,
     isAdmin: json['is_admin'] ?? false,
     permFullAccess: json['perm_full_access'] ?? false,
     permEdit: json['perm_edit'] ?? false,

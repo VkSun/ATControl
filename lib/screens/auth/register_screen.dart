@@ -79,7 +79,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4361EE),
+                        color: AppTheme.primaryColor,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.directions_car,

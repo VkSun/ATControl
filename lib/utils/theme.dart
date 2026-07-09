@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/offline_state.dart';
+import 'brand_colors.dart';
 
 final themeModeProvider =
     StateNotifierProvider<_ThemePref, ThemeMode>((_) => _ThemePref());
@@ -52,7 +53,10 @@ class _DoublePref extends StateNotifier<double> {
 }
 
 class AppTheme {
-  static const _primary = Color(0xFF4361EE);
+  static const Color primaryColor = Color(0xFF4361EE);
+  // Та же константа в виде hex-строки — формат хранения avatar_color в БД
+  // (см. lib/utils/brand_colors.dart, откуда её берут модели и сервисы).
+  static const String primaryColorHex = kPrimaryColorHex;
   static const _danger = Color(0xFFE24B4A);
   static const _amber = Color(0xFFEF9F27);
   static const _green = Color(0xFF639922);
@@ -60,7 +64,7 @@ class AppTheme {
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: _primary,
+      seedColor: primaryColor,
       brightness: Brightness.light,
     ),
     scaffoldBackgroundColor: const Color(0xFFF5F5F5),
@@ -84,18 +88,18 @@ class AppTheme {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: _primary,
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: _primary,
-        side: const BorderSide(color: _primary),
+        foregroundColor: primaryColor,
+        side: const BorderSide(color: primaryColor),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: _primary),
+      style: TextButton.styleFrom(foregroundColor: primaryColor),
     ),
     extensions: const [
       AppColors(
@@ -103,7 +107,7 @@ class AppTheme {
         amber: _amber,
         success: _green,
         sidebarBg: Colors.white,
-        sidebarActive: _primary,
+        sidebarActive: primaryColor,
         tableBorder: Color(0xFFEEEEEE),
         badgeRed: Color(0xFFFCEBEB),
         badgeRedText: Color(0xFFA32D2D),
@@ -118,7 +122,7 @@ class AppTheme {
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: _primary,
+      seedColor: primaryColor,
       brightness: Brightness.dark,
     ),
     scaffoldBackgroundColor: const Color(0xFF1A1A2E),
@@ -137,18 +141,18 @@ class AppTheme {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: _primary,
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: _primary,
-        side: const BorderSide(color: _primary),
+        foregroundColor: primaryColor,
+        side: const BorderSide(color: primaryColor),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: _primary),
+      style: TextButton.styleFrom(foregroundColor: primaryColor),
     ),
     extensions: const [
       AppColors(
@@ -156,7 +160,7 @@ class AppTheme {
         amber: _amber,
         success: _green,
         sidebarBg: Color(0xFF242438),
-        sidebarActive: _primary,
+        sidebarActive: primaryColor,
         tableBorder: Color(0xFF333355),
         badgeRed: Color(0xFF501313),
         badgeRedText: Color(0xFFF7C1C1),

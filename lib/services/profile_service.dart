@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/profile.dart';
+import '../utils/brand_colors.dart';
 import 'vehicle_service.dart';
 
 final profileProvider = FutureProvider<Profile?>((ref) async {
@@ -23,7 +24,7 @@ class ProfileService {
       fullName: json['full_name'] ?? '',
       position: json['position'] ?? '',
       initials: json['initials'] ?? '',
-      avatarColor: json['avatar_color'] ?? '#4361EE',
+      avatarColor: json['avatar_color'] ?? kPrimaryColorHex,
     );
   }
 

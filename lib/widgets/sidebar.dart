@@ -490,7 +490,7 @@ class _SidebarBottomProfile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
     final initials = profileAsync.value?.initials ?? 'АИ';
-    final avatarHex = profileAsync.value?.avatarColor ?? '#4361EE';
+    final avatarHex = profileAsync.value?.avatarColor ?? AppTheme.primaryColorHex;
     final avatarColor = Color(int.parse(avatarHex.replaceFirst('#', '0xFF')));
 
     return Container(

@@ -258,7 +258,7 @@ class UsersTab extends ConsumerWidget {
             style: FilledButton.styleFrom(
               backgroundColor: user.isActive
                   ? const Color(0xFFE24B4A)
-                  : const Color(0xFF4361EE),
+                  : AppTheme.primaryColor,
             ),
             child: Text(user.isActive ? 'Заблокировать' : 'Разблокировать'),
           ),

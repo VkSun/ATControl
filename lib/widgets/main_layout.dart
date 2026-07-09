@@ -169,7 +169,7 @@ class _MobileLayout extends ConsumerWidget {
     final pendingCount = ref.watch(pendingCountProvider).value ?? 0;
     final profileAsync = ref.watch(profileProvider);
     final initials = profileAsync.value?.initials ?? 'АИ';
-    final avatarHex = profileAsync.value?.avatarColor ?? '#4361EE';
+    final avatarHex = profileAsync.value?.avatarColor ?? AppTheme.primaryColorHex;
     final avatarColor = Color(int.parse(avatarHex.replaceFirst('#', '0xFF')));
     final themeMode = ref.watch(themeModeProvider);
     final currentIdx = _locationToIndex(location);

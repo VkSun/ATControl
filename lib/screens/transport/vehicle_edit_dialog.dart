@@ -11,6 +11,7 @@ import '../../services/driver_service.dart';
 import '../../utils/date_picker.dart';
 import '../../utils/date_utils.dart';
 import '../../utils/responsive.dart';
+import '../../utils/theme.dart';
 import '../../widgets/dialog_scroll_content.dart';
 
 class VehicleEditDialog extends ConsumerStatefulWidget {
@@ -751,7 +752,7 @@ class _DriverPickerDialogState extends State<_DriverPickerDialog> {
                                 : Icons.radio_button_unchecked,
                             size: 18,
                             color: _selected == null
-                                ? const Color(0xFF4361EE)
+                                ? AppTheme.primaryColor
                                 : const Color(0xFF888888),
                           ),
                           const SizedBox(width: 10),
@@ -779,7 +780,7 @@ class _DriverPickerDialogState extends State<_DriverPickerDialog> {
                                   : Icons.radio_button_unchecked,
                               size: 18,
                               color: isSelected
-                                  ? const Color(0xFF4361EE)
+                                  ? AppTheme.primaryColor
                                   : const Color(0xFF888888),
                             ),
                             const SizedBox(width: 10),
