@@ -40,7 +40,11 @@ class Driver {
 
   String? get vehicleId => vehicleIds.firstOrNull;
 
-  Driver copyWith({List<String>? vehicleIds}) => Driver(
+  Driver copyWith({
+    List<String>? vehicleIds,
+    DateTime? licenseExpiry,
+    DateTime? medicalExpiry,
+  }) => Driver(
     id: id,
     tabNumber: tabNumber,
     lastName: lastName,
@@ -50,9 +54,9 @@ class Driver {
     phone: phone,
     address: address,
     licenseNumber: licenseNumber,
-    licenseExpiry: licenseExpiry,
+    licenseExpiry: licenseExpiry ?? this.licenseExpiry,
     licenseCategories: licenseCategories,
-    medicalExpiry: medicalExpiry,
+    medicalExpiry: medicalExpiry ?? this.medicalExpiry,
     vehicleIds: vehicleIds ?? this.vehicleIds,
     notes: notes,
     departmentId: departmentId,

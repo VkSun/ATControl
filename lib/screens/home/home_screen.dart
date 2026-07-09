@@ -193,17 +193,16 @@ class _ExpiryCard extends ConsumerWidget {
             final items = <Map<String, dynamic>>[];
             final vehicles = vehiclesAsync.value ?? <Vehicle>[];
             for (final v in vehicles) {
-              void check(DateTime? date, String type) {
-                if (date == null) return;
-                final diff = daysUntil(date);
+              // Все 5 типов сроков ТС (включая вычисляемые ТО автомобиля/
+              // оборудования) — единый источник в Vehicle.expiryDates().
+              for (final entry in v.expiryDates()) {
+                if (entry.date == null) continue;
+                final diff = daysUntil(entry.date!);
                 if (diff <= 30) {
-                  items.add({'label': type, 'subject': v.brandModel,
-                    'extra': v.govNumber, 'date': date, 'diff': diff});
+                  items.add({'label': entry.type, 'subject': v.brandModel,
+                    'extra': v.govNumber, 'date': entry.date, 'diff': diff});
                 }
               }
-              check(v.inspectionDate, 'Техосмотр');
-              check(v.insuranceDate, 'Страховка');
-              check(v.specialPermitDate, 'Спец. разрешение');
             }
 
             final drivers = driversAsync.value ?? <Driver>[];

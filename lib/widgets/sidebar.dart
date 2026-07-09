@@ -22,9 +22,10 @@ final pendingCountProvider = FutureProvider<int>((ref) async {
   int count = 0;
   final vehicles = await ref.read(vehicleServiceProvider).getAll();
   for (final v in vehicles) {
-    for (final date in [v.inspectionDate, v.insuranceDate, v.specialPermitDate]) {
-      if (date == null) continue;
-      if (daysUntil(date) <= 7) count++;
+    // Все 5 типов сроков ТС (включая вычисляемые ТО автомобиля/оборудования).
+    for (final entry in v.expiryDates()) {
+      if (entry.date == null) continue;
+      if (daysUntil(entry.date!) <= 7) count++;
     }
   }
   final drivers = await ref.read(driverServiceProvider).getAll();

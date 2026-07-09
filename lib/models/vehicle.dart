@@ -53,6 +53,41 @@ class Vehicle {
 
   String get brandModel => '$brand $model';
 
+  // Только даты сроков — единственное, что сейчас правится точечно
+  // (см. ExpiryEditDialog). Ручная пересборка Vehicle(...) полем за полем
+  // рискует незаметно потерять новые поля при добавлении — отсюда copyWith.
+  Vehicle copyWith({
+    DateTime? inspectionDate,
+    DateTime? insuranceDate,
+    DateTime? specialPermitDate,
+    DateTime? toDate,
+    DateTime? equipmentToDate,
+  }) => Vehicle(
+    id: id,
+    invNumber: invNumber,
+    brand: brand,
+    model: model,
+    govNumber: govNumber,
+    year: year,
+    color: color,
+    vin: vin,
+    inspectionDate: inspectionDate ?? this.inspectionDate,
+    insuranceDate: insuranceDate ?? this.insuranceDate,
+    specialPermitDate: specialPermitDate ?? this.specialPermitDate,
+    toDate: toDate ?? this.toDate,
+    toMileage: toMileage,
+    toPeriodKm: toPeriodKm,
+    toPeriodMonths: toPeriodMonths,
+    equipmentType: equipmentType,
+    equipmentToDate: equipmentToDate ?? this.equipmentToDate,
+    equipmentHours: equipmentHours,
+    equipmentToPeriodHours: equipmentToPeriodHours,
+    equipmentToPeriodMonths: equipmentToPeriodMonths,
+    notes: notes,
+    departmentId: departmentId,
+    sectionId: sectionId,
+  );
+
   // Все пять типов дат истечения для единого обхода
   List<({String type, DateTime? date})> expiryDates() => [
     (type: 'Техосмотр', date: inspectionDate),

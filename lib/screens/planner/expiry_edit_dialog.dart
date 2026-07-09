@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/task.dart';
 import '../../models/vehicle.dart';
-import '../../models/driver.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../utils/date_picker.dart';
@@ -60,107 +59,20 @@ class ExpiryEditDialogState extends ConsumerState<ExpiryEditDialog> {
         final v =
             vehicles.where((v) => v.id == widget.task.vehicleId).firstOrNull;
         if (v != null) {
-          Vehicle updated;
-          if (taskTitle.startsWith('Техосмотр')) {
-            updated = Vehicle(
-                id: v.id,
-                invNumber: v.invNumber,
-                brand: v.brand,
-                model: v.model,
-                govNumber: v.govNumber,
-                year: v.year,
-                color: v.color,
-                vin: v.vin,
-                inspectionDate: _newDate,
-                insuranceDate: v.insuranceDate,
-                specialPermitDate: v.specialPermitDate,
-                toDate: v.toDate,
-                toMileage: v.toMileage,
-                equipmentType: v.equipmentType,
-                equipmentToDate: v.equipmentToDate,
-                equipmentHours: v.equipmentHours,
-                notes: v.notes);
-          } else if (taskTitle.startsWith('Страховка')) {
-            updated = Vehicle(
-                id: v.id,
-                invNumber: v.invNumber,
-                brand: v.brand,
-                model: v.model,
-                govNumber: v.govNumber,
-                year: v.year,
-                color: v.color,
-                vin: v.vin,
-                inspectionDate: v.inspectionDate,
-                insuranceDate: _newDate,
-                specialPermitDate: v.specialPermitDate,
-                toDate: v.toDate,
-                toMileage: v.toMileage,
-                equipmentType: v.equipmentType,
-                equipmentToDate: v.equipmentToDate,
-                equipmentHours: v.equipmentHours,
-                notes: v.notes);
-          } else {
-            updated = Vehicle(
-                id: v.id,
-                invNumber: v.invNumber,
-                brand: v.brand,
-                model: v.model,
-                govNumber: v.govNumber,
-                year: v.year,
-                color: v.color,
-                vin: v.vin,
-                inspectionDate: v.inspectionDate,
-                insuranceDate: v.insuranceDate,
-                specialPermitDate: _newDate,
-                toDate: v.toDate,
-                toMileage: v.toMileage,
-                equipmentType: v.equipmentType,
-                equipmentToDate: v.equipmentToDate,
-                equipmentHours: v.equipmentHours,
-                notes: v.notes);
+          final updated = _updatedVehicle(v, taskTitle, _newDate!);
+          if (updated != null) {
+            await ref.read(vehicleServiceProvider).update(v.id, updated);
+            ref.invalidate(vehiclesProvider);
           }
-          await ref.read(vehicleServiceProvider).update(v.id, updated);
-          ref.invalidate(vehiclesProvider);
         }
       } else if (widget.task.driverId != null) {
         final drivers = await ref.read(driverServiceProvider).getAll();
         final d =
             drivers.where((d) => d.id == widget.task.driverId).firstOrNull;
         if (d != null) {
-          Driver updated;
-          if (taskTitle.startsWith('Вод.')) {
-            updated = Driver(
-                id: d.id,
-                tabNumber: d.tabNumber,
-                lastName: d.lastName,
-                firstName: d.firstName,
-                middleName: d.middleName,
-                birthDate: d.birthDate,
-                phone: d.phone,
-                address: d.address,
-                licenseNumber: d.licenseNumber,
-                licenseCategories: d.licenseCategories,
-                licenseExpiry: _newDate,
-                medicalExpiry: d.medicalExpiry,
-                vehicleIds: d.vehicleIds,
-                notes: d.notes);
-          } else {
-            updated = Driver(
-                id: d.id,
-                tabNumber: d.tabNumber,
-                lastName: d.lastName,
-                firstName: d.firstName,
-                middleName: d.middleName,
-                birthDate: d.birthDate,
-                phone: d.phone,
-                address: d.address,
-                licenseNumber: d.licenseNumber,
-                licenseCategories: d.licenseCategories,
-                licenseExpiry: d.licenseExpiry,
-                medicalExpiry: _newDate,
-                vehicleIds: d.vehicleIds,
-                notes: d.notes);
-          }
+          final updated = taskTitle.startsWith('Вод.')
+              ? d.copyWith(licenseExpiry: _newDate)
+              : d.copyWith(medicalExpiry: _newDate);
           await ref.read(driverServiceProvider).update(d.id, updated);
           ref.invalidate(driversProvider);
         }
@@ -176,6 +88,37 @@ class ExpiryEditDialogState extends ConsumerState<ExpiryEditDialog> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Определяет, какое поле ТС соответствует задаче, по её заголовку
+  /// (см. sync_expiry_tasks() — ровно эти 5 префиксов). Для вычисляемых
+  /// «ТО автомобиля»/«ТО оборудования» (nextToDate = toDate + период)
+  /// новая дата — это желаемая следующая дата ТО, поэтому пересчитываем
+  /// исходную toDate/equipmentToDate в обратную сторону, на период назад.
+  /// null — заголовок не распознан, запись не трогаем (лучше ничего не
+  /// сохранить, чем молча записать дату не в то поле).
+  Vehicle? _updatedVehicle(Vehicle v, String taskTitle, DateTime newDate) {
+    if (taskTitle.startsWith('Техосмотр')) {
+      return v.copyWith(inspectionDate: newDate);
+    }
+    if (taskTitle.startsWith('Страховка')) {
+      return v.copyWith(insuranceDate: newDate);
+    }
+    if (taskTitle.startsWith('Спец. разрешение')) {
+      return v.copyWith(specialPermitDate: newDate);
+    }
+    if (taskTitle.startsWith('ТО автомобиля')) {
+      final months = v.toPeriodMonths ?? 0;
+      return v.copyWith(
+          toDate: DateTime(newDate.year, newDate.month - months, newDate.day));
+    }
+    if (taskTitle.startsWith('ТО оборудования')) {
+      final months = v.equipmentToPeriodMonths ?? 0;
+      return v.copyWith(
+          equipmentToDate:
+              DateTime(newDate.year, newDate.month - months, newDate.day));
+    }
+    return null;
   }
 
   @override
