@@ -32,12 +32,25 @@ class FakeVehicleService extends VehicleService {
 
 class FakeDriverService extends DriverService {
   final deleted = <String>[];
+  final updateFieldsCalls = <Map<String, dynamic>>[];
+  // Что вернуть на getById — симулирует состояние «на сервере» отдельно
+  // от Driver, с которым был открыт диалог (гонка с VehicleEditDialog).
+  Driver? freshDriver;
 
   @override
   Future<List<Driver>> getAll({String? departmentId, String? sectionId}) async => [];
 
   @override
   Future<void> delete(String id) async => deleted.add(id);
+
+  @override
+  Future<Driver?> getById(String id) async => freshDriver;
+
+  @override
+  Future<void> updateFields(String id, Map<String, dynamic> fields,
+      {required Driver resultingDriver}) async {
+    updateFieldsCalls.add(fields);
+  }
 }
 
 final maz = Vehicle(
@@ -49,22 +62,30 @@ final ivanov = Driver(
   id: 'd1', tabNumber: '4501', lastName: 'Иванов', firstName: 'Иван',
 );
 
+// Иванов с уже закреплённым МАЗом — для тестов сохранения vehicle_ids.
+final ivanovWithVehicle = Driver(
+  id: 'd1', tabNumber: '4501', lastName: 'Иванов', firstName: 'Иван',
+  vehicleIds: const ['v1'],
+);
+
 Future<(FakeVehicleService, FakeDriverService)> pumpDialog(
   WidgetTester tester,
   Size size,
   Widget Function() dialog, {
   VoidCallback? onSaved,
+  List<Vehicle> vehicles = const [],
+  FakeDriverService? driverService,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   final vs = FakeVehicleService();
-  final ds = FakeDriverService();
+  final ds = driverService ?? FakeDriverService();
   await tester.pumpWidget(ProviderScope(
     overrides: [
       vehicleServiceProvider.overrideWithValue(vs),
       driverServiceProvider.overrideWithValue(ds),
-      vehiclesProvider.overrideWith((ref) async => <Vehicle>[]),
+      vehiclesProvider.overrideWith((ref) async => vehicles),
       departmentsProvider.overrideWith((ref) async => <Department>[]),
       sectionsProvider.overrideWith((ref) async => <Section>[]),
     ],
@@ -185,6 +206,70 @@ void main() {
       await tester.pumpAndSettle();
       expect(vs.deleted, isEmpty);
       expect(find.byType(AlertDialog), findsOneWidget); // форма осталась
+    });
+  });
+
+  group('водитель: сохранение и vehicle_ids (гонка с VehicleEditDialog)', () {
+    testWidgets(
+        'поле «Закреплённые ТС» не трогали — vehicle_ids не входит в патч',
+        (tester) async {
+      final ds = FakeDriverService();
+      await pumpDialog(
+        tester,
+        const Size(1280, 800),
+        () => DriverEditDialog(driver: ivanovWithVehicle, onSaved: () {}),
+        vehicles: [maz],
+        driverService: ds,
+      );
+
+      // Правим не связанное с ТС поле.
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'Телефон'), '+375291234567');
+      await tester.tap(find.widgetWithText(FilledButton, 'Сохранить'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Сохранить').last);
+      await tester.pumpAndSettle();
+
+      expect(ds.updateFieldsCalls, hasLength(1));
+      // Ключевая проверка: vehicle_ids отсутствует в патче — не наш
+      // источник истины, раз пользователь пикер не открывал.
+      expect(ds.updateFieldsCalls.single.containsKey('vehicle_ids'), false);
+      expect(ds.updateFieldsCalls.single['phone'], '+375291234567');
+    });
+
+    testWidgets(
+        'ТС открепили — мерж применяется к свежепрочитанному списку, а не '
+        'к снимку на момент открытия', (tester) async {
+      final ds = FakeDriverService()
+        // «На сервере» уже другое состояние, чем при открытии диалога —
+        // из VehicleEditDialog кто-то параллельно добавил v2.
+        ..freshDriver = ivanovWithVehicle.copyWith(vehicleIds: ['v1', 'v2']);
+      final v2 = Vehicle(
+        id: 'v2', invNumber: '770589', brand: 'ГАЗ', model: '3307',
+        govNumber: 'АА1111-5',
+      );
+      await pumpDialog(
+        tester,
+        const Size(1280, 800),
+        () => DriverEditDialog(driver: ivanovWithVehicle, onSaved: () {}),
+        vehicles: [maz, v2],
+        driverService: ds,
+      );
+
+      // Открепляем v1 (МАЗ) через крестик на chip.
+      await tester.tap(find.byTooltip('Открепить'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Сохранить'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Сохранить').last);
+      await tester.pumpAndSettle();
+
+      expect(ds.updateFieldsCalls, hasLength(1));
+      final fields = ds.updateFieldsCalls.single;
+      // v1 — наше удаление (применяется), v2 — чужое добавление на сервере
+      // (сохраняется, а не теряется из-за диффа против устаревшего снимка).
+      expect(Set<String>.from(fields['vehicle_ids'] as List), {'v2'});
     });
   });
 

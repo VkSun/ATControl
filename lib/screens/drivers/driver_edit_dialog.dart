@@ -8,6 +8,7 @@ import '../../services/department_service.dart';
 import '../../services/driver_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../utils/date_picker.dart';
+import '../../utils/list_diff.dart';
 import '../../utils/responsive.dart';
 import '../../utils/theme.dart';
 import '../../widgets/dialog_scroll_content.dart';
@@ -28,6 +29,10 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
   late TextEditingController _phone, _licenseNumber, _licenseCategories, _notes;
   DateTime? _birthDate, _licenseExpiry, _medicalExpiry;
   List<String> _selectedVehicleIds = [];
+  // Снимок vehicleIds на момент открытия диалога — не меняется после,
+  // нужен только чтобы понять, трогал ли пользователь пикер ТС в этой
+  // сессии редактирования (сравнение с _selectedVehicleIds).
+  late final List<String> _initialVehicleIds;
   String? _departmentId, _sectionId;
   bool _loading = false;
 
@@ -47,6 +52,7 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
     _licenseExpiry = d?.licenseExpiry;
     _medicalExpiry = d?.medicalExpiry;
     _selectedVehicleIds = List.from(d?.vehicleIds ?? []);
+    _initialVehicleIds = List.from(d?.vehicleIds ?? []);
     _departmentId = d?.departmentId;
     _sectionId = d?.sectionId;
   }
@@ -89,27 +95,42 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
     setState(() => _loading = true);
     try {
       final service = ref.read(driverServiceProvider);
-      final driver = Driver(
-        id: widget.driver?.id ?? '',
-        tabNumber: _tabNumber.text.trim(),
-        lastName: _lastName.text.trim(),
-        firstName: _firstName.text.trim(),
-        middleName: _middleName.text.trim().isEmpty ? null : _middleName.text.trim(),
-        phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
-        licenseNumber: _licenseNumber.text.trim().isEmpty ? null : _licenseNumber.text.trim(),
-        licenseCategories: _licenseCategories.text.trim().isEmpty ? null : _licenseCategories.text.trim(),
-        notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-        birthDate: _birthDate,
-        licenseExpiry: _licenseExpiry,
-        medicalExpiry: _medicalExpiry,
-        vehicleIds: _selectedVehicleIds,
-        departmentId: _departmentId,
-        sectionId: _sectionId,
-      );
+
       if (widget.driver == null) {
-        await service.create(driver);
+        await service.create(_buildDriver(id: '', vehicleIds: _selectedVehicleIds));
       } else {
-        await service.update(widget.driver!.id, driver);
+        final driverId = widget.driver!.id;
+
+        // Пикер ТС трогали в этой сессии, если текущий выбор отличается
+        // от снимка на момент открытия — не от того, что сейчас на сервере.
+        final vehicleIdsTouched =
+            listsDiffer(_initialVehicleIds, _selectedVehicleIds);
+
+        List<String> vehicleIdsForSave;
+        if (vehicleIdsTouched) {
+          // vehicle_ids мог измениться параллельно (VehicleEditDialog) —
+          // перечитываем свежую запись и применяем СВОЮ правку поверх нее,
+          // а не поверх устаревшего снимка, с которым диалог открылся.
+          final fresh = await service.getById(driverId);
+          vehicleIdsForSave = mergeListDiff(
+            original: _initialVehicleIds,
+            current: _selectedVehicleIds,
+            fresh: fresh?.vehicleIds ?? widget.driver!.vehicleIds,
+          );
+        } else {
+          // Не трогали — не наш источник истины прямо сейчас.
+          vehicleIdsForSave = widget.driver!.vehicleIds;
+        }
+
+        final resultingDriver =
+            _buildDriver(id: driverId, vehicleIds: vehicleIdsForSave);
+        final fields = resultingDriver.toJson();
+        if (!vehicleIdsTouched) {
+          // Частичный патч без vehicle_ids — поле не наше, не перезаписываем.
+          fields.remove('vehicle_ids');
+        }
+        await service.updateFields(driverId, fields,
+            resultingDriver: resultingDriver);
       }
       widget.onSaved();
       if (mounted) Navigator.pop(context);
@@ -122,6 +143,26 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  /// Собирает Driver из текущих полей формы; [vehicleIds] передаётся
+  /// отдельно — источник зависит от того, трогали ли пикер ТС (см. _save).
+  Driver _buildDriver({required String id, required List<String> vehicleIds}) => Driver(
+        id: id,
+        tabNumber: _tabNumber.text.trim(),
+        lastName: _lastName.text.trim(),
+        firstName: _firstName.text.trim(),
+        middleName: _middleName.text.trim().isEmpty ? null : _middleName.text.trim(),
+        phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+        licenseNumber: _licenseNumber.text.trim().isEmpty ? null : _licenseNumber.text.trim(),
+        licenseCategories: _licenseCategories.text.trim().isEmpty ? null : _licenseCategories.text.trim(),
+        notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+        birthDate: _birthDate,
+        licenseExpiry: _licenseExpiry,
+        medicalExpiry: _medicalExpiry,
+        vehicleIds: vehicleIds,
+        departmentId: _departmentId,
+        sectionId: _sectionId,
+      );
 
   Future<void> _pickDate(DateTime? current, ValueChanged<DateTime?> onPicked) async {
     final date = await showAppDatePicker(

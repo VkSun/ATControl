@@ -147,6 +147,33 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
       ),
     );
     if (confirmed != true) return;
+
+    // Проверяем существование водителей ДО сохранения машины: если
+    // проверка всплывёт после service.update() (машина уже сохранена),
+    // пользователь увидит общее «Ошибка: ...», будто не сохранилось ничего,
+    // хотя данные машины на самом деле уже обновились — вводит в заблуждение.
+    final driverAssignmentChanged = _assignedDriverId != _originalDriverId;
+    if (driverAssignmentChanged) {
+      if (_originalDriverId != null &&
+          !_allDrivers.any((d) => d.id == _originalDriverId)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'Прежний закреплённый водитель больше не существует, обновите список')));
+        }
+        return;
+      }
+      if (_assignedDriverId != null &&
+          !_allDrivers.any((d) => d.id == _assignedDriverId)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'Выбранный водитель больше не существует, обновите список')));
+        }
+        return;
+      }
+    }
+
     setState(() => _loading = true);
     try {
       final service = ref.read(vehicleServiceProvider);
@@ -178,15 +205,18 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
       } else {
         await service.update(widget.vehicle!.id, vehicle);
 
-        // Update driver assignment if changed
-        if (_assignedDriverId != _originalDriverId) {
+        // Смена привязки водителя — существование уже проверено выше,
+        // orElse здесь только на случай, если эта проверка когда-нибудь
+        // разъедется с кодом ниже (например, при рефакторинге).
+        if (driverAssignmentChanged) {
           final driverService = ref.read(driverServiceProvider);
           final vehicleId = widget.vehicle!.id;
 
           if (_originalDriverId != null) {
             final orig = _allDrivers.firstWhere(
                 (d) => d.id == _originalDriverId,
-                orElse: () => throw Exception('Driver not found'));
+                orElse: () => throw Exception(
+                    'Прежний водитель больше не существует, обновите список'));
             final updatedIds =
                 orig.vehicleIds.where((id) => id != vehicleId).toList();
             await driverService.update(
@@ -194,8 +224,10 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
           }
 
           if (_assignedDriverId != null) {
-            final next = _allDrivers
-                .firstWhere((d) => d.id == _assignedDriverId);
+            final next = _allDrivers.firstWhere(
+                (d) => d.id == _assignedDriverId,
+                orElse: () => throw Exception(
+                    'Выбранный водитель больше не существует, обновите список'));
             if (!next.vehicleIds.contains(vehicleId)) {
               final updatedIds = [...next.vehicleIds, vehicleId];
               await driverService.update(

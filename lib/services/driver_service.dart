@@ -66,6 +66,18 @@ class DriverService extends OfflineCrudService<Driver> {
         },
       );
 
+  /// Точечное чтение одной записи — свежий снимок непосредственно перед
+  /// частичным сохранением (DriverEditDialog._save), без похода за всем
+  /// списком через getAll().
+  Future<Driver?> getById(String id) async {
+    final data = await supabase
+        .from(table)
+        .select(Driver.columns)
+        .eq('id', id)
+        .maybeSingle();
+    return data == null ? null : fromJson(data);
+  }
+
   Future<List<Driver>> search(String query) async {
     final tokens = query.toLowerCase().split(RegExp(r'\s+'));
     final all = await getAll();
@@ -78,6 +90,31 @@ class DriverService extends OfflineCrudService<Driver> {
   Future<Driver> create(Driver d) => createRow(d);
 
   Future<Driver> update(String id, Driver d) => updateRow(id, d);
+
+  /// Частичное обновление — патчит только [fields] (не полный toJson()).
+  /// Нужно, чтобы сохранение формы водителя не перезаписывало vehicle_ids,
+  /// когда поле «Закреплённые ТС» не трогали (см. DriverEditDialog._save):
+  /// vehicle_ids мог измениться параллельно из VehicleEditDialog, и полный
+  /// toJson() из потенциально устаревшего снимка тихо стёр бы эту правку.
+  /// [resultingDriver] — ожидаемое состояние записи после патча, чтобы
+  /// офлайн-кэш обновился консистентно (patchCaches ждёт полную строку).
+  Future<void> updateFields(
+    String id,
+    Map<String, dynamic> fields, {
+    required Driver resultingDriver,
+  }) =>
+      mutateRow(
+        id: id,
+        opPrefix: 'upd',
+        data: fields,
+        label: describe(resultingDriver),
+        remote: () => supabase.from(table).update(fields).eq('id', id),
+        patch: () => patchCaches(
+            id: id,
+            json: {...resultingDriver.toJson(), 'id': id},
+            op: 'update',
+            item: resultingDriver),
+      );
 
   Future<void> delete(String id) => deleteRow(id);
 
