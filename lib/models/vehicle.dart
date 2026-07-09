@@ -153,6 +153,12 @@ class Vehicle {
     'section_id': sectionId,
   };
 
+  /// Худший (максимальный) статус среди всех дат истечения —
+  /// для цветового индикатора строки в списке.
+  int worstDateStatus() => expiryDates()
+      .map((e) => dateStatus(e.date))
+      .fold(0, (a, b) => a > b ? a : b);
+
   static int dateStatus(DateTime? date) {
     if (date == null) return 0;
     final diff = daysUntil(date);

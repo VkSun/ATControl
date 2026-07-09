@@ -476,7 +476,13 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: widget.colors.tableBorder, width: 0.5)),
+                border: Border(
+                  // Индикатор слева: худший статус удостоверения/медсправки.
+                  left: BorderSide(
+                      color: widget.colors.statusStrip(d.worstDateStatus()),
+                      width: 3),
+                  bottom: BorderSide(color: widget.colors.tableBorder, width: 0.5),
+                ),
               ),
               child: Row(
                 children: [
@@ -524,7 +530,13 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: widget.colors.tableBorder, width: 0.5)),
+                    border: Border(
+                      // Индикатор слева: худший статус удостоверения/медсправки.
+                      left: BorderSide(
+                          color: widget.colors.statusStrip(d.worstDateStatus()),
+                          width: 3),
+                      bottom: BorderSide(color: widget.colors.tableBorder, width: 0.5),
+                    ),
                   ),
                   child: Row(
                     children: [

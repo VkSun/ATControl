@@ -567,13 +567,19 @@ class _VehicleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Индикатор слева: худший статус среди всех дат истечения ТС.
+    final strip = colors.statusStrip(vehicle.worstDateStatus());
+
     if (mobile) {
       return InkWell(
         onTap: canEdit ? onEdit : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+            border: Border(
+              left: BorderSide(color: strip, width: 3),
+              bottom: BorderSide(color: colors.tableBorder, width: 0.5),
+            ),
           ),
           child: Row(
             children: [
@@ -602,7 +608,10 @@ class _VehicleRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
+          border: Border(
+            left: BorderSide(color: strip, width: 3),
+            bottom: BorderSide(color: colors.tableBorder, width: 0.5),
+          ),
         ),
         child: Row(
           children: [

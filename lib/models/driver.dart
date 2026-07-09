@@ -1,4 +1,5 @@
 import '../utils/date_utils.dart';
+import 'vehicle.dart';
 
 class Driver {
   final String id;
@@ -67,6 +68,14 @@ class Driver {
       s += firstName.isNotEmpty ? '${middleName![0]}.' : ' ${middleName![0]}.';
     }
     return s;
+  }
+
+  /// Худший статус по датам удостоверения и медсправки
+  /// (шкала Vehicle.dateStatus) — для цветового индикатора в списке.
+  int worstDateStatus() {
+    final license = Vehicle.dateStatus(licenseExpiry);
+    final medical = Vehicle.dateStatus(medicalExpiry);
+    return license > medical ? license : medical;
   }
 
   /// Колонки для select() — ровно поля, которые читает fromJson.

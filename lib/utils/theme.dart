@@ -209,6 +209,17 @@ class AppColors extends ThemeExtension<AppColors> {
   @override
   AppColors lerp(AppColors? other, double t) => this;
 }
+
+extension StatusStripColor on AppColors {
+  /// Цвет левого индикатора строки списка по шкале Vehicle.dateStatus:
+  /// 3–4 — красный, 2 — жёлтый, 1 — зелёный, 0 — прозрачный.
+  Color statusStrip(int status) => switch (status) {
+        >= 3 => danger,
+        2 => amber,
+        1 => success,
+        _ => Colors.transparent,
+      };
+}
 final resolvedThemeProvider = Provider<ThemeData>((ref) {
   final mode = ref.watch(themeModeProvider);
   if (mode == ThemeMode.dark) return AppTheme.darkTheme;
