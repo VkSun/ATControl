@@ -10,6 +10,7 @@ import '../services/task_service.dart';
 import '../services/offline_state.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
+import '../services/realtime_invalidation.dart';
 import '../screens/profile/profile_dialog.dart';
 import '../l10n/gen/app_localizations.dart';
 import 'sidebar.dart';
@@ -96,6 +97,12 @@ class _MainLayoutState extends ConsumerState<MainLayout>
     final location = GoRouterState.of(context).uri.toString();
     final collapsed = ref.watch(sidebarCollapsedProvider);
     final mobile = isPhone(context);
+
+    // Держим подписки Realtime живыми, пока показан основной каркас
+    // приложения (MainLayout) — закроются автоматически при выходе.
+    ref.watch(taskRealtimeProvider);
+    ref.watch(vehicleRealtimeProvider);
+    ref.watch(driverRealtimeProvider);
 
     if (mobile) {
       return _MobileLayout(child: widget.child, location: location, colors: colors);
