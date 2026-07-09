@@ -3,12 +3,42 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../screens/settings/settings_screen.dart' show weatherCityProvider;
 
+/// Код описания погоды от wttr.in. Перевод в текст — на стороне виджета
+/// (см. weather_desc_text.dart), т.к. у WeatherService нет BuildContext.
+enum WeatherDescCode {
+  sunny,
+  clear,
+  partlyCloudy,
+  cloudy,
+  overcast,
+  fog,
+  lightRain,
+  moderateRain,
+  heavyRain,
+  lightSnow,
+  moderateSnow,
+  heavySnow,
+  blizzard,
+  thunder,
+  patchyRain,
+  patchySnow,
+  freezingDrizzle,
+  lightDrizzle,
+  unknown,
+}
+
 class WeatherData {
   final double temp;
-  final String description;
+  final WeatherDescCode descCode;
+  final String rawDescription;
   final String icon;
 
-  WeatherData({required this.temp, required this.description, required this.icon});
+  WeatherData({
+    required this.temp,
+    required this.descCode,
+    required this.rawDescription,
+    required this.icon,
+  });
 }
 
 final weatherProvider = FutureProvider<WeatherData>((ref) async {
@@ -57,36 +87,37 @@ class WeatherService {
 
     return WeatherData(
       temp: temp,
-      description: _translateDesc(desc),
+      descCode: _matchDescCode(desc),
+      rawDescription: desc,
       icon: icon,
     );
   }
 
-  String _translateDesc(String desc) {
+  WeatherDescCode _matchDescCode(String desc) {
     const map = {
-      'sunny': 'солнечно',
-      'clear': 'ясно',
-      'partly cloudy': 'переменная облачность',
-      'cloudy': 'облачно',
-      'overcast': 'пасмурно',
-      'mist': 'туман',
-      'fog': 'туман',
-      'light rain': 'небольшой дождь',
-      'moderate rain': 'дождь',
-      'heavy rain': 'сильный дождь',
-      'light snow': 'небольшой снег',
-      'moderate snow': 'снег',
-      'heavy snow': 'сильный снег',
-      'blizzard': 'метель',
-      'thundery outbreaks': 'гроза',
-      'patchy rain': 'местами дождь',
-      'patchy snow': 'местами снег',
-      'freezing drizzle': 'ледяная морось',
-      'light drizzle': 'морось',
+      'sunny': WeatherDescCode.sunny,
+      'clear': WeatherDescCode.clear,
+      'partly cloudy': WeatherDescCode.partlyCloudy,
+      'cloudy': WeatherDescCode.cloudy,
+      'overcast': WeatherDescCode.overcast,
+      'mist': WeatherDescCode.fog,
+      'fog': WeatherDescCode.fog,
+      'light rain': WeatherDescCode.lightRain,
+      'moderate rain': WeatherDescCode.moderateRain,
+      'heavy rain': WeatherDescCode.heavyRain,
+      'light snow': WeatherDescCode.lightSnow,
+      'moderate snow': WeatherDescCode.moderateSnow,
+      'heavy snow': WeatherDescCode.heavySnow,
+      'blizzard': WeatherDescCode.blizzard,
+      'thundery outbreaks': WeatherDescCode.thunder,
+      'patchy rain': WeatherDescCode.patchyRain,
+      'patchy snow': WeatherDescCode.patchySnow,
+      'freezing drizzle': WeatherDescCode.freezingDrizzle,
+      'light drizzle': WeatherDescCode.lightDrizzle,
     };
     for (final entry in map.entries) {
       if (desc.contains(entry.key)) return entry.value;
     }
-    return desc;
+    return WeatherDescCode.unknown;
   }
 }

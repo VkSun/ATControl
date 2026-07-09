@@ -14,6 +14,7 @@ import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../screens/profile/profile_dialog.dart';
 import '../l10n/gen/app_localizations.dart';
+import 'weather_desc_text.dart';
 
 // ─── Expiring documents badge count ──────────────────────────────────────────
 
@@ -328,7 +329,7 @@ class _SidebarTop extends StatelessWidget {
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
-                                        '${w.temp.round()}°C • ${w.description}',
+                                        '${w.temp.round()}°C • ${weatherDescText(context, w)}',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall,

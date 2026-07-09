@@ -159,6 +159,60 @@
   "weatherUnavailable": "погода недоступна",
   "@weatherUnavailable": { "description": "Сайдбар: не удалось получить погоду" },
 
+  "weatherDescSunny": "солнечно",
+  "@weatherDescSunny": { "description": "Погода: код 'sunny' от wttr.in" },
+
+  "weatherDescClear": "ясно",
+  "@weatherDescClear": { "description": "Погода: код 'clear' от wttr.in" },
+
+  "weatherDescPartlyCloudy": "переменная облачность",
+  "@weatherDescPartlyCloudy": { "description": "Погода: код 'partly cloudy' от wttr.in" },
+
+  "weatherDescCloudy": "облачно",
+  "@weatherDescCloudy": { "description": "Погода: код 'cloudy' от wttr.in" },
+
+  "weatherDescOvercast": "пасмурно",
+  "@weatherDescOvercast": { "description": "Погода: код 'overcast' от wttr.in" },
+
+  "weatherDescFog": "туман",
+  "@weatherDescFog": { "description": "Погода: коды 'mist'/'fog' от wttr.in" },
+
+  "weatherDescLightRain": "небольшой дождь",
+  "@weatherDescLightRain": { "description": "Погода: код 'light rain' от wttr.in" },
+
+  "weatherDescModerateRain": "дождь",
+  "@weatherDescModerateRain": { "description": "Погода: код 'moderate rain' от wttr.in" },
+
+  "weatherDescHeavyRain": "сильный дождь",
+  "@weatherDescHeavyRain": { "description": "Погода: код 'heavy rain' от wttr.in" },
+
+  "weatherDescLightSnow": "небольшой снег",
+  "@weatherDescLightSnow": { "description": "Погода: код 'light snow' от wttr.in" },
+
+  "weatherDescModerateSnow": "снег",
+  "@weatherDescModerateSnow": { "description": "Погода: код 'moderate snow' от wttr.in" },
+
+  "weatherDescHeavySnow": "сильный снег",
+  "@weatherDescHeavySnow": { "description": "Погода: код 'heavy snow' от wttr.in" },
+
+  "weatherDescBlizzard": "метель",
+  "@weatherDescBlizzard": { "description": "Погода: код 'blizzard' от wttr.in" },
+
+  "weatherDescThunder": "гроза",
+  "@weatherDescThunder": { "description": "Погода: код 'thundery outbreaks' от wttr.in" },
+
+  "weatherDescPatchyRain": "местами дождь",
+  "@weatherDescPatchyRain": { "description": "Погода: код 'patchy rain' от wttr.in" },
+
+  "weatherDescPatchySnow": "местами снег",
+  "@weatherDescPatchySnow": { "description": "Погода: код 'patchy snow' от wttr.in" },
+
+  "weatherDescFreezingDrizzle": "ледяная морось",
+  "@weatherDescFreezingDrizzle": { "description": "Погода: код 'freezing drizzle' от wttr.in" },
+
+  "weatherDescLightDrizzle": "морось",
+  "@weatherDescLightDrizzle": { "description": "Погода: код 'light drizzle' от wttr.in" },
+
   "networkChecking": "Проверка...",
   "@networkChecking": { "description": "Сайдбар: идёт проверка соединения" },
 

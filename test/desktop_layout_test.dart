@@ -37,8 +37,11 @@ List<Override> overrides() => [
       currentUserRoleProvider.overrideWith((ref) async => adminRole()),
       departmentsProvider.overrideWith((ref) async => <Department>[]),
       sectionsProvider.overrideWith((ref) async => <Section>[]),
-      weatherProvider.overrideWith((ref) async =>
-          WeatherData(temp: 21, description: 'ясно', icon: '☀️')),
+      weatherProvider.overrideWith((ref) async => WeatherData(
+          temp: 21,
+          descCode: WeatherDescCode.clear,
+          rawDescription: 'clear',
+          icon: '☀️')),
       profileProvider.overrideWith((ref) async => Profile(
           id: 'u1', fullName: 'Админ Админов', position: 'Механик',
           initials: 'АА', avatarColor: '#4361EE')),
