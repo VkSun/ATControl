@@ -92,7 +92,6 @@ class _MainLayoutState extends ConsumerState<MainLayout>
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
-    final themeMode = ref.watch(themeModeProvider);
     final location = GoRouterState.of(context).uri.toString();
     final collapsed = ref.watch(sidebarCollapsedProvider);
     final mobile = isPhone(context);
@@ -115,12 +114,7 @@ class _MainLayoutState extends ConsumerState<MainLayout>
                   child: Sidebar(
                     colors: colors,
                     currentLocation: location,
-                    themeMode: themeMode,
                     collapsed: collapsed,
-                    onThemeToggle: () {
-                      ref.read(themeModeProvider.notifier).set(
-                          themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light);
-                    },
                     onToggleCollapse: () {
                       ref.read(sidebarCollapsedProvider.notifier).state = !collapsed;
                     },

@@ -38,7 +38,10 @@ final pendingCountProvider = FutureProvider<int>((ref) async {
 /// Часы и дата в сайдбаре: собственный таймер, чтобы ежесекундный setState
 /// не перерисовывал весь layout.
 class SidebarClock extends StatefulWidget {
-  const SidebarClock({super.key});
+  /// true — одна строка (только время), для сайдбара на малой высоте.
+  final bool compact;
+
+  const SidebarClock({super.key, this.compact = false});
 
   @override
   State<SidebarClock> createState() => _SidebarClockState();
@@ -66,6 +69,10 @@ class _SidebarClockState extends State<SidebarClock> {
   @override
   Widget build(BuildContext context) {
     final timeStr = DateFormat('HH:mm').format(_now);
+    if (widget.compact) {
+      return Text(timeStr,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500));
+    }
     final dateStr = DateFormat('EEEE, d MMMM', 'ru').format(_now);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,18 +103,18 @@ class _SidebarClockState extends State<SidebarClock> {
 class Sidebar extends StatefulWidget {
   final AppColors colors;
   final String currentLocation;
-  final ThemeMode themeMode;
+
   final bool collapsed;
-  final VoidCallback onThemeToggle;
+
   final VoidCallback onToggleCollapse;
 
   const Sidebar({
     super.key,
     required this.colors,
     required this.currentLocation,
-    required this.themeMode,
+
     required this.collapsed,
-    required this.onThemeToggle,
+
     required this.onToggleCollapse,
   });
 
@@ -162,11 +169,11 @@ class _SidebarState extends State<Sidebar> {
         children: [
           _SidebarTop(
             colors: widget.colors,
-            themeMode: widget.themeMode,
+
             collapsed: widget.collapsed,
             textVisible: _textVisible,
             textOpacity: _textOpacity,
-            onThemeToggle: widget.onThemeToggle,
+
             onToggleCollapse: widget.onToggleCollapse,
           ),
           Expanded(
@@ -203,20 +210,20 @@ class _SidebarState extends State<Sidebar> {
 
 class _SidebarTop extends StatelessWidget {
   final AppColors colors;
-  final ThemeMode themeMode;
+
   final bool collapsed;
   final bool textVisible;
   final double textOpacity;
-  final VoidCallback onThemeToggle;
+
   final VoidCallback onToggleCollapse;
 
   const _SidebarTop({
     required this.colors,
-    required this.themeMode,
+
     required this.collapsed,
     required this.textVisible,
     required this.textOpacity,
-    required this.onThemeToggle,
+
     required this.onToggleCollapse,
   });
 
@@ -271,68 +278,67 @@ class _SidebarTop extends StatelessWidget {
             AnimatedOpacity(
               opacity: textOpacity,
               duration: const Duration(milliseconds: 200),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 14),
-                  const SidebarClock(),
-                  const SizedBox(height: 4),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final weatherAsync = ref.watch(weatherProvider);
-                      return weatherAsync.when(
-                        loading: () => Text('загрузка...',
-                          style: Theme.of(context).textTheme.bodySmall),
-                        error: (_, __) => Text('погода недоступна',
-                          style: Theme.of(context).textTheme.bodySmall),
-                        data: (w) => Row(
-                          children: [
-                            Text(w.icon, style: const TextStyle(fontSize: 13)),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text('${w.temp.round()}°C • ${w.description}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                                overflow: TextOverflow.ellipsis),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.wb_sunny_outlined, size: 13),
-                      const SizedBox(width: 4),
-                      GestureDetector(
-                        onTap: onThemeToggle,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 36, height: 20,
-                          decoration: BoxDecoration(
-                            color: themeMode == ThemeMode.dark
-                                ? colors.sidebarActive : colors.tableBorder,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: AnimatedAlign(
-                            duration: const Duration(milliseconds: 200),
-                            alignment: themeMode == ThemeMode.dark
-                                ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.all(2),
-                              width: 16, height: 16,
-                              decoration: const BoxDecoration(
-                                  color: Colors.white, shape: BoxShape.circle),
+              // Десктопная раскладка существует только при высоте ≥ 600
+              // (isPhone смотрит на shortestSide), поэтому порог компактного
+              // блока — 700: на тесной высоте часы+температура в одну строку,
+              // дата и описание погоды скрываются.
+              child: MediaQuery.sizeOf(context).height < 700
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Row(
+                        children: [
+                          const SidebarClock(compact: true),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Consumer(
+                              builder: (context, ref, _) {
+                                final w = ref.watch(weatherProvider).value;
+                                if (w == null) return const SizedBox.shrink();
+                                return Text(
+                                    '${w.icon} ${w.temp.round()}°C',
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                    overflow: TextOverflow.ellipsis);
+                              },
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.nightlight_round, size: 13),
-                    ],
-                  ),
-                ],
-              ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 14),
+                        const SidebarClock(),
+                        const SizedBox(height: 4),
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final weatherAsync = ref.watch(weatherProvider);
+                            return weatherAsync.when(
+                              loading: () => Text('загрузка...',
+                                  style: Theme.of(context).textTheme.bodySmall),
+                              error: (_, __) => Text('погода недоступна',
+                                  style: Theme.of(context).textTheme.bodySmall),
+                              data: (w) => Row(
+                                children: [
+                                  Text(w.icon,
+                                      style: const TextStyle(fontSize: 13)),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                        '${w.temp.round()}°C • ${w.description}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
+                                        overflow: TextOverflow.ellipsis),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
             ),
         ],
       ),

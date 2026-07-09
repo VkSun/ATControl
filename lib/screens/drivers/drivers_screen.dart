@@ -514,13 +514,15 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
         ),
         Expanded(
           child: ListView.builder(
+            // Компактные строки фиксированной высоты: больше записей на экран
+            itemExtent: 52,
             itemCount: widget.drivers.length,
             itemBuilder: (context, i) {
               final d = widget.drivers[i];
               return InkWell(
                 onTap: perms.canEditDriver ? () => _openEdit(context, d) : null,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     border: Border(bottom: BorderSide(color: widget.colors.tableBorder, width: 0.5)),
                   ),

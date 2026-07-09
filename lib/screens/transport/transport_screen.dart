@@ -516,6 +516,8 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
         ),
         Expanded(
           child: ListView.builder(
+            // Компактные строки фиксированной высоты: больше записей на экран
+            itemExtent: 52,
             itemCount: widget.vehicles.length,
             itemBuilder: (context, i) => _VehicleRow(
               vehicle: widget.vehicles[i],
@@ -598,7 +600,7 @@ class _VehicleRow extends StatelessWidget {
     return InkWell(
       onTap: canEdit ? onEdit : null,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: colors.tableBorder, width: 0.5)),
         ),
@@ -618,6 +620,7 @@ class _VehicleRow extends StatelessWidget {
               child: _DateCell(date: vehicle.specialPermitDate, fmt: fmt, colors: colors)),
             SizedBox(width: widths[6],
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _DateCell(
@@ -638,6 +641,7 @@ class _VehicleRow extends StatelessWidget {
             ),
             SizedBox(width: widths[7],
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _DateCell(
