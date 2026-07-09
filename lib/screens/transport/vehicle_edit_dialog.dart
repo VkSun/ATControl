@@ -208,6 +208,12 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
         // Смена привязки водителя — существование уже проверено выше,
         // orElse здесь только на случай, если эта проверка когда-нибудь
         // разъедется с кодом ниже (например, при рефакторинге).
+        //
+        // Патчим только поле vehicle_ids (updateFields), а не весь объект
+        // водителя (update): _allDrivers — снимок на момент открытия ЭТОГО
+        // диалога, и полная перезапись могла бы затереть чужую параллельную
+        // правку остальных полей водителя (телефон, права и т.д.), сделанную
+        // через DriverEditDialog, пока этот диалог был открыт.
         if (driverAssignmentChanged) {
           final driverService = ref.read(driverServiceProvider);
           final vehicleId = widget.vehicle!.id;
@@ -219,8 +225,9 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                     'Прежний водитель больше не существует, обновите список'));
             final updatedIds =
                 orig.vehicleIds.where((id) => id != vehicleId).toList();
-            await driverService.update(
-                _originalDriverId!, orig.copyWith(vehicleIds: updatedIds));
+            await driverService.updateFields(
+                _originalDriverId!, {'vehicle_ids': updatedIds},
+                resultingDriver: orig.copyWith(vehicleIds: updatedIds));
           }
 
           if (_assignedDriverId != null) {
@@ -230,8 +237,9 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                     'Выбранный водитель больше не существует, обновите список'));
             if (!next.vehicleIds.contains(vehicleId)) {
               final updatedIds = [...next.vehicleIds, vehicleId];
-              await driverService.update(
-                  _assignedDriverId!, next.copyWith(vehicleIds: updatedIds));
+              await driverService.updateFields(
+                  _assignedDriverId!, {'vehicle_ids': updatedIds},
+                  resultingDriver: next.copyWith(vehicleIds: updatedIds));
             }
           }
         }

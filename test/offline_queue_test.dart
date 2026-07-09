@@ -42,6 +42,7 @@ class MemoryQueueStore implements QueueStore {
 
 class RecordingExecutor implements QueueExecutor {
   Exception? _insertError;
+  Exception? _updateErrorOnce;
   int insertCallCount = 0;
   int updateCallCount = 0;
   int deleteCallCount = 0;
@@ -53,6 +54,9 @@ class RecordingExecutor implements QueueExecutor {
 
   void queueInsertId(String id) => _nextInsertIds.add(id);
   void alwaysFailWith(Exception e) => _insertError = e;
+
+  /// The next update() call throws [e]; subsequent calls succeed normally.
+  void failNextUpdateWith(Exception e) => _updateErrorOnce = e;
 
   @override
   Future<String> insert(String table, Map<String, dynamic> data) async {
@@ -67,6 +71,11 @@ class RecordingExecutor implements QueueExecutor {
   @override
   Future<void> update(String table, String rowId, Map<String, dynamic> data) async {
     updateCallCount++;
+    if (_updateErrorOnce != null) {
+      final e = _updateErrorOnce!;
+      _updateErrorOnce = null;
+      throw e;
+    }
     updates.add((table, rowId, Map.of(data)));
   }
 
@@ -241,6 +250,47 @@ void main() {
           .firstWhere((e) => e.$1 == 'tasks')
           .$2;
       expect(taskData['vehicle_id'], 'real-vehicle-id');
+    });
+
+    test(
+        'network drop right after parent insert succeeds: dependent update '
+        'keeps its tempId resolved and is not stuck forever', () async {
+      final store = MemoryQueueStore();
+      final ex = RecordingExecutor()..queueInsertId('server-uuid-late');
+      final queue = OfflineQueue.forTesting(executor: ex, store: store);
+
+      await queue.enqueue(_insertOp('offline_late1', {'title': 'Draft'},
+          at: DateTime(2026, 1, 1, 10, 0)));
+      await queue.enqueue(_updateOp(
+          'upd_offline_late1_1', 'offline_late1', {'is_completed': true},
+          at: DateTime(2026, 1, 1, 10, 1)));
+
+      // Connection dies exactly between the two requests of this pass: the
+      // insert (for the parent) succeeds and is already removed from the
+      // queue, but its dependent update never gets to run this pass.
+      ex.failNextUpdateWith(SocketException('network is unreachable'));
+      final ok1 = await queue.flush();
+
+      expect(ok1, isFalse);
+      expect(ex.insertCallCount, 1);
+      // The update was attempted (and failed) but not counted as a business
+      // failure — attempts must stay untouched, same as any network error.
+      final afterFirstPass = await store.getAll();
+      expect(afterFirstPass, hasLength(1));
+      expect(afterFirstPass.first.attempts, 0);
+      // The crux of the fix: even though the update itself didn't run, its
+      // rowId must already be permanently rewritten to the real server id —
+      // the tempId no longer exists anywhere once the insert op is gone.
+      expect(afterFirstPass.first.rowId, 'server-uuid-late');
+
+      // Connection is back: second flush must actually apply the update
+      // using the already-resolved real id, not sit deferred forever.
+      final ok2 = await queue.flush();
+
+      expect(ok2, isTrue);
+      expect(ex.updates, hasLength(1));
+      expect(ex.updates.first.$2, 'server-uuid-late');
+      expect(await store.getAll(), isEmpty);
     });
 
     // ── Test 2: concurrency ──────────────────────────────────────────────────

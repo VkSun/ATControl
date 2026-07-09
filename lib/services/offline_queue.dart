@@ -41,12 +41,14 @@ class PendingOp {
     this.label,
   });
 
-  PendingOp copyWith({int? attempts}) => PendingOp(
+  PendingOp copyWith(
+          {int? attempts, String? rowId, Map<String, dynamic>? data}) =>
+      PendingOp(
         id: id,
         table: table,
         op: op,
-        data: data,
-        rowId: rowId,
+        data: data ?? this.data,
+        rowId: rowId ?? this.rowId,
         createdAt: createdAt,
         attempts: attempts ?? this.attempts,
         label: label,
@@ -395,10 +397,17 @@ class OfflineQueue {
       }
     }
 
-    if (toRemove.isNotEmpty || updatedOps.isNotEmpty) {
+    if (toRemove.isNotEmpty || updatedOps.isNotEmpty || idMap.isNotEmpty) {
+      // Permanently resolve any tempId this pass learned (idMap) into the
+      // ops that are staying in the queue — including ones that were never
+      // touched this pass (e.g. flush() broke on a network error right
+      // after the parent insert had already succeeded and been removed
+      // from the queue). Without this, such an op would keep referencing a
+      // tempId that no longer exists anywhere once this pass's local idMap
+      // is discarded, and could never resolve again on any future flush.
       final remaining = ops
           .where((o) => !toRemove.contains(o.id))
-          .map((o) => updatedOps[o.id] ?? o)
+          .map((o) => _resolveTempIds(updatedOps[o.id] ?? o, idMap))
           .toList();
       await _store.persist(remaining);
       queueCountNotifier.value = remaining.length;
@@ -407,6 +416,15 @@ class OfflineQueue {
     final remaining = await count;
     if (remaining == 0) isOfflineNotifier.value = false;
     return remaining == 0;
+  }
+
+  /// Rewrites [op]'s rowId and data in place using [idMap] so a mapping
+  /// learned this pass survives even for ops this pass didn't execute.
+  static PendingOp _resolveTempIds(PendingOp op, Map<String, String> idMap) {
+    if (idMap.isEmpty) return op;
+    final resolvedRowId =
+        op.rowId != null ? (idMap[op.rowId] ?? op.rowId) : op.rowId;
+    return op.copyWith(rowId: resolvedRowId, data: _applyIdMap(op.data, idMap));
   }
 
   /// Replaces any string value in [data] that appears as a key in [idMap]
