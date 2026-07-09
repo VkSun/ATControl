@@ -129,9 +129,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Icon(Icons.error_outline, size: 14,
                           color: colors.badgeRedText),
                       const SizedBox(width: 8),
-                      Text(_error!,
-                        style: TextStyle(fontSize: 12,
-                            color: colors.badgeRedText)),
+                      // Expanded: длинное сообщение переносится, а не
+                      // переполняет строку на узком экране.
+                      Expanded(
+                        child: Text(_error!,
+                          style: TextStyle(fontSize: 12,
+                              color: colors.badgeRedText)),
+                      ),
                     ],
                   ),
                 ),
