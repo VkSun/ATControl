@@ -14,6 +14,22 @@ final _log = Logger('OfflineQueue');
 /// Maximum consecutive non-network failures before an op is dead-lettered.
 const int maxQueueAttempts = 5;
 
+// ─── Soft JSON field readers ───────────────────────────────────────────────
+//
+// fromJson() reads queue files written by past app versions (and, in theory,
+// hand-edited/corrupted ones). A raw `as` cast throws on any type mismatch;
+// these helpers degrade to a default instead so one malformed field doesn't
+// take down the whole entry.
+
+String _asString(dynamic v, [String def = '']) => v is String ? v : def;
+
+String? _asStringOrNull(dynamic v) => v is String ? v : null;
+
+int _asInt(dynamic v, [int def = 0]) => v is int ? v : def;
+
+Map<String, dynamic> _asMap(dynamic v) =>
+    v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
+
 // ─── PendingOp ────────────────────────────────────────────────────────────────
 
 class PendingOp {
@@ -53,14 +69,15 @@ class PendingOp {
       );
 
   factory PendingOp.fromJson(Map<String, dynamic> j) => PendingOp(
-        id: j['id'] as String,
-        table: j['table'] as String,
-        op: j['op'] as String,
-        data: Map<String, dynamic>.from(j['data'] as Map),
-        rowId: j['row_id'] as String?,
-        createdAt: DateTime.parse(j['created_at'] as String),
-        attempts: (j['attempts'] as int?) ?? 0,
-        label: j['label'] as String?,
+        id: _asString(j['id']),
+        table: _asString(j['table']),
+        op: _asString(j['op']),
+        data: _asMap(j['data']),
+        rowId: _asStringOrNull(j['row_id']),
+        createdAt:
+            DateTime.tryParse(_asString(j['created_at'])) ?? DateTime.now(),
+        attempts: _asInt(j['attempts']),
+        label: _asStringOrNull(j['label']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -84,10 +101,9 @@ class DeadLetterEntry {
   DeadLetterEntry({required this.op, required this.reason, required this.killedAt});
 
   factory DeadLetterEntry.fromJson(Map<String, dynamic> j) => DeadLetterEntry(
-        op: PendingOp.fromJson(Map<String, dynamic>.from(j['op'] as Map)),
-        reason: (j['reason'] as String?) ?? '',
-        killedAt: DateTime.tryParse(j['killed_at'] as String? ?? '') ??
-            DateTime.now(),
+        op: PendingOp.fromJson(_asMap(j['op'])),
+        reason: _asString(j['reason']),
+        killedAt: DateTime.tryParse(_asString(j['killed_at'])) ?? DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => {

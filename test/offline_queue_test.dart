@@ -153,6 +153,25 @@ void main() {
       );
       expect(PendingOp.fromJson(op.toJson()).attempts, 3);
     });
+
+    test('fromJson soft-checks types instead of throwing on a bad field', () {
+      final json = {
+        'id': 1, // не строка
+        'table': 'tasks',
+        'op': 'insert',
+        'data': 'not a map',
+        'row_id': 42, // не строка
+        'created_at': 'not a date',
+        'attempts': '3', // не int
+        'label': 7,
+      };
+      final parsed = PendingOp.fromJson(json);
+      expect(parsed.id, '');
+      expect(parsed.data, <String, dynamic>{});
+      expect(parsed.rowId, null);
+      expect(parsed.attempts, 0);
+      expect(parsed.label, null);
+    });
   });
 
   group('OfflineQueue.flush()', () {
