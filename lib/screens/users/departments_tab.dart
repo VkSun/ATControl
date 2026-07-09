@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/department.dart';
 import '../../services/department_service.dart';
+import '../../utils/responsive.dart';
 import '../../utils/theme.dart';
 import '../../widgets/async_value_view.dart';
 import '../../widgets/dialog_scroll_content.dart';
@@ -31,13 +32,8 @@ class DepartmentsTabState extends ConsumerState<DepartmentsTab> {
         .where((s) => s.departmentId == _selectedDeptId)
         .toList();
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Список цехов
-        Expanded(
-          flex: 2,
-          child: Container(
+    // Список цехов
+    final deptPanel = Container(
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
@@ -150,13 +146,10 @@ class DepartmentsTabState extends ConsumerState<DepartmentsTab> {
                 ),
               ],
             ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        // Список участков выбранного цеха
-        Expanded(
-          flex: 3,
-          child: Container(
+          );
+
+    // Список участков выбранного цеха
+    final sectionPanel = Container(
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
@@ -258,8 +251,26 @@ class DepartmentsTabState extends ConsumerState<DepartmentsTab> {
                 ),
               ],
             ),
-          ),
-        ),
+          );
+
+    // На телефоне узкие панели бок о бок нечитаемы — цеха сверху,
+    // участки снизу; на планшете/десктопе — как раньше, в два столбца.
+    if (isPhone(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 2, child: deptPanel),
+          const SizedBox(height: 16),
+          Expanded(flex: 3, child: sectionPanel),
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 2, child: deptPanel),
+        const SizedBox(width: 16),
+        Expanded(flex: 3, child: sectionPanel),
       ],
     );
   }

@@ -27,15 +27,18 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
 
     if (mobile) {
       return DefaultTabController(
-        length: 2,
+        length: 3,
         child: Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: Column(
             children: [
               TabBar(
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
                 tabs: const [
                   Tab(text: 'Пользователи'),
                   Tab(text: 'Приглашения'),
+                  Tab(text: 'Подразделения'),
                 ],
                 labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
               ),
@@ -44,6 +47,10 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                   children: [
                     UsersTab(colors: colors, ref: ref),
                     InvitationsTab(colors: colors, ref: ref),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: DepartmentsTab(colors: colors),
+                    ),
                   ],
                 ),
               ),
