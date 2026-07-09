@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/theme.dart';
 import '../../utils/responsive.dart';
 import '../../platform/app_platform.dart';
+import 'about_dialog.dart';
 import 'import_dialog.dart';
 
 // Провайдеры уведомлений с сохранением в SharedPreferences
@@ -75,6 +76,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColors>()!;
+    final aboutLabel = AppPlatform.isAndroid ? 'О приложении' : 'О программе';
 
     return Column(
       children: [
@@ -157,6 +159,8 @@ class SettingsScreen extends ConsumerWidget {
                   const _SectionLabel('Импорт и экспорт'),
                   _ImportExportCard(colors: colors),
                 ],
+                _SectionLabel(aboutLabel),
+                _AboutCard(colors: colors, label: aboutLabel),
               ],
             ),
           ),
@@ -323,6 +327,30 @@ class _ImportExportCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AboutCard extends StatelessWidget {
+  final AppColors colors;
+  final String label;
+  const _AboutCard({required this.colors, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => showAboutAppDialog(context),
+      child: _SettingCard(
+        colors: colors,
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline, size: 18, color: AppTheme.primaryColor),
+            const SizedBox(width: 10),
+            Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
+            const Icon(Icons.chevron_right, size: 18, color: Color(0xFF888888)),
+          ],
+        ),
       ),
     );
   }
