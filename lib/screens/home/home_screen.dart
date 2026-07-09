@@ -249,7 +249,11 @@ class _ExpiryCard extends ConsumerWidget {
                             Text(item['subject'] as String,
                                 style: const TextStyle(
                                     fontSize: 12, fontWeight: FontWeight.w500)),
-                            Text(item['label'] as String,
+                            // Гос. номер отличает одинаковые модели
+                            Text(
+                                (item['extra'] as String).isNotEmpty
+                                    ? '${item['label']} · ${item['extra']}'
+                                    : item['label'] as String,
                                 style: TextStyle(
                                     fontSize: 10,
                                     color: Theme.of(context)
