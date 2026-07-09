@@ -102,13 +102,27 @@ class _MobileHome extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        _ExpiryCard(colors: colors, limit: 5),
-        const SizedBox(height: 12),
-        _TasksCard(colors: colors, limit: 5),
-      ],
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Данные главной: сроки по ТС/водителям и задачи.
+        ref.invalidate(vehiclesProvider);
+        ref.invalidate(driversProvider);
+        ref.invalidate(tasksProvider);
+        await Future.wait([
+          ref.read(vehiclesProvider.future),
+          ref.read(driversProvider.future),
+          ref.read(tasksProvider.future),
+        ]);
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(12),
+        children: [
+          _ExpiryCard(colors: colors, limit: 5),
+          const SizedBox(height: 12),
+          _TasksCard(colors: colors, limit: 5),
+        ],
+      ),
     );
   }
 }

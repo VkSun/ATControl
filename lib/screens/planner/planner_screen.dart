@@ -274,9 +274,12 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                         grouped.putIfAbsent(key, () => []).add(t);
                       }
                       final keys = grouped.keys.toList()..sort();
-                      return ListView(
-                        padding: const EdgeInsets.only(bottom: 80),
-                        children: [
+                      return RefreshIndicator(
+                        onRefresh: () => ref.refresh(tasksProvider.future),
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 80),
+                          children: [
                           if (compactHeight)
                             Container(
                               color: Theme.of(context).cardColor,
@@ -321,7 +324,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
                             ],
                           );
                         }),
-                        ],
+                          ],
+                        ),
                       );
                     },
                   ),

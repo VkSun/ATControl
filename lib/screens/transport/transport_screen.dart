@@ -483,18 +483,23 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
     final primary = Theme.of(context).colorScheme.primary;
 
     if (widget.mobile) {
-      return ListView.builder(
-        // bottom: 96 — FAB не перекрывает последнюю строку списка
-        padding: const EdgeInsets.only(top: 8, bottom: 96),
-        itemCount: widget.vehicles.length,
-        itemBuilder: (context, i) => _VehicleRow(
-          vehicle: widget.vehicles[i],
-          colors: widget.colors,
-          fmt: fmt,
-          canEdit: perms.canEditVehicle,
-          onEdit: () => _openEdit(context, widget.vehicles[i]),
-          mobile: true,
-          widths: _widths,
+      return RefreshIndicator(
+        onRefresh: () => ref.refresh(vehiclesProvider.future),
+        child: ListView.builder(
+          // тянется даже при неполном экране записей
+          physics: const AlwaysScrollableScrollPhysics(),
+          // bottom: 96 — FAB не перекрывает последнюю строку списка
+          padding: const EdgeInsets.only(top: 8, bottom: 96),
+          itemCount: widget.vehicles.length,
+          itemBuilder: (context, i) => _VehicleRow(
+            vehicle: widget.vehicles[i],
+            colors: widget.colors,
+            fmt: fmt,
+            canEdit: perms.canEditVehicle,
+            onEdit: () => _openEdit(context, widget.vehicles[i]),
+            mobile: true,
+            widths: _widths,
+          ),
         ),
       );
     }

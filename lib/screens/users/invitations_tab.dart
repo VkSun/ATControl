@@ -73,14 +73,18 @@ class InvitationsTab extends ConsumerWidget {
           if (invitations.isEmpty) {
             return const Center(child: Text('Нет кодов приглашений'));
           }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
-            itemCount: invitations.length,
-            itemBuilder: (context, i) => _InvitationCard(
-              invitation: invitations[i],
-              colors: colors,
-              fmt: fmt,
-              onRevoke: () => _revoke(ref, invitations[i]),
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(invitationsProvider.future),
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
+              itemCount: invitations.length,
+              itemBuilder: (context, i) => _InvitationCard(
+                invitation: invitations[i],
+                colors: colors,
+                fmt: fmt,
+                onRevoke: () => _revoke(ref, invitations[i]),
+              ),
             ),
           );
         },

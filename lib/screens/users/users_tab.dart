@@ -38,10 +38,13 @@ class UsersTab extends ConsumerWidget {
         onRetry: usersProvider,
         builder: (users) {
           if (users.isEmpty) return const Center(child: Text('Нет пользователей'));
-          return ListView.builder(
-            padding: const EdgeInsets.only(top: 8, bottom: 80),
-            itemCount: users.length,
-            itemBuilder: (context, i) {
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(usersProvider.future),
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(top: 8, bottom: 80),
+              itemCount: users.length,
+              itemBuilder: (context, i) {
               final u = users[i];
               final avatarColor = Color(int.parse(u.avatarColor.replaceFirst('#', '0xFF')));
               return InkWell(
@@ -108,7 +111,8 @@ class UsersTab extends ConsumerWidget {
                   ),
                 ),
               );
-            },
+              },
+            ),
           );
         },
       );

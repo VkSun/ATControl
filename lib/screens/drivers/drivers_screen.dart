@@ -465,11 +465,15 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
     final primary = Theme.of(context).colorScheme.primary;
 
     if (widget.mobile) {
-      return ListView.builder(
-        // bottom: 96 — FAB не перекрывает последнюю строку списка
-        padding: const EdgeInsets.only(top: 8, bottom: 96),
-        itemCount: widget.drivers.length,
-        itemBuilder: (context, i) {
+      return RefreshIndicator(
+        onRefresh: () => ref.refresh(driversProvider.future),
+        child: ListView.builder(
+          // тянется даже при неполном экране записей
+          physics: const AlwaysScrollableScrollPhysics(),
+          // bottom: 96 — FAB не перекрывает последнюю строку списка
+          padding: const EdgeInsets.only(top: 8, bottom: 96),
+          itemCount: widget.drivers.length,
+          itemBuilder: (context, i) {
           final d = widget.drivers[i];
           return InkWell(
             onTap: perms.canEditDriver ? () => _openEdit(context, d) : null,
@@ -499,7 +503,8 @@ class _DriverTableState extends ConsumerState<_DriverTable> {
               ),
             ),
           );
-        },
+          },
+        ),
       );
     }
 
