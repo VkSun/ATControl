@@ -179,7 +179,6 @@ class _MobileLayout extends ConsumerWidget {
     final initials = profileAsync.value?.initials ?? 'АИ';
     final avatarHex = profileAsync.value?.avatarColor ?? AppTheme.primaryColorHex;
     final avatarColor = Color(int.parse(avatarHex.replaceFirst('#', '0xFF')));
-    final themeMode = ref.watch(themeModeProvider);
     final currentIdx = _locationToIndex(location);
     final l10n = AppLocalizations.of(context);
 
@@ -243,10 +242,13 @@ class _MobileLayout extends ConsumerWidget {
               ),
             ],
           ),
-          // Нижняя панель: профиль + тема + пользователи
+          // Нижняя панель: профиль + пользователи. Высота — как у меню
+          // сверху (NavigationBar height: 60), чтобы обе полосы смотрелись
+          // единым целым, а не разной толщины.
           Container(
+            height: 60,
             color: Theme.of(context).cardColor,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 GestureDetector(
@@ -277,20 +279,6 @@ class _MobileLayout extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
-                IconButton(
-                  icon: Icon(
-                    themeMode == ThemeMode.dark
-                        ? Icons.wb_sunny_outlined
-                        : Icons.nightlight_round,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    ref.read(themeModeProvider.notifier).set(
-                        themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark);
-                  },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                ),
               ],
             ),
           ),
