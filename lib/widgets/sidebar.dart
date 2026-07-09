@@ -13,6 +13,7 @@ import '../services/driver_service.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../screens/profile/profile_dialog.dart';
+import '../l10n/gen/app_localizations.dart';
 
 // ─── Expiring documents badge count ──────────────────────────────────────────
 
@@ -314,10 +315,11 @@ class _SidebarTop extends StatelessWidget {
                         Consumer(
                           builder: (context, ref, _) {
                             final weatherAsync = ref.watch(weatherProvider);
+                            final l10n = AppLocalizations.of(context);
                             return weatherAsync.when(
-                              loading: () => Text('загрузка...',
+                              loading: () => Text(l10n.weatherLoading,
                                   style: Theme.of(context).textTheme.bodySmall),
-                              error: (_, __) => Text('погода недоступна',
+                              error: (_, __) => Text(l10n.weatherUnavailable,
                                   style: Theme.of(context).textTheme.bodySmall),
                               data: (w) => Row(
                                 children: [
@@ -372,15 +374,16 @@ class _SidebarNav extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pendingCount = ref.watch(pendingCountProvider).value ?? 0;
     final userRole = ref.watch(currentUserRoleProvider).value;
+    final l10n = AppLocalizations.of(context);
 
     final items = [
-      const _NavItem('Главная', '/', Icons.home_outlined),
-      const _NavItem('Транспорт', '/transport', Icons.directions_car_outlined),
-      const _NavItem('Водители', '/drivers', Icons.people_outlined),
-      _NavItem('Планировщик', '/planner', Icons.calendar_month_outlined, badge: pendingCount),
+      _NavItem(l10n.navHome, '/', Icons.home_outlined),
+      _NavItem(l10n.navTransport, '/transport', Icons.directions_car_outlined),
+      _NavItem(l10n.navDrivers, '/drivers', Icons.people_outlined),
+      _NavItem(l10n.navPlanner, '/planner', Icons.calendar_month_outlined, badge: pendingCount),
       if (userRole?.isAdmin == true)
-        const _NavItem('Пользователи', '/users', Icons.manage_accounts_outlined),
-      const _NavItem('Настройки', '/settings', Icons.settings_outlined),
+        _NavItem(l10n.navUsers, '/users', Icons.manage_accounts_outlined),
+      _NavItem(l10n.navSettings, '/settings', Icons.settings_outlined),
     ];
 
     return ListView(
@@ -584,6 +587,7 @@ class _SidebarNetworkStatusState extends State<_SidebarNetworkStatus> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final connected = _connected;
     final isOnline = connected == true;
     final dotColor = connected == null
@@ -592,10 +596,10 @@ class _SidebarNetworkStatusState extends State<_SidebarNetworkStatus> {
             ? const Color(0xFF4CAF50)
             : const Color(0xFFE24B4A);
     final label = connected == null
-        ? 'Проверка...'
+        ? l10n.networkChecking
         : isOnline
-            ? 'Подключено'
-            : 'Нет подключения';
+            ? l10n.networkConnected
+            : l10n.networkDisconnected;
 
     if (!widget.textVisible) {
       return Padding(
@@ -667,7 +671,7 @@ class _SidebarBottomState extends State<_SidebarBottom> {
       duration: const Duration(milliseconds: 200),
       child: Container(
         padding: const EdgeInsets.all(14),
-        child: Text('Версия $_version',
+        child: Text(AppLocalizations.of(context).appVersion(_version),
           style: Theme.of(context).textTheme.bodySmall),
       ),
     );

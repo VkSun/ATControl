@@ -44,5 +44,55 @@
   "authRedeemAlreadyUsedError": "Invitation code already used",
   "authRedeemExpiredError": "The code has expired",
   "authRedeemUnknownError": "Failed to activate the invitation code",
-  "authGenericError": "Couldn't complete the operation. Please try again."
+  "authGenericError": "Couldn't complete the operation. Please try again.",
+
+  "cancelButton": "Cancel",
+  "deleteTooltip": "Delete",
+  "retryTooltip": "Retry",
+
+  "navHome": "Home",
+  "navTransport": "Transport",
+  "navDrivers": "Drivers",
+  "navPlanner": "Planner",
+  "navUsers": "Users",
+  "navSettings": "Settings",
+
+  "weatherLoading": "loading...",
+  "weatherUnavailable": "weather unavailable",
+  "networkChecking": "Checking...",
+  "networkConnected": "Connected",
+  "networkDisconnected": "No connection",
+  "appVersion": "Version {version}",
+
+  "offlineWithPendingChanges": "Offline · changes pending sync",
+  "offlineNoConnection": "No internet connection",
+  "onlinePendingChanges": "Changes pending sync",
+  "refreshButton": "Refresh",
+
+  "syncSheetTitle": "Sync",
+  "syncNowButton": "Sync now",
+  "syncAllDone": "All changes are synced",
+  "syncPendingSectionTitle": "PENDING SYNC ({count})",
+  "syncFailedSectionTitle": "FAILED TO SYNC ({count})",
+
+  "opInsert": "create",
+  "opUpdate": "update",
+  "opDelete": "delete",
+  "tableVehicle": "Vehicle",
+  "tableDriver": "Driver",
+  "tableTask": "Task",
+
+  "windowCloseConfirmTitle": "Quit ATControl?",
+  "windowCloseConfirmButton": "Quit",
+  "unsyncedChangesWarning": "{count, plural, one{You have {count} unsynced change. It may be lost if you close now.} other{You have {count} unsynced changes. They may be lost if you close now.}}",
+
+  "extensionUpdateTitle": "Extension update",
+  "appUpdateTitle": "Update available",
+  "extensionUpdateBody": "A new version of the ATControl browser extension is available — {version}.",
+  "extensionUpdateHint": "Tap \"Download\" — the new installer already includes the updated extension.\nRun it — the app and extension will update automatically.",
+  "appUpdateBody": "Version {version} is ready to install.",
+  "appUpdateHintAndroid": "Tap \"Download\" — the APK download will start.\nInstall it over the current version once downloaded.",
+  "appUpdateHintWindows": "Tap \"Download\" — the installer (.exe) download will start.\nRun it — it will replace the current version automatically.",
+  "updateLaterButton": "Later",
+  "updateDownloadButton": "Download"
 }

@@ -124,5 +124,149 @@
   "@authRedeemUnknownError": { "description": "redeem_invitation: прочие ошибки" },
 
   "authGenericError": "Не удалось выполнить операцию. Попробуйте ещё раз.",
-  "@authGenericError": { "description": "Резервное сообщение для нераспознанных ошибок аутентификации" }
+  "@authGenericError": { "description": "Резервное сообщение для нераспознанных ошибок аутентификации" },
+
+  "cancelButton": "Отмена",
+  "@cancelButton": { "description": "Общая кнопка отмены в диалогах" },
+
+  "deleteTooltip": "Удалить",
+  "@deleteTooltip": { "description": "Общая подсказка кнопки-иконки удаления" },
+
+  "retryTooltip": "Повторить",
+  "@retryTooltip": { "description": "Общая подсказка кнопки-иконки повтора действия" },
+
+  "navHome": "Главная",
+  "@navHome": { "description": "Пункт навигации: главная" },
+
+  "navTransport": "Транспорт",
+  "@navTransport": { "description": "Пункт навигации: транспорт" },
+
+  "navDrivers": "Водители",
+  "@navDrivers": { "description": "Пункт навигации: водители" },
+
+  "navPlanner": "Планировщик",
+  "@navPlanner": { "description": "Пункт навигации: планировщик" },
+
+  "navUsers": "Пользователи",
+  "@navUsers": { "description": "Пункт навигации: пользователи (только админ)" },
+
+  "navSettings": "Настройки",
+  "@navSettings": { "description": "Пункт навигации: настройки" },
+
+  "weatherLoading": "загрузка...",
+  "@weatherLoading": { "description": "Сайдбар: погода загружается" },
+
+  "weatherUnavailable": "погода недоступна",
+  "@weatherUnavailable": { "description": "Сайдбар: не удалось получить погоду" },
+
+  "networkChecking": "Проверка...",
+  "@networkChecking": { "description": "Сайдбар: идёт проверка соединения" },
+
+  "networkConnected": "Подключено",
+  "@networkConnected": { "description": "Сайдбар: соединение есть" },
+
+  "networkDisconnected": "Нет подключения",
+  "@networkDisconnected": { "description": "Сайдбар: соединения нет" },
+
+  "appVersion": "Версия {version}",
+  "@appVersion": {
+    "description": "Сайдбар: номер версии приложения внизу",
+    "placeholders": { "version": { "type": "String" } }
+  },
+
+  "offlineWithPendingChanges": "Офлайн · изменения ожидают синхронизации",
+  "@offlineWithPendingChanges": { "description": "Баннер: нет сети и есть несинхронизированные изменения" },
+
+  "offlineNoConnection": "Нет подключения к интернету",
+  "@offlineNoConnection": { "description": "Баннер: нет сети, очередь пуста" },
+
+  "onlinePendingChanges": "Изменения ожидают синхронизации",
+  "@onlinePendingChanges": { "description": "Баннер: сеть есть, но очередь ещё не разгружена" },
+
+  "refreshButton": "Обновить",
+  "@refreshButton": { "description": "Баннер офлайн: кнопка повторного запроса данных" },
+
+  "syncSheetTitle": "Синхронизация",
+  "@syncSheetTitle": { "description": "Заголовок шторки офлайн-очереди" },
+
+  "syncNowButton": "Синхронизировать сейчас",
+  "@syncNowButton": { "description": "Кнопка немедленной синхронизации в шторке" },
+
+  "syncAllDone": "Все изменения синхронизированы",
+  "@syncAllDone": { "description": "Шторка синхронизации: очередь и dead-letter пусты" },
+
+  "syncPendingSectionTitle": "ОЖИДАЮТ СИНХРОНИЗАЦИИ ({count})",
+  "@syncPendingSectionTitle": {
+    "description": "Заголовок секции ожидающих операций в шторке синхронизации",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "syncFailedSectionTitle": "НЕ УДАЛОСЬ СИНХРОНИЗИРОВАТЬ ({count})",
+  "@syncFailedSectionTitle": {
+    "description": "Заголовок секции dead-letter в шторке синхронизации",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "opInsert": "создание",
+  "@opInsert": { "description": "Тип операции офлайн-очереди: создание записи" },
+
+  "opUpdate": "изменение",
+  "@opUpdate": { "description": "Тип операции офлайн-очереди: изменение записи" },
+
+  "opDelete": "удаление",
+  "@opDelete": { "description": "Тип операции офлайн-очереди: удаление записи" },
+
+  "tableVehicle": "Автомобиль",
+  "@tableVehicle": { "description": "Название таблицы vehicles для отображения в очереди" },
+
+  "tableDriver": "Водитель",
+  "@tableDriver": { "description": "Название таблицы drivers для отображения в очереди" },
+
+  "tableTask": "Задача",
+  "@tableTask": { "description": "Название таблицы tasks для отображения в очереди" },
+
+  "windowCloseConfirmTitle": "Завершить ATControl?",
+  "@windowCloseConfirmTitle": { "description": "Заголовок диалога подтверждения закрытия окна" },
+
+  "windowCloseConfirmButton": "Завершить",
+  "@windowCloseConfirmButton": { "description": "Кнопка подтверждения закрытия окна" },
+
+  "unsyncedChangesWarning": "{count, plural, one{У вас {count} несинхронизированное изменение. При закрытии оно может быть потеряно.} few{У вас {count} несинхронизированных изменения. При закрытии они могут быть потеряны.} many{У вас {count} несинхронизированных изменений. При закрытии они могут быть потеряны.} other{У вас {count} несинхронизированных изменений. При закрытии они могут быть потеряны.}}",
+  "@unsyncedChangesWarning": {
+    "description": "Предупреждение о несинхронизированных изменениях в диалоге закрытия окна",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "extensionUpdateTitle": "Обновление расширения",
+  "@extensionUpdateTitle": { "description": "Заголовок диалога обновления браузерного расширения" },
+
+  "appUpdateTitle": "Доступно обновление",
+  "@appUpdateTitle": { "description": "Заголовок диалога обновления приложения" },
+
+  "extensionUpdateBody": "Доступна новая версия браузерного расширения ATControl — {version}.",
+  "@extensionUpdateBody": {
+    "description": "Текст диалога обновления расширения",
+    "placeholders": { "version": { "type": "String" } }
+  },
+
+  "extensionUpdateHint": "Нажмите «Скачать» — новый установщик уже включает обновлённое расширение.\nЗапустите его — приложение и расширение обновятся автоматически.",
+  "@extensionUpdateHint": { "description": "Подсказка под текстом обновления расширения" },
+
+  "appUpdateBody": "Версия {version} готова к установке.",
+  "@appUpdateBody": {
+    "description": "Текст диалога обновления приложения",
+    "placeholders": { "version": { "type": "String" } }
+  },
+
+  "appUpdateHintAndroid": "Нажмите «Скачать» — откроется загрузка APK.\nПосле загрузки установите поверх текущей версии.",
+  "@appUpdateHintAndroid": { "description": "Подсказка обновления на Android" },
+
+  "appUpdateHintWindows": "Нажмите «Скачать» — откроется загрузка установщика (.exe).\nЗапустите его — он заменит текущую версию автоматически.",
+  "@appUpdateHintWindows": { "description": "Подсказка обновления на Windows" },
+
+  "updateLaterButton": "Позже",
+  "@updateLaterButton": { "description": "Кнопка отложить обновление" },
+
+  "updateDownloadButton": "Скачать",
+  "@updateDownloadButton": { "description": "Кнопка скачать обновление" }
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../platform/app_platform.dart';
 import '../services/update_service.dart';
+import '../l10n/gen/app_localizations.dart';
 import 'dialog_scroll_content.dart';
 
 Future<void> checkForUpdates(BuildContext context) async {
@@ -15,42 +16,39 @@ Future<void> checkForUpdates(BuildContext context) async {
 
 Future<void> _showUpdateDialog(BuildContext context, UpdateInfo update) async {
 if (!context.mounted) return;
+  final l10n = AppLocalizations.of(context);
   await showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: Theme.of(ctx).cardColor,
       surfaceTintColor: Colors.transparent,
       title: Text(update.type == UpdateType.extension
-          ? 'Обновление расширения'
-          : 'Доступно обновление'),
+          ? l10n.extensionUpdateTitle
+          : l10n.appUpdateTitle),
       content: DialogScrollContent(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (update.type == UpdateType.extension) ...[
-            Text(
-                'Доступна новая версия браузерного расширения ATControl — ${update.version}.'),
+            Text(l10n.extensionUpdateBody(update.version)),
             const SizedBox(height: 8),
-            const Text(
-              'Нажмите «Скачать» — новый установщик уже включает обновлённое расширение.\n'
-              'Запустите его — приложение и расширение обновятся автоматически.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+            Text(
+              l10n.extensionUpdateHint,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
             ),
           ] else ...[
-            Text('Версия ${update.version} готова к установке.'),
+            Text(l10n.appUpdateBody(update.version)),
             const SizedBox(height: 8),
             if (AppPlatform.isAndroid)
-              const Text(
-                'Нажмите «Скачать» — откроется загрузка APK.\n'
-                'После загрузки установите поверх текущей версии.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+              Text(
+                l10n.appUpdateHintAndroid,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
               ),
             if (AppPlatform.isWindows)
-              const Text(
-                'Нажмите «Скачать» — откроется загрузка установщика (.exe).\n'
-                'Запустите его — он заменит текущую версию автоматически.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+              Text(
+                l10n.appUpdateHintWindows,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
               ),
             ],
           ],
@@ -64,7 +62,7 @@ if (!context.mounted) return;
               await UpdateService.dismissExtensionUpdate(update.version);
             }
           },
-          child: const Text('Позже'),
+          child: Text(l10n.updateLaterButton),
         ),
         FilledButton(
           onPressed: () async {
@@ -75,7 +73,7 @@ if (!context.mounted) return;
             // Открывает внешний браузер — ждать здесь больше нечего.
             unawaited(UpdateService.openDownload(update.downloadUrl));
           },
-          child: const Text('Скачать'),
+          child: Text(l10n.updateDownloadButton),
         ),
       ],
     ),

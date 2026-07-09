@@ -7,6 +7,7 @@ import '../services/task_service.dart';
 import '../services/vehicle_service.dart';
 import '../utils/theme.dart';
 import '../widgets/sidebar.dart' show pendingCountProvider;
+import '../l10n/gen/app_localizations.dart';
 
 /// Шторка «Синхронизация»: ожидающие операции офлайн-очереди и dead-letter.
 Future<void> showSyncSheet(BuildContext context) {
@@ -21,17 +22,17 @@ Future<void> showSyncSheet(BuildContext context) {
   );
 }
 
-String _opText(String op) => switch (op) {
-      'insert' => 'создание',
-      'update' => 'изменение',
-      'delete' => 'удаление',
+String _opText(AppLocalizations l10n, String op) => switch (op) {
+      'insert' => l10n.opInsert,
+      'update' => l10n.opUpdate,
+      'delete' => l10n.opDelete,
       _ => op,
     };
 
-String _tableText(String table) => switch (table) {
-      'vehicles' => 'Автомобиль',
-      'drivers' => 'Водитель',
-      'tasks' => 'Задача',
+String _tableText(AppLocalizations l10n, String table) => switch (table) {
+      'vehicles' => l10n.tableVehicle,
+      'drivers' => l10n.tableDriver,
+      'tasks' => l10n.tableTask,
       _ => table,
     };
 
@@ -96,6 +97,7 @@ class _SyncSheetState extends ConsumerState<SyncSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
+    final l10n = AppLocalizations.of(context);
     final fmt = DateFormat('dd.MM HH:mm');
     final maxHeight = MediaQuery.sizeOf(context).height * 0.8;
 
@@ -109,7 +111,7 @@ class _SyncSheetState extends ConsumerState<SyncSheet> {
               padding: const EdgeInsets.fromLTRB(20, 14, 12, 4),
               child: Row(
                 children: [
-                  Text('Синхронизация',
+                  Text(l10n.syncSheetTitle,
                       style: Theme.of(context).textTheme.titleMedium),
                   const Spacer(),
                   FilledButton.icon(
@@ -121,8 +123,8 @@ class _SyncSheetState extends ConsumerState<SyncSheet> {
                             height: 12,
                             child: CircularProgressIndicator(strokeWidth: 1.5))
                         : const Icon(Icons.sync, size: 14),
-                    label: const Text('Синхронизировать сейчас',
-                        style: TextStyle(fontSize: 12)),
+                    label: Text(l10n.syncNowButton,
+                        style: const TextStyle(fontSize: 12)),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 10),
@@ -144,15 +146,15 @@ class _SyncSheetState extends ConsumerState<SyncSheet> {
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
                   children: [
                     if (_pending.isEmpty && _dead.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Center(
-                            child: Text('Все изменения синхронизированы',
-                                style: TextStyle(
+                            child: Text(l10n.syncAllDone,
+                                style: const TextStyle(
                                     fontSize: 13, color: Color(0xFF888888)))),
                       ),
                     if (_pending.isNotEmpty) ...[
-                      Text('ОЖИДАЮТ СИНХРОНИЗАЦИИ (${_pending.length})',
+                      Text(l10n.syncPendingSectionTitle(_pending.length),
                           style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
@@ -161,14 +163,14 @@ class _SyncSheetState extends ConsumerState<SyncSheet> {
                       const SizedBox(height: 4),
                       ..._pending.map((op) => _OpRow(
                             title:
-                                '${op.label ?? _tableText(op.table)}: ${_opText(op.op)}',
+                                '${op.label ?? _tableText(l10n, op.table)}: ${_opText(l10n, op.op)}',
                             subtitle: fmt.format(op.createdAt),
                             colors: colors,
                           )),
                     ],
                     if (_dead.isNotEmpty) ...[
                       const SizedBox(height: 14),
-                      Text('НЕ УДАЛОСЬ СИНХРОНИЗИРОВАТЬ (${_dead.length})',
+                      Text(l10n.syncFailedSectionTitle(_dead.length),
                           style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
@@ -177,7 +179,7 @@ class _SyncSheetState extends ConsumerState<SyncSheet> {
                       const SizedBox(height: 4),
                       ..._dead.map((e) => _OpRow(
                             title:
-                                '${e.op.label ?? _tableText(e.op.table)}: ${_opText(e.op.op)}',
+                                '${e.op.label ?? _tableText(l10n, e.op.table)}: ${_opText(l10n, e.op.op)}',
                             subtitle:
                                 '${fmt.format(e.op.createdAt)} · ${e.reason}',
                             colors: colors,
@@ -186,7 +188,7 @@ class _SyncSheetState extends ConsumerState<SyncSheet> {
                               children: [
                                 IconButton(
                                   icon: const Icon(Icons.replay, size: 16),
-                                  tooltip: 'Повторить',
+                                  tooltip: l10n.retryTooltip,
                                   onPressed: () => _retryDead(e),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
@@ -195,7 +197,7 @@ class _SyncSheetState extends ConsumerState<SyncSheet> {
                                 IconButton(
                                   icon: const Icon(Icons.delete_outline,
                                       size: 16),
-                                  tooltip: 'Удалить',
+                                  tooltip: l10n.deleteTooltip,
                                   onPressed: () => _deleteDead(e),
                                   color: const Color(0xFFE24B4A),
                                   padding: EdgeInsets.zero,

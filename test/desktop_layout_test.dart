@@ -16,6 +16,7 @@ import 'package:atcontrol/services/vehicle_service.dart';
 import 'package:atcontrol/services/weather_service.dart';
 import 'package:atcontrol/utils/theme.dart';
 import 'package:atcontrol/widgets/sidebar.dart';
+import 'package:atcontrol/l10n/gen/app_localizations.dart';
 
 UserRole adminRole() => UserRole(
       id: 'r1', userId: 'u1', fullName: 'Админ Админов', initials: 'АА',
@@ -59,7 +60,13 @@ Future<void> pumpApp(WidgetTester tester, Size size, Widget home) async {
   addTearDown(tester.view.reset);
   await tester.pumpWidget(ProviderScope(
     overrides: overrides(),
-    child: MaterialApp(theme: AppTheme.lightTheme, home: home),
+    child: MaterialApp(
+      theme: AppTheme.lightTheme,
+      locale: const Locale('ru'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: home,
+    ),
   ));
   await tester.pumpAndSettle();
 }

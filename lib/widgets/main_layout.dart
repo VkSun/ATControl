@@ -11,6 +11,7 @@ import '../services/offline_state.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../screens/profile/profile_dialog.dart';
+import '../l10n/gen/app_localizations.dart';
 import 'sidebar.dart';
 import 'sync_sheet.dart';
 import 'update_dialog.dart';
@@ -173,6 +174,7 @@ class _MobileLayout extends ConsumerWidget {
     final avatarColor = Color(int.parse(avatarHex.replaceFirst('#', '0xFF')));
     final themeMode = ref.watch(themeModeProvider);
     final currentIdx = _locationToIndex(location);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -199,20 +201,20 @@ class _MobileLayout extends ConsumerWidget {
             onDestinationSelected: (i) => context.go(_indexToLocation(i)),
             labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
             destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Главная',
+              NavigationDestination(
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: const Icon(Icons.home),
+                label: l10n.navHome,
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.directions_car_outlined),
-                selectedIcon: Icon(Icons.directions_car),
-                label: 'Транспорт',
+              NavigationDestination(
+                icon: const Icon(Icons.directions_car_outlined),
+                selectedIcon: const Icon(Icons.directions_car),
+                label: l10n.navTransport,
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.people_outlined),
-                selectedIcon: Icon(Icons.people),
-                label: 'Водители',
+              NavigationDestination(
+                icon: const Icon(Icons.people_outlined),
+                selectedIcon: const Icon(Icons.people),
+                label: l10n.navDrivers,
               ),
               NavigationDestination(
                 icon: Badge(
@@ -225,12 +227,12 @@ class _MobileLayout extends ConsumerWidget {
                   label: Text('$pendingCount'),
                   child: const Icon(Icons.calendar_month),
                 ),
-                label: 'Планировщик',
+                label: l10n.navPlanner,
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
-                label: 'Настройки',
+              NavigationDestination(
+                icon: const Icon(Icons.settings_outlined),
+                selectedIcon: const Icon(Icons.settings),
+                label: l10n.navSettings,
               ),
             ],
           ),
@@ -264,7 +266,7 @@ class _MobileLayout extends ConsumerWidget {
                   IconButton(
                     icon: const Icon(Icons.manage_accounts_outlined, size: 20),
                     onPressed: () => context.go('/users'),
-                    tooltip: 'Пользователи',
+                    tooltip: l10n.navUsers,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
@@ -303,6 +305,7 @@ class _OfflineBanner extends ConsumerWidget {
     final queueCount = ref.watch(offlineQueueCountProvider).value;
     // Баннер виден и после восстановления сети, пока очередь не пуста.
     if (!isOffline && queueCount == 0) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
     return Material(
       color: const Color(0xFFF57C00),
       child: InkWell(
@@ -318,9 +321,9 @@ class _OfflineBanner extends ConsumerWidget {
               child: Text(
                 isOffline
                     ? (queueCount > 0
-                        ? 'Офлайн · изменения ожидают синхронизации'
-                        : 'Нет подключения к интернету')
-                    : 'Изменения ожидают синхронизации',
+                        ? l10n.offlineWithPendingChanges
+                        : l10n.offlineNoConnection)
+                    : l10n.onlinePendingChanges,
                 style: const TextStyle(
                   color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600,
                 ),
@@ -350,9 +353,9 @@ class _OfflineBanner extends ConsumerWidget {
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text(
-                'Обновить',
-                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+              child: Text(
+                l10n.refreshButton,
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
               ),
             ),
           ],
