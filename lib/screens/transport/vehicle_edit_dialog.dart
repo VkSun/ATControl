@@ -10,6 +10,7 @@ import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
 import '../../utils/date_picker.dart';
 import '../../utils/date_utils.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/dialog_scroll_content.dart';
 
 class VehicleEditDialog extends ConsumerStatefulWidget {
@@ -231,15 +232,9 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
     final deptSections = (ref.watch(sectionsProvider).value ?? [])
         .where((s) => s.departmentId == _departmentId)
         .toList();
-    return AlertDialog(
-      backgroundColor: Theme.of(context).cardColor,
-      surfaceTintColor: Colors.transparent,
-      title: Text(title),
-      content: DialogScrollContent(
-        width: 560,
-        child: Form(
-          key: _formKey,
-          child: Column(
+    final form = Form(
+      key: _formKey,
+      child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -340,6 +335,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 Row(children: [
                   Expanded(
                     child: DropdownButtonFormField<String?>(
+                      // не переполняется на узком экране телефона
+                      isExpanded: true,
                       value: _departmentId,
                       isDense: true,
                       decoration: const InputDecoration(
@@ -361,6 +358,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String?>(
+                      // не переполняется на узком экране телефона
+                      isExpanded: true,
                       value: _sectionId,
                       isDense: true,
                       decoration: const InputDecoration(
@@ -395,63 +394,119 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
                 _sectionLabel('Заметки'),
                 _field(_notes, 'Заметки', maxLines: 2),
             ],
+      ),
+    );
+
+    // Телефон: полноэкранная форма с одним скроллом; свой AppBar с «✕»,
+    // заголовком и «Сохранить». Удаление — в меню «⋮», не в ряду кнопок.
+    if (isPhone(context)) {
+      return Dialog.fullscreen(
+        child: Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: 'Закрыть',
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(title),
+            actions: [
+              if (widget.vehicle != null) _overflowMenu(),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: TextButton(
+                  onPressed: _loading ? null : _save,
+                  child: _loading
+                      ? const SizedBox(width: 16, height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Сохранить'),
+                ),
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: form,
           ),
         ),
+      );
+    }
+
+    return AlertDialog(
+      backgroundColor: Theme.of(context).cardColor,
+      surfaceTintColor: Colors.transparent,
+      title: Row(
+        children: [
+          Expanded(child: Text(title)),
+          if (widget.vehicle != null) _overflowMenu(),
+        ],
       ),
-      actionsAlignment: MainAxisAlignment.spaceBetween,
+      content: DialogScrollContent(
+        width: 560,
+        child: form,
+      ),
       actions: [
         TextButton(
-          onPressed: widget.vehicle == null ? null : () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                backgroundColor: Theme.of(ctx).cardColor,
-                surfaceTintColor: Colors.transparent,
-                title: const Text('Удалить транспорт?'),
-                content: DialogScrollContent(
-                    child: Text(
-                        '${widget.vehicle!.brandModel} (${widget.vehicle!.govNumber})\n\nЭто действие нельзя отменить.')),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Отмена'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE24B4A)),
-                    child: const Text('Удалить'),
-                  ),
-                ],
-              ),
-            );
-            if (confirmed == true) {
-              await ref.read(vehicleServiceProvider).delete(widget.vehicle!.id);
-              widget.onSaved();
-              if (mounted) Navigator.pop(context);
-            }
-          },
-          style: TextButton.styleFrom(foregroundColor: const Color(0xFFE24B4A)),
-          child: const Text('Удалить'),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
         ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: _loading ? null : _save,
-              child: _loading
-                  ? const SizedBox(width: 16, height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Сохранить'),
-            ),
-          ],
+        FilledButton(
+          onPressed: _loading ? null : _save,
+          child: _loading
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Сохранить'),
         ),
       ],
     );
+  }
+
+  /// Меню «⋮» в шапке формы: удаление вынесено из ряда кнопок,
+  /// чтобы промах по «Сохранить» не приводил к потере записи.
+  Widget _overflowMenu() => PopupMenuButton<String>(
+        icon: const Icon(Icons.more_vert, size: 20),
+        tooltip: 'Ещё',
+        onSelected: (v) {
+          if (v == 'delete') _confirmDelete();
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(
+            value: 'delete',
+            child: Text('Удалить',
+                style: TextStyle(color: Color(0xFFE24B4A))),
+          ),
+        ],
+      );
+
+  Future<void> _confirmDelete() async {
+    final v = widget.vehicle!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        surfaceTintColor: Colors.transparent,
+        // Идентификация записи прямо в вопросе
+        title: Text('Удалить ${v.brandModel} (${v.govNumber})?'),
+        content: const DialogScrollContent(
+            child: Text('Это действие нельзя отменить.')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFE24B4A)),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref.read(vehicleServiceProvider).delete(v.id);
+      widget.onSaved();
+      if (mounted) Navigator.pop(context);
+    }
   }
 
   Widget _sectionLabel(String text) => Padding(

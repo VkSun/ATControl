@@ -111,12 +111,17 @@ void main() {
           lessThanOrEqualTo(tester.getRect(save).top + 0.01));
     });
 
+    // На телефоне (shortestSide < 600) формы транспорта/водителя теперь
+    // полноэкранные: «Сохранить» — TextButton в AppBar сверху.
     testWidgets('DriverEditDialog: кнопки на экране, поля доступны ($label)',
         (tester) async {
       await pumpDialog(
           tester, size, (_) => DriverEditDialog(onSaved: () {}));
 
-      final save = find.widgetWithText(FilledButton, 'Сохранить');
+      final phone = size.shortestSide < 600;
+      final save = phone
+          ? find.widgetWithText(TextButton, 'Сохранить')
+          : find.widgetWithText(FilledButton, 'Сохранить');
       expectOnScreen(tester, save, size);
 
       // Верхнее поле "Фамилия": floating-подпись не должна обрезаться.
@@ -125,12 +130,11 @@ void main() {
       expect(tester.getRect(find.text('Фамилия')).top,
           greaterThanOrEqualTo(0));
 
-      // Нижнее поле прокручивается в зону видимости над кнопками.
+      // Нижнее поле прокручивается в зону видимости.
       final notes = find.text('Заметки').last;
       await tester.ensureVisible(notes);
       await tester.pumpAndSettle();
-      expect(tester.getRect(notes).bottom,
-          lessThanOrEqualTo(tester.getRect(save).top + 0.01));
+      expectOnScreen(tester, notes, size);
     });
 
     testWidgets('VehicleEditDialog: кнопки на экране, поля доступны ($label)',
@@ -138,14 +142,16 @@ void main() {
       await pumpDialog(
           tester, size, (_) => VehicleEditDialog(onSaved: () {}));
 
-      final save = find.widgetWithText(FilledButton, 'Сохранить');
+      final phone = size.shortestSide < 600;
+      final save = phone
+          ? find.widgetWithText(TextButton, 'Сохранить')
+          : find.widgetWithText(FilledButton, 'Сохранить');
       expectOnScreen(tester, save, size);
 
       final notes = find.text('Заметки').last;
       await tester.ensureVisible(notes);
       await tester.pumpAndSettle();
-      expect(tester.getRect(notes).bottom,
-          lessThanOrEqualTo(tester.getRect(save).top + 0.01));
+      expectOnScreen(tester, notes, size);
     });
 
     testWidgets('ImportDialog: кнопки на экране ($label)', (tester) async {

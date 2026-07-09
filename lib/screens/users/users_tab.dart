@@ -236,10 +236,14 @@ class UsersTab extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(ctx).cardColor,
         surfaceTintColor: Colors.transparent,
+        // Идентификация пользователя прямо в вопросе
         title: Text(user.isActive
-            ? 'Заблокировать пользователя?'
-            : 'Разблокировать пользователя?'),
-        content: DialogScrollContent(child: Text(user.fullName)),
+            ? 'Заблокировать ${user.fullName}?'
+            : 'Разблокировать ${user.fullName}?'),
+        content: DialogScrollContent(
+            child: Text(user.isActive
+                ? 'Пользователь потеряет доступ к системе.'
+                : 'Пользователь снова сможет войти в систему.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
