@@ -407,59 +407,47 @@ class _VehicleSelectorField extends StatelessWidget {
     required this.onChanged,
   });
 
-  String _displayText() {
-    if (selectedIds.isEmpty) return '— не выбраны —';
-    final matched = vehicles
-        .where((v) => selectedIds.contains(v.id as String))
-        .map((v) => v.invNumber as String)
-        .toList();
-    return matched.isEmpty ? '— не выбраны —' : matched.join('; ');
+  Future<void> _openPicker(BuildContext context) async {
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => _VehiclePickerDialog(
+        vehicles: vehicles,
+        initialSelected: selectedIds,
+      ),
+    );
+    if (result != null) onChanged(result);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEmpty = selectedIds.isEmpty;
+    final matched =
+        vehicles.where((v) => selectedIds.contains(v.id as String)).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Закреплённые ТС',
             style: TextStyle(fontSize: 12, color: Color(0xFF888888))),
         const SizedBox(height: 6),
-        Row(
+        // Каждое ТС — chip с крестиком; добавление — через общий пикер.
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
           children: [
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              tooltip: 'Выбрать ТС',
-              padding: const EdgeInsets.all(4),
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              onPressed: () async {
-                final result = await showDialog<List<String>>(
-                  context: context,
-                  builder: (_) => _VehiclePickerDialog(
-                    vehicles: vehicles,
-                    initialSelected: selectedIds,
-                  ),
-                );
-                if (result != null) onChanged(result);
-              },
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFBBBBBB)),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  _displayText(),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isEmpty ? const Color(0xFF888888) : null,
-                  ),
-                ),
+            for (final v in matched)
+              InputChip(
+                label: Text(v.invNumber as String,
+                    style: const TextStyle(fontSize: 12)),
+                visualDensity: VisualDensity.compact,
+                deleteButtonTooltipMessage: 'Открепить',
+                onDeleted: () =>
+                    onChanged([...selectedIds]..remove(v.id as String)),
               ),
+            ActionChip(
+              avatar: const Icon(Icons.add, size: 16),
+              label: Text(matched.isEmpty ? 'Выбрать ТС' : 'Добавить',
+                  style: const TextStyle(fontSize: 12)),
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _openPicker(context),
             ),
           ],
         ),
