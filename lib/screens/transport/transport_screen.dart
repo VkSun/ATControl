@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../../models/vehicle.dart';
 import '../../services/vehicle_service.dart';
+import '../../services/driver_service.dart';
 import '../../services/department_service.dart';
 import '../../utils/theme.dart';
 import 'vehicle_edit_dialog.dart';
@@ -94,7 +95,12 @@ class TransportScreen extends ConsumerWidget {
                 onPressed: perms.isLoading ? null : () => showDialog(
                   context: context,
                   builder: (_) => VehicleEditDialog(
-                    onSaved: () => ref.invalidate(vehiclesProvider),
+                    // VehicleEditDialog может менять привязку водителя
+                    // (driver.vehicle_ids) — обновляем и список водителей.
+                    onSaved: () {
+                      ref.invalidate(vehiclesProvider);
+                      ref.invalidate(driversProvider);
+                    },
                   ),
                 ),
                 child: const Icon(Icons.add),
@@ -180,7 +186,12 @@ class _TopBar extends StatelessWidget {
               onPressed: perms.isLoading ? null : () => showDialog(
                 context: context,
                 builder: (_) => VehicleEditDialog(
-                  onSaved: () => ref.invalidate(vehiclesProvider),
+                  // VehicleEditDialog может менять привязку водителя
+                  // (driver.vehicle_ids) — обновляем и список водителей.
+                  onSaved: () {
+                    ref.invalidate(vehiclesProvider);
+                    ref.invalidate(driversProvider);
+                  },
                 ),
               ),
               icon: const Icon(Icons.add, size: 14),
@@ -546,7 +557,15 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
   void _openEdit(BuildContext context, Vehicle v) {
     showDialog(
       context: context,
-      builder: (_) => VehicleEditDialog(vehicle: v, onSaved: () => ref.invalidate(vehiclesProvider)),
+      // VehicleEditDialog может менять привязку водителя
+      // (driver.vehicle_ids) — обновляем и список водителей.
+      builder: (_) => VehicleEditDialog(
+        vehicle: v,
+        onSaved: () {
+          ref.invalidate(vehiclesProvider);
+          ref.invalidate(driversProvider);
+        },
+      ),
     );
   }
 }
