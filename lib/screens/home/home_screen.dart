@@ -9,8 +9,10 @@ import '../../services/driver_service.dart';
 import '../../services/task_service.dart';
 import '../../services/notification_service.dart';
 import '../../utils/theme.dart';
+import '../../utils/permissions.dart';
 import '../../utils/responsive.dart';
 import '../../utils/date_utils.dart';
+import '../planner/add_task_dialog.dart';
 import '../settings/settings_screen.dart' show notifyDay7Provider, notifyDay14Provider, notifyDay30Provider;
 import '../../widgets/main_layout.dart' show SplitHandle;
 import '../../widgets/async_value_view.dart';
@@ -354,9 +356,29 @@ class _TasksCard extends ConsumerWidget {
             }
 
             if (todayTasks.isEmpty && tomorrowTasks.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(20),
-                child: Center(child: Text('Задач на сегодня и завтра нет')),
+              final perms = ref.watch(permissionsProvider);
+              return Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Задач на сегодня и завтра нет'),
+                      if (perms.canAddTask) ...[
+                        const SizedBox(height: 10),
+                        FilledButton.tonalIcon(
+                          onPressed: () => showDialog(
+                            context: context,
+                            builder: (_) => AddTaskDialog(
+                                onSaved: () => ref.invalidate(tasksProvider)),
+                          ),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Добавить задачу'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               );
             }
 
