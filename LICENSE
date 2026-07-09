@@ -1,0 +1,22 @@
+Proprietary License
+
+Copyright (c) 2026 Webchik. All rights reserved.
+
+This software and its source code (the "Software") are the proprietary and
+confidential property of Webchik. The Software is provided for use solely
+within the scope authorized by its owner.
+
+No part of the Software may be copied, modified, merged, published,
+distributed, sublicensed, or sold without the prior written permission of
+the copyright holder. No license, express or implied, to any intellectual
+property rights is granted by this document.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE
+USE OF THE SOFTWARE.
+
+This project depends on third-party open-source packages (Flutter, Dart
+packages, etc.), each governed by its own license. Use of those packages
+within this Software does not affect their independent licensing terms.
