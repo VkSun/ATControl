@@ -224,7 +224,9 @@ class TaskRow extends StatelessWidget {
                     style:
                         TextStyle(fontSize: 10, color: colors.badgeAmberText)),
               const SizedBox(width: 8),
-              if (perms.canDeleteTask)
+              // Задачи-сроки генерируются автоматически: вручную не удаляются,
+              // исчезнут сами после обновления даты у записи.
+              if (perms.canDeleteTask && !isExpiry)
                 GestureDetector(
                   onTap: () => _confirmDelete(context),
                   child: Icon(Icons.close,
