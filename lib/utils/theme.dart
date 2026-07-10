@@ -7,7 +7,7 @@ import 'brand_colors.dart';
 /// Раздельно от Flutter-овского ThemeMode: помимо светлая/тёмная/системная
 /// сюда добавляются именованные цветовые темы (см. AppTheme.purpleTheme) —
 /// они переключаются тем же селектором в Настройках, добавляются по одной.
-enum AppThemeMode { light, dark, system, purple, orange, mono, beige, emerald }
+enum AppThemeMode { light, dark, system, purple, orange, mono, beige, emerald, teal }
 
 final themeModeProvider =
     StateNotifierProvider<_ThemePref, AppThemeMode>((_) => _ThemePref());
@@ -67,6 +67,7 @@ class AppTheme {
   static const _monoAccent = Color(0xFF5A5A5A);
   static const _beigeAccent = Color(0xFFC9962F);
   static const _emeraldAccent = Color(0xFF4ECB8D);
+  static const _tealAccent = Color(0xFF1F4E4A);
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -479,6 +480,67 @@ class AppTheme {
       ),
     ],
   );
+
+  // Бирюзовая: шестой референс — светлая, холодный серо-голубой фон,
+  // тёмно-бирюзовый акцент (как кнопка «Add drug» в референсе).
+  static ThemeData tealTheme = ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: _tealAccent,
+      brightness: Brightness.light,
+    ),
+    scaffoldBackgroundColor: const Color(0xFFEEF1F2),
+    cardColor: Colors.white,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.white,
+      foregroundColor: Color(0xFF1A1A2E),
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+      contentTextStyle: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+    ),
+    textTheme: const TextTheme(
+      bodyMedium: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+      bodySmall: TextStyle(fontSize: 11, color: Color(0xFF888888)),
+      titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1A1A2E)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _tealAccent,
+        foregroundColor: Colors.white,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _tealAccent,
+        side: const BorderSide(color: _tealAccent),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: _tealAccent),
+    ),
+    extensions: const [
+      AppColors(
+        accent: _tealAccent,
+        danger: _danger,
+        amber: _amber,
+        success: _green,
+        sidebarBg: Colors.white,
+        sidebarActive: _tealAccent,
+        tableBorder: Color(0xFFE2E8E8),
+        badgeRed: Color(0xFFFCEBEB),
+        badgeRedText: Color(0xFFA32D2D),
+        badgeAmber: Color(0xFFFAEEDA),
+        badgeAmberText: Color(0xFF854F0B),
+        badgeGreen: Color(0xFFEAF3DE),
+        badgeGreenText: Color(0xFF3B6D11),
+      ),
+    ],
+  );
 }
 
 class AppColors extends ThemeExtension<AppColors> {
@@ -549,6 +611,7 @@ final resolvedThemeProvider = Provider<ThemeData>((ref) {
     AppThemeMode.mono => AppTheme.monoTheme,
     AppThemeMode.beige => AppTheme.beigeTheme,
     AppThemeMode.emerald => AppTheme.emeraldTheme,
+    AppThemeMode.teal => AppTheme.tealTheme,
     AppThemeMode.light || AppThemeMode.system => AppTheme.lightTheme,
   };
 });
