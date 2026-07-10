@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -5,6 +6,9 @@ import '../models/auth_exceptions.dart';
 import '../models/user_role.dart';
 import '../models/invitation_code.dart';
 import '../utils/logger.dart';
+import 'cache_service.dart';
+import 'offline_queue.dart' show isNetworkError;
+import 'offline_state.dart';
 import 'supabase_client.dart';
 
 final _log = Logger('AuthService');
@@ -16,6 +20,13 @@ final currentUserProvider = StreamProvider<User?>((ref) {
       .map((event) => event.session?.user);
 });
 
+const _roleCacheKey = 'user_role';
+
+// currentUserRoleProvider раньше не имел офлайн-фоллбэка: при потере сети
+// он падал с ошибкой, а от него зависят vehiclesProvider/driversProvider
+// (ждут role.departmentId/sectionId для фильтрации до похода в fetchList())
+// — их собственный дисковый кэш из-за этого не получал шанса сработать,
+// и вместо старых данных пользователь видел пустой экран/ошибку.
 final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
   final userAsync = ref.watch(currentUserProvider);
   final user = userAsync.value;
@@ -24,8 +35,18 @@ final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
     // Общая для приложения и расширения логика профиля — в БД (get_my_profile).
     final data = await supabase.rpc('get_my_profile');
     if (data == null) return null; // пользователя нет в user_roles
-    return UserRole.fromJson(Map<String, dynamic>.from(data as Map));
+    final map = Map<String, dynamic>.from(data as Map);
+    unawaited(CacheService.instance.save(_roleCacheKey, [map]));
+    isOfflineNotifier.value = false;
+    return UserRole.fromJson(map);
   } catch (e, s) {
+    if (isNetworkError(e)) {
+      isOfflineNotifier.value = true;
+      final cached = await CacheService.instance.load(_roleCacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        return UserRole.fromJson(cached.first);
+      }
+    }
     _log.warning('currentUserRoleProvider failed', e, s);
     rethrow;
   }

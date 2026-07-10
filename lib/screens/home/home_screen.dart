@@ -183,7 +183,13 @@ class _ExpiryCard extends ConsumerWidget {
                 style: Theme.of(context).textTheme.titleSmall),
           ),
           Builder(builder: (_) {
-            if (vehiclesAsync.isLoading || driversAsync.isLoading) {
+            // Спиннер — только пока нет вообще никаких данных (первая
+            // загрузка). Фоновое обновление (в т.ч. неудачное — offline)
+            // не должно стирать уже показанный список: valueOrNull вместо
+            // value — тот при AsyncError без закэшированного значения
+            // бросает исключение и роняет билд в пустой ErrorWidget.
+            if ((vehiclesAsync.isLoading && !vehiclesAsync.hasValue) ||
+                (driversAsync.isLoading && !driversAsync.hasValue)) {
               return const Padding(
                 padding: EdgeInsets.all(20),
                 child: Center(child: CircularProgressIndicator()),
@@ -191,7 +197,7 @@ class _ExpiryCard extends ConsumerWidget {
             }
 
             final items = <Map<String, dynamic>>[];
-            final vehicles = vehiclesAsync.value ?? <Vehicle>[];
+            final vehicles = vehiclesAsync.valueOrNull ?? <Vehicle>[];
             for (final v in vehicles) {
               // Все 5 типов сроков ТС (включая вычисляемые ТО автомобиля/
               // оборудования) — единый источник в Vehicle.expiryDates().
@@ -205,7 +211,7 @@ class _ExpiryCard extends ConsumerWidget {
               }
             }
 
-            final drivers = driversAsync.value ?? <Driver>[];
+            final drivers = driversAsync.valueOrNull ?? <Driver>[];
             for (final d in drivers) {
               void check(DateTime? date, String type) {
                 if (date == null) return;
