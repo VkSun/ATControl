@@ -4,6 +4,7 @@ import '../../models/task.dart';
 import '../../models/vehicle.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/driver_service.dart';
+import '../../services/task_service.dart';
 import '../../utils/date_picker.dart';
 import '../../widgets/dialog_scroll_content.dart';
 
@@ -77,6 +78,11 @@ class ExpiryEditDialogState extends ConsumerState<ExpiryEditDialog> {
           ref.invalidate(driversProvider);
         }
       }
+
+      // Задачи-сроки не пересчитываются сами по себе при правке даты —
+      // без пересинхронизации старая задача (со старой датой) осталась бы
+      // висеть в списке до следующего полного захода в Планировщик.
+      await ref.read(taskServiceProvider).syncExpiryTasks();
 
       widget.onSaved();
       if (mounted) Navigator.pop(context);

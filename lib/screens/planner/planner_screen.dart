@@ -98,6 +98,11 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen> {
     try {
       await ref.read(taskServiceProvider).syncExpiryTasks();
       ref.invalidate(tasksProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Не удалось обновить сроки: $e')));
+      }
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
