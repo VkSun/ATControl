@@ -7,7 +7,7 @@ import 'brand_colors.dart';
 /// Раздельно от Flutter-овского ThemeMode: помимо светлая/тёмная/системная
 /// сюда добавляются именованные цветовые темы (см. AppTheme.purpleTheme) —
 /// они переключаются тем же селектором в Настройках, добавляются по одной.
-enum AppThemeMode { light, dark, system, purple, orange, mono, beige }
+enum AppThemeMode { light, dark, system, purple, orange, mono, beige, emerald }
 
 final themeModeProvider =
     StateNotifierProvider<_ThemePref, AppThemeMode>((_) => _ThemePref());
@@ -66,6 +66,7 @@ class AppTheme {
   static const _orangeAccent = Color(0xFFFF7A30);
   static const _monoAccent = Color(0xFF5A5A5A);
   static const _beigeAccent = Color(0xFFC9962F);
+  static const _emeraldAccent = Color(0xFF4ECB8D);
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -422,6 +423,62 @@ class AppTheme {
       ),
     ],
   );
+
+  // Изумрудная: пятый референс — тёмная (структура как у monoTheme) с
+  // изумрудно-зелёным акцентом вместо серого.
+  static ThemeData emeraldTheme = ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: _emeraldAccent,
+      brightness: Brightness.dark,
+    ),
+    scaffoldBackgroundColor: const Color(0xFF121212),
+    cardColor: const Color(0xFF1E1E1E),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF1E1E1E),
+      foregroundColor: Color(0xFFEEEEEE),
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: Color(0xFF1E1E1E),
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFFEEEEEE)),
+      contentTextStyle: TextStyle(fontSize: 13, color: Color(0xFFCCCCCC)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _emeraldAccent,
+        foregroundColor: Colors.white,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _emeraldAccent,
+        side: const BorderSide(color: _emeraldAccent),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: _emeraldAccent),
+    ),
+    extensions: const [
+      AppColors(
+        accent: _emeraldAccent,
+        danger: _danger,
+        amber: _amber,
+        success: _green,
+        sidebarBg: Color(0xFF1E1E1E),
+        sidebarActive: _emeraldAccent,
+        tableBorder: Color(0xFF2E2E2E),
+        badgeRed: Color(0xFF501313),
+        badgeRedText: Color(0xFFF7C1C1),
+        badgeAmber: Color(0xFF412402),
+        badgeAmberText: Color(0xFFFAC775),
+        badgeGreen: Color(0xFF173404),
+        badgeGreenText: Color(0xFFC0DD97),
+      ),
+    ],
+  );
 }
 
 class AppColors extends ThemeExtension<AppColors> {
@@ -491,6 +548,7 @@ final resolvedThemeProvider = Provider<ThemeData>((ref) {
     AppThemeMode.orange => AppTheme.orangeTheme,
     AppThemeMode.mono => AppTheme.monoTheme,
     AppThemeMode.beige => AppTheme.beigeTheme,
+    AppThemeMode.emerald => AppTheme.emeraldTheme,
     AppThemeMode.light || AppThemeMode.system => AppTheme.lightTheme,
   };
 });

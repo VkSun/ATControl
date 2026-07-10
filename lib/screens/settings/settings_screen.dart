@@ -121,8 +121,9 @@ class SettingsScreen extends ConsumerWidget {
                     AppThemeMode.orange => 'Оранжевая',
                     AppThemeMode.mono => 'Монохромная',
                     AppThemeMode.beige => 'Бежевая',
+                    AppThemeMode.emerald => 'Изумрудная',
                   },
-                  options: const ['Светлая', 'Тёмная', 'Системная', 'Фиолетовая', 'Оранжевая', 'Монохромная', 'Бежевая'],
+                  options: const ['Светлая', 'Тёмная', 'Системная', 'Фиолетовая', 'Оранжевая', 'Монохромная', 'Бежевая', 'Изумрудная'],
                   onChanged: (v) {
                     ref.read(themeModeProvider.notifier).set(switch (v) {
                       'Светлая' => AppThemeMode.light,
@@ -131,6 +132,7 @@ class SettingsScreen extends ConsumerWidget {
                       'Оранжевая' => AppThemeMode.orange,
                       'Монохромная' => AppThemeMode.mono,
                       'Бежевая' => AppThemeMode.beige,
+                      'Изумрудная' => AppThemeMode.emerald,
                       _ => AppThemeMode.system,
                     });
                   },
