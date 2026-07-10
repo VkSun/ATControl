@@ -26,8 +26,8 @@ class DepartmentsTabState extends ConsumerState<DepartmentsTab> {
     final sectionsAsync = ref.watch(sectionsProvider);
     final colors = widget.colors;
 
-    final departments = departmentsAsync.value ?? [];
-    final allSections = sectionsAsync.value ?? [];
+    final departments = departmentsAsync.valueOrNull ?? [];
+    final allSections = sectionsAsync.valueOrNull ?? [];
     final deptSections = allSections
         .where((s) => s.departmentId == _selectedDeptId)
         .toList();

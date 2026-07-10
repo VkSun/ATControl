@@ -173,11 +173,11 @@ class _MobileLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userRole = ref.watch(currentUserRoleProvider).value;
-    final pendingCount = ref.watch(pendingCountProvider).value ?? 0;
+    final userRole = ref.watch(currentUserRoleProvider).valueOrNull;
+    final pendingCount = ref.watch(pendingCountProvider).valueOrNull ?? 0;
     final profileAsync = ref.watch(profileProvider);
-    final initials = profileAsync.value?.initials ?? 'АИ';
-    final avatarHex = profileAsync.value?.avatarColor ?? AppTheme.primaryColorHex;
+    final initials = profileAsync.valueOrNull?.initials ?? 'АИ';
+    final avatarHex = profileAsync.valueOrNull?.avatarColor ?? AppTheme.primaryColorHex;
     final avatarColor = Color(int.parse(avatarHex.replaceFirst('#', '0xFF')));
     final currentIdx = _locationToIndex(location);
     final l10n = AppLocalizations.of(context);
@@ -265,7 +265,7 @@ class _MobileLayout extends ConsumerWidget {
                             style: const TextStyle(fontSize: 10, color: Colors.white)),
                       ),
                       const SizedBox(width: 8),
-                      Text(profileAsync.value?.fullName ?? '',
+                      Text(profileAsync.valueOrNull?.fullName ?? '',
                           style: const TextStyle(fontSize: 12)),
                     ],
                   ),

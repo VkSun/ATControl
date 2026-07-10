@@ -178,8 +178,8 @@ class _DriverEditDialogState extends ConsumerState<DriverEditDialog> {
   Widget build(BuildContext context) {
     final title = widget.driver == null ? 'Добавить водителя' : 'Редактировать водителя';
     final vehiclesAsync = ref.watch(vehiclesProvider);
-    final departments = ref.watch(departmentsProvider).value ?? [];
-    final deptSections = (ref.watch(sectionsProvider).value ?? [])
+    final departments = ref.watch(departmentsProvider).valueOrNull ?? [];
+    final deptSections = (ref.watch(sectionsProvider).valueOrNull ?? [])
         .where((s) => s.departmentId == _departmentId)
         .toList();
 

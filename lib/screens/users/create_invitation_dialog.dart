@@ -77,8 +77,8 @@ class CreateInvitationDialogState
 
   @override
   Widget build(BuildContext context) {
-    final departments = ref.watch(departmentsProvider).value ?? [];
-    final deptSections = (ref.watch(sectionsProvider).value ?? [])
+    final departments = ref.watch(departmentsProvider).valueOrNull ?? [];
+    final deptSections = (ref.watch(sectionsProvider).valueOrNull ?? [])
         .where((s) => s.departmentId == _departmentId)
         .toList();
 

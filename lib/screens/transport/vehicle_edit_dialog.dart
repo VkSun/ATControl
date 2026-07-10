@@ -261,8 +261,8 @@ class _VehicleEditDialogState extends ConsumerState<VehicleEditDialog> {
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd.MM.yyyy');
     final title = widget.vehicle == null ? 'Добавить транспорт' : 'Редактировать транспорт';
-    final departments = ref.watch(departmentsProvider).value ?? [];
-    final deptSections = (ref.watch(sectionsProvider).value ?? [])
+    final departments = ref.watch(departmentsProvider).valueOrNull ?? [];
+    final deptSections = (ref.watch(sectionsProvider).valueOrNull ?? [])
         .where((s) => s.departmentId == _departmentId)
         .toList();
     final form = Form(

@@ -295,7 +295,7 @@ class _SidebarTop extends StatelessWidget {
                           Expanded(
                             child: Consumer(
                               builder: (context, ref, _) {
-                                final w = ref.watch(weatherProvider).value;
+                                final w = ref.watch(weatherProvider).valueOrNull;
                                 if (w == null) return const SizedBox.shrink();
                                 return Text(
                                     '${w.icon} ${w.temp.round()}°C',
@@ -374,8 +374,8 @@ class _SidebarNav extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pendingCount = ref.watch(pendingCountProvider).value ?? 0;
-    final userRole = ref.watch(currentUserRoleProvider).value;
+    final pendingCount = ref.watch(pendingCountProvider).valueOrNull ?? 0;
+    final userRole = ref.watch(currentUserRoleProvider).valueOrNull;
     final l10n = AppLocalizations.of(context);
 
     final items = [
@@ -494,8 +494,8 @@ class _SidebarBottomProfile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
-    final initials = profileAsync.value?.initials ?? 'АИ';
-    final avatarHex = profileAsync.value?.avatarColor ?? AppTheme.primaryColorHex;
+    final initials = profileAsync.valueOrNull?.initials ?? 'АИ';
+    final avatarHex = profileAsync.valueOrNull?.avatarColor ?? AppTheme.primaryColorHex;
     final avatarColor = Color(int.parse(avatarHex.replaceFirst('#', '0xFF')));
 
     return Container(
@@ -526,10 +526,10 @@ class _SidebarBottomProfile extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(profileAsync.value?.fullName ?? '',
+                      Text(profileAsync.valueOrNull?.fullName ?? '',
                           style: const TextStyle(fontSize: 12),
                           overflow: TextOverflow.ellipsis),
-                      Text(profileAsync.value?.position ?? '',
+                      Text(profileAsync.valueOrNull?.position ?? '',
                           style: const TextStyle(
                               fontSize: 10, color: Color(0xFF888888)),
                           overflow: TextOverflow.ellipsis),

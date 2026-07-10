@@ -92,8 +92,8 @@ class EditUserDialogState extends ConsumerState<EditUserDialog> {
   Widget build(BuildContext context) {
     final departmentsAsync = ref.watch(departmentsProvider);
     final sectionsAsync = ref.watch(sectionsProvider);
-    final departments = departmentsAsync.value ?? [];
-    final deptSections = (sectionsAsync.value ?? [])
+    final departments = departmentsAsync.valueOrNull ?? [];
+    final deptSections = (sectionsAsync.valueOrNull ?? [])
         .where((s) => s.departmentId == _departmentId)
         .toList();
 

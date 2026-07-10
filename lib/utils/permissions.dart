@@ -35,6 +35,11 @@ class Permissions {
 
 final permissionsProvider = Provider<Permissions>((ref) {
   final roleAsync = ref.watch(currentUserRoleProvider);
-  if (roleAsync.isLoading) return const Permissions(null, isLoading: true);
-  return Permissions(roleAsync.value);
+  // hasValue, а не только isLoading: во время фонового обновления (в т.ч.
+  // неудачного, offline) держим последние известные права вместо того,
+  // чтобы на мгновение спрятать все действия за isLoading.
+  if (roleAsync.isLoading && !roleAsync.hasValue) {
+    return const Permissions(null, isLoading: true);
+  }
+  return Permissions(roleAsync.valueOrNull);
 });

@@ -186,8 +186,8 @@ class _TopBar extends StatelessWidget {
             Consumer(
               builder: (context, ref, _) {
                 final profileAsync = ref.watch(profileProvider);
-                final initials = profileAsync.value?.initials ?? 'АИ';
-                final color = profileAsync.value?.avatarColor ?? AppTheme.primaryColorHex;
+                final initials = profileAsync.valueOrNull?.initials ?? 'АИ';
+                final color = profileAsync.valueOrNull?.avatarColor ?? AppTheme.primaryColorHex;
                 final avatarColor =
                     Color(int.parse(color.replaceFirst('#', '0xFF')));
                 return GestureDetector(
