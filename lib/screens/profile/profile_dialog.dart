@@ -37,7 +37,10 @@ class _ProfileDialogState extends ConsumerState<ProfileDialog> {
 
   Future<void> _loadProfile() async {
     try {
-      final p = await ref.read(profileServiceProvider).get();
+      // profileProvider вместо прямого ProfileService().get(): если профиль
+      // уже загружен (почти всегда — он же виден в сайдбаре), диалог
+      // получает его мгновенно из провайдера, а не заново ходит в сеть.
+      final p = await ref.read(profileProvider.future);
       if (mounted) {
         setState(() {
           _fullName.text = p?.fullName ?? '';

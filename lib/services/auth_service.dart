@@ -20,7 +20,10 @@ final currentUserProvider = StreamProvider<User?>((ref) {
       .map((event) => event.session?.user);
 });
 
-const _roleCacheKey = 'user_role';
+// Ключ кэша содержит user id: раньше был общий на все аккаунты — после
+// смены пользователя на этом же устройстве офлайн-фоллбэк мог подсунуть
+// данные предыдущего аккаунта.
+String _roleCacheKey(String userId) => 'user_role_$userId';
 
 // currentUserRoleProvider раньше не имел офлайн-фоллбэка: при потере сети
 // он падал с ошибкой, а от него зависят vehiclesProvider/driversProvider
@@ -29,20 +32,21 @@ const _roleCacheKey = 'user_role';
 // и вместо старых данных пользователь видел пустой экран/ошибку.
 final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
   final userAsync = ref.watch(currentUserProvider);
-  final user = userAsync.value;
+  final user = userAsync.valueOrNull;
   if (user == null) return null;
+  final cacheKey = _roleCacheKey(user.id);
   try {
     // Общая для приложения и расширения логика профиля — в БД (get_my_profile).
     final data = await supabase.rpc('get_my_profile');
     if (data == null) return null; // пользователя нет в user_roles
     final map = Map<String, dynamic>.from(data as Map);
-    unawaited(CacheService.instance.save(_roleCacheKey, [map]));
+    unawaited(CacheService.instance.save(cacheKey, [map]));
     isOfflineNotifier.value = false;
     return UserRole.fromJson(map);
   } catch (e, s) {
     if (isNetworkError(e)) {
       isOfflineNotifier.value = true;
-      final cached = await CacheService.instance.load(_roleCacheKey);
+      final cached = await CacheService.instance.load(cacheKey);
       if (cached != null && cached.isNotEmpty) {
         return UserRole.fromJson(cached.first);
       }
