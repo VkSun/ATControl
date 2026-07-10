@@ -7,7 +7,7 @@ import 'brand_colors.dart';
 /// Раздельно от Flutter-овского ThemeMode: помимо светлая/тёмная/системная
 /// сюда добавляются именованные цветовые темы (см. AppTheme.purpleTheme) —
 /// они переключаются тем же селектором в Настройках, добавляются по одной.
-enum AppThemeMode { light, dark, system, purple }
+enum AppThemeMode { light, dark, system, purple, orange }
 
 final themeModeProvider =
     StateNotifierProvider<_ThemePref, AppThemeMode>((_) => _ThemePref());
@@ -63,6 +63,7 @@ class AppTheme {
   static const _amber = Color(0xFFEF9F27);
   static const _green = Color(0xFF639922);
   static const _purpleAccent = Color(0xFF6C5DD3);
+  static const _orangeAccent = Color(0xFFFF7A30);
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -238,6 +239,67 @@ class AppTheme {
       ),
     ],
   );
+
+  // Оранжевая: акцент из второго мокапа-референса (тёплый оранжевый),
+  // светлый персиковый фон — та же структура, что у purpleTheme.
+  static ThemeData orangeTheme = ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: _orangeAccent,
+      brightness: Brightness.light,
+    ),
+    scaffoldBackgroundColor: const Color(0xFFFDF0E4),
+    cardColor: Colors.white,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.white,
+      foregroundColor: Color(0xFF1A1A2E),
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+      contentTextStyle: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+    ),
+    textTheme: const TextTheme(
+      bodyMedium: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+      bodySmall: TextStyle(fontSize: 11, color: Color(0xFF888888)),
+      titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1A1A2E)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _orangeAccent,
+        foregroundColor: Colors.white,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _orangeAccent,
+        side: const BorderSide(color: _orangeAccent),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: _orangeAccent),
+    ),
+    extensions: const [
+      AppColors(
+        accent: _orangeAccent,
+        danger: _danger,
+        amber: _amber,
+        success: _green,
+        sidebarBg: Colors.white,
+        sidebarActive: _orangeAccent,
+        tableBorder: Color(0xFFF6E3D2),
+        badgeRed: Color(0xFFFCEBEB),
+        badgeRedText: Color(0xFFA32D2D),
+        badgeAmber: Color(0xFFFAEEDA),
+        badgeAmberText: Color(0xFF854F0B),
+        badgeGreen: Color(0xFFEAF3DE),
+        badgeGreenText: Color(0xFF3B6D11),
+      ),
+    ],
+  );
 }
 
 class AppColors extends ThemeExtension<AppColors> {
@@ -304,6 +366,7 @@ final resolvedThemeProvider = Provider<ThemeData>((ref) {
   return switch (mode) {
     AppThemeMode.dark => AppTheme.darkTheme,
     AppThemeMode.purple => AppTheme.purpleTheme,
+    AppThemeMode.orange => AppTheme.orangeTheme,
     AppThemeMode.light || AppThemeMode.system => AppTheme.lightTheme,
   };
 });
