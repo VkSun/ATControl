@@ -592,7 +592,7 @@ class _VehiclePickerDialogState extends State<_VehiclePickerDialog> {
                                       : Icons.check_box_outline_blank,
                                   size: 18,
                                   color: isSelected
-                                      ? AppTheme.primaryColor
+                                      ? Theme.of(context).extension<AppColors>()!.accent
                                       : const Color(0xFF888888),
                                 ),
                                 const SizedBox(width: 10),
@@ -615,8 +615,9 @@ class _VehiclePickerDialogState extends State<_VehiclePickerDialog> {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text('Выбрано: ${_selected.length}',
-                      style: const TextStyle(
-                          fontSize: 11, color: AppTheme.primaryColor)),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).extension<AppColors>()!.accent)),
                 ),
               ),
           ],

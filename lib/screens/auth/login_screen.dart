@@ -70,7 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Container(
                     width: 40, height: 40,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
+                      color: colors.accent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.directions_car,

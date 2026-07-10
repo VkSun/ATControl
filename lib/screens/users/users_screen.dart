@@ -123,10 +123,10 @@ class _TabBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? AppTheme.primaryColor : Colors.transparent,
+          color: active ? colors.accent : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: active ? AppTheme.primaryColor : colors.tableBorder,
+            color: active ? colors.accent : colors.tableBorder,
           ),
         ),
         child: Text(

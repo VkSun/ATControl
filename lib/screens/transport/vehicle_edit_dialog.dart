@@ -784,7 +784,7 @@ class _DriverPickerDialogState extends State<_DriverPickerDialog> {
                                 : Icons.radio_button_unchecked,
                             size: 18,
                             color: _selected == null
-                                ? AppTheme.primaryColor
+                                ? Theme.of(context).extension<AppColors>()!.accent
                                 : const Color(0xFF888888),
                           ),
                           const SizedBox(width: 10),
@@ -812,7 +812,7 @@ class _DriverPickerDialogState extends State<_DriverPickerDialog> {
                                   : Icons.radio_button_unchecked,
                               size: 18,
                               color: isSelected
-                                  ? AppTheme.primaryColor
+                                  ? Theme.of(context).extension<AppColors>()!.accent
                                   : const Color(0xFF888888),
                             ),
                             const SizedBox(width: 10),

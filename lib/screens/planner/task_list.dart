@@ -188,12 +188,12 @@ class TaskRow extends StatelessWidget {
                     height: 16,
                     decoration: BoxDecoration(
                       color: task.isCompleted
-                          ? AppTheme.primaryColor
+                          ? colors.accent
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
                         color: task.isCompleted
-                            ? AppTheme.primaryColor
+                            ? colors.accent
                             : colors.tableBorder,
                         width: 1.5,
                       ),

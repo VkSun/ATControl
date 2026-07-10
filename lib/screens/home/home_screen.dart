@@ -458,10 +458,10 @@ class _TaskRow extends ConsumerWidget {
               duration: const Duration(milliseconds: 150),
               width: 16, height: 16,
               decoration: BoxDecoration(
-                color: task.isCompleted ? AppTheme.primaryColor : Colors.transparent,
+                color: task.isCompleted ? colors.accent : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
-                  color: task.isCompleted ? AppTheme.primaryColor : colors.tableBorder,
+                  color: task.isCompleted ? colors.accent : colors.tableBorder,
                   width: 1.5,
                 ),
               ),

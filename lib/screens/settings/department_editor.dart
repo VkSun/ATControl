@@ -282,7 +282,7 @@ class _Header extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.account_tree_outlined, size: 18, color: AppTheme.primaryColor),
+          Icon(Icons.account_tree_outlined, size: 18, color: colors.accent),
           const SizedBox(width: 10),
           const Text('Структура предприятия',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
@@ -346,7 +346,7 @@ class _DeptRow extends StatelessWidget {
           Icon(
             isChild ? Icons.subdirectory_arrow_right : Icons.corporate_fare,
             size: isChild ? 14 : 16,
-            color: AppTheme.primaryColor,
+            color: colors.accent,
           ),
           const SizedBox(width: 8),
           Expanded(

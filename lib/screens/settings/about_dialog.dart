@@ -57,7 +57,7 @@ class _AboutAppDialogState extends State<AboutAppDialog> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
+                color: colors.accent,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Icon(Icons.local_shipping_rounded,
@@ -77,17 +77,17 @@ class _AboutAppDialogState extends State<AboutAppDialog> {
             InkWell(
               onTap: _openWebsite,
               borderRadius: BorderRadius.circular(6),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.language, size: 14, color: AppTheme.primaryColor),
-                    SizedBox(width: 6),
+                    Icon(Icons.language, size: 14, color: colors.accent),
+                    const SizedBox(width: 6),
                     Text('ATControl.com',
                         style: TextStyle(
                             fontSize: 13,
-                            color: AppTheme.primaryColor,
+                            color: colors.accent,
                             fontWeight: FontWeight.w500)),
                   ],
                 ),

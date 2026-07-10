@@ -113,12 +113,20 @@ class SettingsScreen extends ConsumerWidget {
                 const _SectionLabel('Внешний вид'),
                 _SelectSetting(
                   label: 'Тема оформления',
-                  value: ref.watch(themeModeProvider) == ThemeMode.light ? 'Светлая'
-                      : ref.watch(themeModeProvider) == ThemeMode.dark ? 'Тёмная' : 'Системная',
-                  options: const ['Светлая', 'Тёмная', 'Системная'],
+                  value: switch (ref.watch(themeModeProvider)) {
+                    AppThemeMode.light => 'Светлая',
+                    AppThemeMode.dark => 'Тёмная',
+                    AppThemeMode.system => 'Системная',
+                    AppThemeMode.purple => 'Фиолетовая',
+                  },
+                  options: const ['Светлая', 'Тёмная', 'Системная', 'Фиолетовая'],
                   onChanged: (v) {
-                    ref.read(themeModeProvider.notifier).set(v == 'Светлая'
-                        ? ThemeMode.light : v == 'Тёмная' ? ThemeMode.dark : ThemeMode.system);
+                    ref.read(themeModeProvider.notifier).set(switch (v) {
+                      'Светлая' => AppThemeMode.light,
+                      'Тёмная' => AppThemeMode.dark,
+                      'Фиолетовая' => AppThemeMode.purple,
+                      _ => AppThemeMode.system,
+                    });
                   },
                   colors: colors,
                 ),
@@ -254,7 +262,7 @@ class _ToggleSetting extends StatelessWidget {
               ],
             ),
           ),
-          Switch(value: value, onChanged: onChanged, activeThumbColor: AppTheme.primaryColor),
+          Switch(value: value, onChanged: onChanged, activeThumbColor: colors.accent),
         ],
       ),
     );
@@ -345,7 +353,7 @@ class _AboutCard extends StatelessWidget {
         colors: colors,
         child: Row(
           children: [
-            const Icon(Icons.info_outline, size: 18, color: AppTheme.primaryColor),
+            Icon(Icons.info_outline, size: 18, color: colors.accent),
             const SizedBox(width: 10),
             Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
             const Icon(Icons.chevron_right, size: 18, color: Color(0xFF888888)),
@@ -388,7 +396,7 @@ class _AutostartCard extends ConsumerWidget {
             data: (enabled) => Switch(
               value: enabled,
               onChanged: (v) => ref.read(autostartProvider.notifier).set(v),
-              activeThumbColor: AppTheme.primaryColor,
+              activeThumbColor: colors.accent,
             ),
           ),
         ],

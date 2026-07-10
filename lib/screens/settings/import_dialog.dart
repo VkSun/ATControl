@@ -350,7 +350,8 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
               ),
               if (file != null)
                 Text(file.name,
-                    style: const TextStyle(fontSize: 11, color: AppTheme.primaryColor),
+                    style: TextStyle(fontSize: 11,
+                        color: Theme.of(context).extension<AppColors>()!.accent),
                     overflow: TextOverflow.ellipsis)
               else
                 const Text('Файл не выбран',
@@ -457,7 +458,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: AppTheme.primaryColor),
+          Icon(icon, size: 18, color: Theme.of(context).extension<AppColors>()!.accent),
           const SizedBox(width: 10),
           Expanded(child: Text(label, style: const TextStyle(fontSize: 12))),
           Column(

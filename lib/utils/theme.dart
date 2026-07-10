@@ -4,25 +4,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/offline_state.dart';
 import 'brand_colors.dart';
 
-final themeModeProvider =
-    StateNotifierProvider<_ThemePref, ThemeMode>((_) => _ThemePref());
+/// Раздельно от Flutter-овского ThemeMode: помимо светлая/тёмная/системная
+/// сюда добавляются именованные цветовые темы (см. AppTheme.purpleTheme) —
+/// они переключаются тем же селектором в Настройках, добавляются по одной.
+enum AppThemeMode { light, dark, system, purple }
 
-class _ThemePref extends StateNotifier<ThemeMode> {
-  _ThemePref() : super(ThemeMode.light) {
+final themeModeProvider =
+    StateNotifierProvider<_ThemePref, AppThemeMode>((_) => _ThemePref());
+
+class _ThemePref extends StateNotifier<AppThemeMode> {
+  _ThemePref() : super(AppThemeMode.light) {
     SharedPreferences.getInstance().then((p) {
       final v = p.getString('theme_mode');
-      if (v == 'dark') {
-        state = ThemeMode.dark;
-      } else if (v == 'system') {
-        state = ThemeMode.system;
-      }
+      state = AppThemeMode.values.where((m) => m.name == v).firstOrNull ??
+          AppThemeMode.light;
     });
   }
-  Future<void> set(ThemeMode v) async {
+  Future<void> set(AppThemeMode v) async {
     state = v;
     final p = await SharedPreferences.getInstance();
-    await p.setString('theme_mode',
-        v == ThemeMode.dark ? 'dark' : v == ThemeMode.system ? 'system' : 'light');
+    await p.setString('theme_mode', v.name);
   }
 }
 
@@ -56,10 +57,12 @@ class AppTheme {
   static const Color primaryColor = Color(0xFF4361EE);
   // Та же константа в виде hex-строки — формат хранения avatar_color в БД
   // (см. lib/utils/brand_colors.dart, откуда её берут модели и сервисы).
+  // Это дефолт для аватара, а не акцент темы — не путать с AppColors.accent.
   static const String primaryColorHex = kPrimaryColorHex;
   static const _danger = Color(0xFFE24B4A);
   static const _amber = Color(0xFFEF9F27);
   static const _green = Color(0xFF639922);
+  static const _purpleAccent = Color(0xFF6C5DD3);
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -103,6 +106,7 @@ class AppTheme {
     ),
     extensions: const [
       AppColors(
+        accent: primaryColor,
         danger: _danger,
         amber: _amber,
         success: _green,
@@ -156,6 +160,7 @@ class AppTheme {
     ),
     extensions: const [
       AppColors(
+        accent: primaryColor,
         danger: _danger,
         amber: _amber,
         success: _green,
@@ -171,9 +176,76 @@ class AppTheme {
       ),
     ],
   );
+
+  // Фиолетовая: акцент из мокапа-референса (насыщенный индиго-фиолетовый),
+  // светлый лавандовый фон, белые карточки — структура как у lightTheme,
+  // отличается только акцентом и фоном.
+  static ThemeData purpleTheme = ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: _purpleAccent,
+      brightness: Brightness.light,
+    ),
+    scaffoldBackgroundColor: const Color(0xFFF4F2FC),
+    cardColor: Colors.white,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.white,
+      foregroundColor: Color(0xFF1A1A2E),
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+      contentTextStyle: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+    ),
+    textTheme: const TextTheme(
+      bodyMedium: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+      bodySmall: TextStyle(fontSize: 11, color: Color(0xFF888888)),
+      titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1A1A2E)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _purpleAccent,
+        foregroundColor: Colors.white,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _purpleAccent,
+        side: const BorderSide(color: _purpleAccent),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: _purpleAccent),
+    ),
+    extensions: const [
+      AppColors(
+        accent: _purpleAccent,
+        danger: _danger,
+        amber: _amber,
+        success: _green,
+        sidebarBg: Colors.white,
+        sidebarActive: _purpleAccent,
+        tableBorder: Color(0xFFE8E4F7),
+        badgeRed: Color(0xFFFCEBEB),
+        badgeRedText: Color(0xFFA32D2D),
+        badgeAmber: Color(0xFFFAEEDA),
+        badgeAmberText: Color(0xFF854F0B),
+        badgeGreen: Color(0xFFEAF3DE),
+        badgeGreenText: Color(0xFF3B6D11),
+      ),
+    ],
+  );
 }
 
 class AppColors extends ThemeExtension<AppColors> {
+  // accent — акцентный цвет текущей темы (кнопки, активные состояния,
+  // выделения). Раньше эти места использовали AppTheme.primaryColor
+  // напрямую как статическую константу, из-за чего они не могли меняться
+  // вместе с темой — теперь берут его отсюда, через Theme.of(context).
+  final Color accent;
   final Color danger, amber, success;
   final Color sidebarBg, sidebarActive, tableBorder;
   final Color badgeRed, badgeRedText;
@@ -181,6 +253,7 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color badgeGreen, badgeGreenText;
 
   const AppColors({
+    required this.accent,
     required this.danger, required this.amber, required this.success,
     required this.sidebarBg, required this.sidebarActive, required this.tableBorder,
     required this.badgeRed, required this.badgeRedText,
@@ -190,12 +263,14 @@ class AppColors extends ThemeExtension<AppColors> {
 
   @override
   AppColors copyWith({
+    Color? accent,
     Color? danger, Color? amber, Color? success,
     Color? sidebarBg, Color? sidebarActive, Color? tableBorder,
     Color? badgeRed, Color? badgeRedText,
     Color? badgeAmber, Color? badgeAmberText,
     Color? badgeGreen, Color? badgeGreenText,
   }) => AppColors(
+    accent: accent ?? this.accent,
     danger: danger ?? this.danger,
     amber: amber ?? this.amber,
     success: success ?? this.success,
@@ -226,8 +301,11 @@ extension StatusStripColor on AppColors {
 }
 final resolvedThemeProvider = Provider<ThemeData>((ref) {
   final mode = ref.watch(themeModeProvider);
-  if (mode == ThemeMode.dark) return AppTheme.darkTheme;
-  return AppTheme.lightTheme;
+  return switch (mode) {
+    AppThemeMode.dark => AppTheme.darkTheme,
+    AppThemeMode.purple => AppTheme.purpleTheme,
+    AppThemeMode.light || AppThemeMode.system => AppTheme.lightTheme,
+  };
 });
 
 // ─── Offline state providers ──────────────────────────────────────────────────

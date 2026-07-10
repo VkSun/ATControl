@@ -96,8 +96,7 @@ class MiniCalendar extends StatelessWidget {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color:
-                        isToday ? AppTheme.primaryColor : Colors.transparent,
+                    color: isToday ? colors.accent : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
