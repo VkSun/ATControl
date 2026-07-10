@@ -1,6 +1,7 @@
 // Реализации платформенного слоя для dart:io-платформ (Windows, Android,
 // десктопы). Выбирается условным импортом в app_platform.dart.
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
@@ -93,6 +94,18 @@ class WindowsWindowService
   Future<void> init() async {
     await windowManager.ensureInitialized();
     await windowManager.setPreventClose(true);
+    await _limitMinimumSize();
+  }
+
+  // Не даём ужать окно меньше четверти экрана (половина ширины × половина
+  // высоты) — на меньшем окне десктопная раскладка (сайдбар + контент)
+  // банально не помещается.
+  Future<void> _limitMinimumSize() async {
+    final displays = PlatformDispatcher.instance.displays;
+    if (displays.isEmpty) return;
+    final display = displays.first;
+    final logicalSize = display.size / display.devicePixelRatio;
+    await windowManager.setMinimumSize(logicalSize / 2);
   }
 
   @override
