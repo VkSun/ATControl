@@ -510,6 +510,7 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
             onEdit: () => _openEdit(context, widget.vehicles[i]),
             mobile: true,
             widths: _widths,
+            index: i,
           ),
         ),
       );
@@ -542,6 +543,7 @@ class _VehicleTableState extends ConsumerState<_VehicleTable> {
               canEdit: perms.canEditVehicle,
               onEdit: () => _openEdit(context, widget.vehicles[i]),
               widths: _widths,
+              index: i,
             ),
           ),
         ),
@@ -578,6 +580,7 @@ class _VehicleRow extends StatelessWidget {
   final bool canEdit;
   final bool mobile;
   final List<double> widths;
+  final int index;
 
   const _VehicleRow({
     required this.vehicle,
@@ -586,6 +589,7 @@ class _VehicleRow extends StatelessWidget {
     required this.onEdit,
     required this.canEdit,
     required this.widths,
+    required this.index,
     this.mobile = false,
   });
 
@@ -632,6 +636,7 @@ class _VehicleRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
+          color: index.isOdd ? colors.zebraStripe : Colors.transparent,
           border: Border(
             left: BorderSide(color: strip, width: 3),
             bottom: BorderSide(color: colors.tableBorder, width: 0.5),

@@ -7,7 +7,7 @@ import 'brand_colors.dart';
 /// Раздельно от Flutter-овского ThemeMode: помимо светлая/тёмная/системная
 /// сюда добавляются именованные цветовые темы (см. AppTheme.purpleTheme) —
 /// они переключаются тем же селектором в Настройках, добавляются по одной.
-enum AppThemeMode { light, dark, system, purple, orange, mono, beige, emerald, teal }
+enum AppThemeMode { light, dark, system, purple, orange, mono, beige, emerald, teal, mint }
 
 final themeModeProvider =
     StateNotifierProvider<_ThemePref, AppThemeMode>((_) => _ThemePref());
@@ -68,6 +68,7 @@ class AppTheme {
   static const _beigeAccent = Color(0xFFC9962F);
   static const _emeraldAccent = Color(0xFF4ECB8D);
   static const _tealAccent = Color(0xFF1F4E4A);
+  static const _mintAccent = Color(0xFF3DDC84);
 
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
@@ -124,6 +125,7 @@ class AppTheme {
         badgeAmberText: Color(0xFF854F0B),
         badgeGreen: Color(0xFFEAF3DE),
         badgeGreenText: Color(0xFF3B6D11),
+        zebraStripe: Colors.transparent,
       ),
     ],
   );
@@ -178,6 +180,7 @@ class AppTheme {
         badgeAmberText: Color(0xFFFAC775),
         badgeGreen: Color(0xFF173404),
         badgeGreenText: Color(0xFFC0DD97),
+        zebraStripe: Colors.transparent,
       ),
     ],
   );
@@ -240,6 +243,7 @@ class AppTheme {
         badgeAmberText: Color(0xFF854F0B),
         badgeGreen: Color(0xFFEAF3DE),
         badgeGreenText: Color(0xFF3B6D11),
+        zebraStripe: Colors.transparent,
       ),
     ],
   );
@@ -301,6 +305,7 @@ class AppTheme {
         badgeAmberText: Color(0xFF854F0B),
         badgeGreen: Color(0xFFEAF3DE),
         badgeGreenText: Color(0xFF3B6D11),
+        zebraStripe: Colors.transparent,
       ),
     ],
   );
@@ -359,6 +364,7 @@ class AppTheme {
         badgeAmberText: Color(0xFFFAC775),
         badgeGreen: Color(0xFF173404),
         badgeGreenText: Color(0xFFC0DD97),
+        zebraStripe: Colors.transparent,
       ),
     ],
   );
@@ -421,6 +427,7 @@ class AppTheme {
         badgeAmberText: Color(0xFF854F0B),
         badgeGreen: Color(0xFFEAF3DE),
         badgeGreenText: Color(0xFF3B6D11),
+        zebraStripe: Colors.transparent,
       ),
     ],
   );
@@ -477,6 +484,7 @@ class AppTheme {
         badgeAmberText: Color(0xFFFAC775),
         badgeGreen: Color(0xFF173404),
         badgeGreenText: Color(0xFFC0DD97),
+        zebraStripe: Colors.transparent,
       ),
     ],
   );
@@ -538,6 +546,68 @@ class AppTheme {
         badgeAmberText: Color(0xFF854F0B),
         badgeGreen: Color(0xFFEAF3DE),
         badgeGreenText: Color(0xFF3B6D11),
+        zebraStripe: Colors.transparent,
+      ),
+    ],
+  );
+
+  // Мятная: седьмой референс — точный пиксель-мокап приложения (тёмный
+  // фон с зеленоватым оттенком, весенне-зелёный акцент, скруглённая
+  // плавающая боковая панель, зебра в таблицах). В отличие от предыдущих
+  // тем здесь воспроизведены точные значения из мокапа (проверено через
+  // рендер в headless-браузере и снятие computed style), а не только
+  // акцент/фон.
+  static ThemeData mintTheme = ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: _mintAccent,
+      brightness: Brightness.dark,
+    ),
+    scaffoldBackgroundColor: const Color(0xFF131614),
+    cardColor: const Color(0xFF1C211D),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF1C211D),
+      foregroundColor: Color(0xFFE9ECE9),
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: Color(0xFF212823),
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFFE9ECE9)),
+      contentTextStyle: TextStyle(fontSize: 13, color: Color(0xFF99A39B)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _mintAccent,
+        foregroundColor: const Color(0xFF0F2A1B),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _mintAccent,
+        side: const BorderSide(color: _mintAccent),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: _mintAccent),
+    ),
+    extensions: [
+      AppColors(
+        accent: _mintAccent,
+        danger: _danger,
+        amber: _amber,
+        success: _green,
+        sidebarBg: const Color(0xFF131614),
+        sidebarActive: _mintAccent,
+        tableBorder: Colors.white.withOpacity(0.07),
+        badgeRed: const Color(0xFFFF6F61).withOpacity(0.12),
+        badgeRedText: const Color(0xFFFF6F61),
+        badgeAmber: const Color(0xFF412402),
+        badgeAmberText: const Color(0xFFFAC775),
+        badgeGreen: const Color(0xFF173404),
+        badgeGreenText: const Color(0xFFC0DD97),
+        zebraStripe: Colors.white.withOpacity(0.03),
       ),
     ],
   );
@@ -554,6 +624,9 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color badgeRed, badgeRedText;
   final Color badgeAmber, badgeAmberText;
   final Color badgeGreen, badgeGreenText;
+  // Цвет подсветки чётных строк таблицы (зебра). Colors.transparent — зебра
+  // выключена (у большинства тем её нет, только у референса с мокапом).
+  final Color zebraStripe;
 
   const AppColors({
     required this.accent,
@@ -562,6 +635,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.badgeRed, required this.badgeRedText,
     required this.badgeAmber, required this.badgeAmberText,
     required this.badgeGreen, required this.badgeGreenText,
+    required this.zebraStripe,
   });
 
   @override
@@ -572,6 +646,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? badgeRed, Color? badgeRedText,
     Color? badgeAmber, Color? badgeAmberText,
     Color? badgeGreen, Color? badgeGreenText,
+    Color? zebraStripe,
   }) => AppColors(
     accent: accent ?? this.accent,
     danger: danger ?? this.danger,
@@ -586,6 +661,7 @@ class AppColors extends ThemeExtension<AppColors> {
     badgeAmberText: badgeAmberText ?? this.badgeAmberText,
     badgeGreen: badgeGreen ?? this.badgeGreen,
     badgeGreenText: badgeGreenText ?? this.badgeGreenText,
+    zebraStripe: zebraStripe ?? this.zebraStripe,
   );
 
   @override
@@ -612,6 +688,7 @@ final resolvedThemeProvider = Provider<ThemeData>((ref) {
     AppThemeMode.beige => AppTheme.beigeTheme,
     AppThemeMode.emerald => AppTheme.emeraldTheme,
     AppThemeMode.teal => AppTheme.tealTheme,
+    AppThemeMode.mint => AppTheme.mintTheme,
     AppThemeMode.light || AppThemeMode.system => AppTheme.lightTheme,
   };
 });
